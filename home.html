@@ -19,6 +19,12 @@
         .nav-links a:hover { color: #42a5f5; }
         .btn-post { background: #42a5f5; color: white !important; padding: 8px 15px; border-radius: 5px; font-weight: bold; display: none; }
 
+        /* MODAL STYLES */
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal-content { background: white; margin: 10% auto; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; }
+        .modal-content h3 { color: #0d47a1; margin-top: 0; }
+        .modal-content input, .modal-content select { margin-bottom: 15px; }
+
         .filter-section { background: white; padding: 20px 5%; display: flex; flex-wrap: wrap; gap: 15px; border-bottom: 1px solid #ddd; }
         .filter-group { flex: 1; min-width: 200px; }
         .filter-group label { display: block; font-size: 12px; font-weight: bold; color: #0d47a1; margin-bottom: 5px; }
@@ -42,9 +48,29 @@
         <a href="home.html" class="logo">Stay<span>Find</span></a>
         <div class="nav-links">
             <a href="#" class="btn-post" id="postBtn"><i class="fas fa-plus"></i> Post Listing</a>
+            <a id="settingsBtn"><i class="fas fa-cog"></i> Settings</a>
             <a id="logoutLink"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </nav>
+
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <h3>Account Settings</h3>
+            <label style="font-size: 12px;">Full Name (30-day limit)</label>
+            <input type="text" id="editName">
+            <label style="font-size: 12px;">Address (30-day limit)</label>
+            <input type="text" id="editAddress">
+            <label style="font-size: 12px;">Contact (30-day limit)</label>
+            <input type="text" id="editContact">
+            <label style="font-size: 12px;">Your Role (Change anytime)</label>
+            <select id="editRole">
+                <option value="tenant">Tenant</option>
+                <option value="landlord">Landlord</option>
+            </select>
+            <button id="saveSettingsBtn" style="width:100%; padding:10px; background:#0d47a1; color:white; border:none; border-radius:5px; cursor:pointer;">Save Changes</button>
+            <button onclick="document.getElementById('settingsModal').style.display='none'" style="width:100%; margin-top:10px; background:none; border:none; color:gray; cursor:pointer;">Cancel</button>
+        </div>
+    </div>
 
     <div class="filter-section">
         <div class="filter-group">
@@ -62,8 +88,7 @@
         </div>
     </div>
 
-    <div class="container" id="listingsGrid">
-        </div>
+    <div class="container" id="listingsGrid"></div>
 
     <script src="home.js"></script>
 </body>
