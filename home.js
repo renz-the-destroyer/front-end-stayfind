@@ -99,7 +99,7 @@ if (searchInput) {
     });
 }
 
-// --- 6. SETTINGS MODAL LOGIC (NEW) ---
+// --- 6. SETTINGS MODAL LOGIC (FIXED POPUP LAYERING) ---
 function setupSettingsLogic() {
     const settingsBtn = document.getElementById('settingsBtn');
     const modal = document.getElementById('settingsModal');
@@ -146,15 +146,32 @@ function setupSettingsLogic() {
                 currentUser.role = updatedData.role;
                 localStorage.setItem('user', JSON.stringify(currentUser));
 
-                Swal.fire('Success!', 'Profile updated successfully.', 'success').then(() => {
-                    location.reload(); // Refresh to apply role changes (like showing/hiding post button)
+                // FIXED: Added target to ensure popup is in front of the modal
+                Swal.fire({
+                    title: 'Success!',
+                    text: 'Profile updated successfully.',
+                    icon: 'success',
+                    target: '#settingsModal'
+                }).then(() => {
+                    location.reload(); 
                 });
             } else {
-                // This captures the 403 error from your 30-day restriction logic
-                Swal.fire('Restricted', result.message || 'Failed to update', 'error');
+                // FIXED: Added target to ensure popup is in front of the modal
+                Swal.fire({
+                    title: 'Restricted',
+                    text: result.message || 'Failed to update',
+                    icon: 'error',
+                    target: '#settingsModal'
+                });
             }
         } catch (err) {
-            Swal.fire('Error', 'Could not connect to server', 'error');
+            // FIXED: Added target to ensure popup is in front of the modal
+            Swal.fire({
+                title: 'Error',
+                text: 'Could not connect to server',
+                icon: 'error',
+                target: '#settingsModal'
+            });
         } finally {
             saveBtn.disabled = false;
             saveBtn.innerText = "Update Profile";
