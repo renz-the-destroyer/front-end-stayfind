@@ -2,7 +2,7 @@
 emailjs.init("Y7oJ_Er1PJ59eTUfI"); 
 
 // REPLACE THIS with your Render URL (e.g., https://stayfind-api.onrender.com/api)
-const API_BASE = "https://stayfind-app.onrender.com/api";
+const API_BASE = "https://stayfind-app-system.onrender.com/api";
 
 let generatedOtp = null;
 let signUpData = {}; 
