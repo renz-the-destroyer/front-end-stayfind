@@ -1,8 +1,8 @@
 // Initialize EmailJS with your User ID
 emailjs.init("Y7oJ_Er1PJ59eTUfI"); 
 
-// REPLACE THIS with your Render URL (e.g., https://stayfind-api.onrender.com/api)
-const API_BASE = "https://stayfind-app-system.onrender.com";
+// FIXED: Added /api to the base URL to match your server.js prefix
+const API_BASE = "https://stayfind-app-system.onrender.com/api";
 
 let generatedOtp = null;
 let signUpData = {}; 
@@ -29,8 +29,9 @@ document.getElementById('signUpForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('signUpBtn');
     
+    // FIXED: Changed 'name' to 'full_name' to match your SQL database column
     signUpData = {
-        name: document.getElementById('regName').value,
+        full_name: document.getElementById('regName').value,
         email: document.getElementById('regEmail').value,
         password: document.getElementById('regPassword').value,
         role: 'pending' 
@@ -43,7 +44,6 @@ document.getElementById('signUpForm').addEventListener('submit', async (e) => {
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner"></div> Sending OTP...';
     
-    // Generate a random 6-digit OTP
     generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
     
     const templateParams = {
@@ -85,8 +85,7 @@ document.getElementById('verifyOtpBtn').addEventListener('click', async () => {
             const result = await response.json();
 
             if (response.ok) {
-                // Store user locally for the session
-                localStorage.setItem('user', JSON.stringify(signUpData));
+                localStorage.setItem('user', JSON.stringify(result.user || signUpData));
                 Swal.fire('Success!', 'Account created successfully.', 'success').then(() => {
                     window.location.href = "dashboard.html";
                 });
@@ -96,6 +95,8 @@ document.getElementById('verifyOtpBtn').addEventListener('click', async () => {
         } catch (error) {
             btn.disabled = false;
             btn.innerText = "Verify & Create Account";
+            // FIXED: Added console log to help you debug in F12
+            console.error("Signup Error:", error);
             Swal.fire('Database Error', error.message, 'error');
         }
     } else {
@@ -115,14 +116,14 @@ document.getElementById('signInForm').addEventListener('submit', async (e) => {
 
     try {
         const response = await fetch(`${API_BASE}/view`);
+        if (!response.ok) throw new Error("Server reached but returned an error.");
+        
         const users = await response.json();
         
-        // Find user by email and password in the database
         const user = users.find(u => u.email === email && u.password === password);
 
         if (user) {
             localStorage.setItem('user', JSON.stringify(user));
-            // Redirect based on whether they are a new user or already set up
             window.location.href = (user.role === 'pending') ? "dashboard.html" : "home.html";
         } else {
             throw new Error("Invalid email or password.");
@@ -130,6 +131,8 @@ document.getElementById('signInForm').addEventListener('submit', async (e) => {
     } catch (error) {
         btn.disabled = false;
         btn.innerText = "Sign In";
+        // FIXED: Added console log to help you debug in F12
+        console.error("Login Error:", error);
         Swal.fire('Login Failed', error.message, 'error');
     }
 });
