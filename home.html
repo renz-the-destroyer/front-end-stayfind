@@ -11,6 +11,7 @@
         * { box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
         body { background: #f4f7f6; margin: 0; padding-top: 70px; }
 
+        /* NAVBAR */
         nav { background: #0d47a1; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; position: fixed; top: 0; width: 100%; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .logo { color: white; font-weight: 800; font-size: 1.5rem; text-decoration: none; }
         .logo span { color: #42a5f5; }
@@ -19,17 +20,48 @@
         .nav-links a:hover { color: #42a5f5; }
         .btn-post { background: #42a5f5; color: white !important; padding: 8px 15px; border-radius: 5px; font-weight: bold; display: none; }
 
-        /* MODAL STYLES */
-        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
-        .modal-content { background: white; margin: 10% auto; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; }
-        .modal-content h3 { color: #0d47a1; margin-top: 0; }
-        .modal-content input, .modal-content select { margin-bottom: 15px; }
+        /* MODAL STYLES - FIXED FOR CENTER & FRONT VIEW */
+        .modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 3000; /* Higher z-index to stay above everything */
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.6); /* Darker backdrop for focus */
+            backdrop-filter: blur(3px); /* Slight blur for modern look */
+        }
+        .modal-content { 
+            background: white; 
+            position: relative;
+            top: 50%; /* Center vertically */
+            left: 50%; /* Center horizontally */
+            transform: translate(-50%, -50%); /* Precise centering offset */
+            padding: 30px; 
+            border-radius: 15px; 
+            width: 90%; 
+            max-width: 450px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3); /* Stronger shadow to bring it forward */
+        }
+        .modal-content h3 { color: #0d47a1; margin-top: 0; text-align: center; margin-bottom: 20px; }
+        .modal-content label { display: block; font-size: 12px; font-weight: bold; color: #555; margin-bottom: 5px; }
+        .modal-content input, .modal-content select { 
+            width: 100%; 
+            padding: 12px; 
+            margin-bottom: 20px; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            font-size: 14px;
+        }
 
+        /* FILTERS */
         .filter-section { background: white; padding: 20px 5%; display: flex; flex-wrap: wrap; gap: 15px; border-bottom: 1px solid #ddd; }
         .filter-group { flex: 1; min-width: 200px; }
         .filter-group label { display: block; font-size: 12px; font-weight: bold; color: #0d47a1; margin-bottom: 5px; }
         select, input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; outline-color: #42a5f5; }
 
+        /* LISTINGS */
         .container { padding: 30px 5%; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; }
         .listing-card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s; position: relative; cursor: pointer; }
         .listing-card:hover { transform: translateY(-5px); }
@@ -39,7 +71,16 @@
         .location { font-size: 13px; color: #546e7a; margin: 5px 0; }
         .details { display: flex; gap: 10px; font-size: 12px; color: #78909c; margin-top: 10px; }
         
-        @media (max-width: 768px) { .nav-links a:not(.btn-post) { display: none; } .filter-group { min-width: 100%; } }
+        /* MOBILE RESPONSIVENESS */
+        @media (max-width: 768px) { 
+            .nav-links a:not(.btn-post) { display: none; } 
+            .filter-group { min-width: 100%; } 
+            .modal-content { 
+                width: 95%; 
+                padding: 20px; 
+                top: 45%; /* Adjusted slightly higher for mobile keyboard space */
+            }
+        }
     </style>
 </head>
 <body>
@@ -47,7 +88,7 @@
     <nav>
         <a href="home.html" class="logo">Stay<span>Find</span></a>
         <div class="nav-links">
-            <a href="#" class="btn-post" id="postBtn"><i class="fas fa-plus"></i> Post Listing</a>
+            <a href="#" class="btn-post" id="postBtn"><i class="fas fa-plus"></i> Post</a>
             <a id="settingsBtn"><i class="fas fa-cog"></i> Settings</a>
             <a id="logoutLink"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
@@ -56,19 +97,24 @@
     <div id="settingsModal" class="modal">
         <div class="modal-content">
             <h3>Account Settings</h3>
-            <label style="font-size: 12px;">Full Name (30-day limit)</label>
-            <input type="text" id="editName">
-            <label style="font-size: 12px;">Address (30-day limit)</label>
-            <input type="text" id="editAddress">
-            <label style="font-size: 12px;">Contact (30-day limit)</label>
-            <input type="text" id="editContact">
-            <label style="font-size: 12px;">Your Role (Change anytime)</label>
+            
+            <label>Full Name (30-day limit)</label>
+            <input type="text" id="editName" placeholder="Your Full Name">
+            
+            <label>Address (30-day limit)</label>
+            <input type="text" id="editAddress" placeholder="Your Address">
+            
+            <label>Contact (30-day limit)</label>
+            <input type="text" id="editContact" placeholder="Phone Number">
+            
+            <label>Your Role (Change anytime)</label>
             <select id="editRole">
                 <option value="tenant">Tenant</option>
                 <option value="landlord">Landlord</option>
             </select>
-            <button id="saveSettingsBtn" style="width:100%; padding:10px; background:#0d47a1; color:white; border:none; border-radius:5px; cursor:pointer;">Save Changes</button>
-            <button onclick="document.getElementById('settingsModal').style.display='none'" style="width:100%; margin-top:10px; background:none; border:none; color:gray; cursor:pointer;">Cancel</button>
+            
+            <button id="saveSettingsBtn" style="width:100%; padding:14px; background:#0d47a1; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size: 15px;">Save Changes</button>
+            <button onclick="document.getElementById('settingsModal').style.display='none'" style="width:100%; margin-top:15px; background:none; border:none; color:gray; cursor:pointer; font-size: 13px;">Cancel</button>
         </div>
     </div>
 
