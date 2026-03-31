@@ -12,10 +12,10 @@ window.onload = () => {
     }
 
     // Pre-fill name from registration (Matches full_name in DB)
-    document.getElementById('fullName').value = currentUser.full_name || currentUser.name || "";
-    
-    const loader = document.getElementById('loader');
-    if (loader) loader.style.display = 'none';
+    const nameInput = document.getElementById('fullName');
+    if (nameInput) {
+        nameInput.value = currentUser.full_name || currentUser.name || "";
+    }
     
     // Redirect if they already finished setup
     if(currentUser.role && currentUser.role !== 'pending') {
@@ -28,8 +28,8 @@ const tenantBox = document.getElementById('roleTenant');
 const landlordBox = document.getElementById('roleLandlord');
 
 if (tenantBox && landlordBox) {
-    tenantBox.addEventListener('click', () => setRole('tenant'));
-    landlordBox.addEventListener('click', () => setRole('landlord'));
+    tenantBox.onclick = () => setRole('tenant');
+    landlordBox.onclick = () => setRole('landlord');
 }
 
 function setRole(role) {
@@ -41,7 +41,7 @@ function setRole(role) {
     else landlordBox.classList.add('active');
 }
 
-// --- 3. SAVE PROFILE TO DATABASE (FIXED) ---
+// --- 3. SAVE PROFILE TO DATABASE ---
 document.getElementById('profileForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -53,19 +53,17 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
-    // Data package sent to backend
     const profileData = {
-        full_name: document.getElementById('fullName').value, // FIXED: Matches backend controller
+        full_name: document.getElementById('fullName').value,
         address: document.getElementById('address').value,
         contact: document.getElementById('contact').value,
         role: userRole,
-        email: currentUser.email // Key used to find the user in DB
+        email: currentUser.email 
     };
 
     try {
-        // FIXED: Endpoint changed to /update-profile to match your router
         const response = await fetch(`${API_BASE}/update-profile`, {
-            method: 'POST', // Matches router.post in index.js
+            method: 'POST', 
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(profileData)
         });
@@ -73,9 +71,12 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
         const result = await response.json();
 
         if (response.ok && result.success) {
-            // Update the user data in browser memory so home.html knows the role
+            // UPDATED: Sync all new fields to local storage
             currentUser.role = userRole;
             currentUser.full_name = profileData.full_name;
+            currentUser.address = profileData.address; // Added to sync
+            currentUser.contact = profileData.contact; // Added to sync
+            
             localStorage.setItem('user', JSON.stringify(currentUser));
 
             Swal.fire({
@@ -88,11 +89,12 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
                 window.location.href = "home.html";
             });
         } else {
-            throw new Error(result.message || "Failed to update profile. Try again.");
+            // This will now correctly show the 30-day message if the bypass fails
+            throw new Error(result.message || "Failed to update profile.");
         }
     } catch (err) {
         btn.disabled = false;
-        btn.innerText = "Complete Setup";
+        btn.innerHTML = 'Complete Setup';
         Swal.fire('Error', err.message, 'error');
     }
 });
