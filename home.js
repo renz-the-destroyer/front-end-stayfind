@@ -21,6 +21,7 @@ window.onload = () => {
     console.log("Welcome back, " + (currentUser.full_name || currentUser.name));
 
     loadListings();
+    setupSettingsLogic(); // Initialize the new settings features
 };
 
 // --- 2. FETCH LISTINGS FROM MYSQL ---
@@ -49,8 +50,6 @@ async function loadListings() {
 function renderListings(items) {
     listingsGrid.innerHTML = "";
     items.forEach(item => {
-        // FIXED: Using item.images to match your DB column 'images'
-        // FIXED: Using item.price, item.title, item.location, item.rooms, and item.size
         const displayImage = item.images || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500';
         
         listingsGrid.innerHTML += `
@@ -91,7 +90,6 @@ if (searchInput) {
             const locationText = card.querySelector('.location').innerText.toLowerCase();
             const titleText = card.querySelector('div[style*="font-weight:bold"]').innerText.toLowerCase();
             
-            // Search works for both Location and Title
             if (locationText.includes(term) || titleText.includes(term)) {
                 card.style.display = "block";
             } else {
@@ -99,4 +97,74 @@ if (searchInput) {
             }
         });
     });
+}
+
+// --- 6. SETTINGS MODAL LOGIC (NEW) ---
+function setupSettingsLogic() {
+    const settingsBtn = document.getElementById('settingsBtn');
+    const modal = document.getElementById('settingsModal');
+    const saveBtn = document.getElementById('saveSettingsBtn');
+
+    if (!settingsBtn || !modal) return;
+
+    // Open Modal and Pre-fill data
+    settingsBtn.onclick = () => {
+        document.getElementById('editName').value = currentUser.full_name || currentUser.name || "";
+        document.getElementById('editAddress').value = currentUser.address || "";
+        document.getElementById('editContact').value = currentUser.contact || "";
+        document.getElementById('editRole').value = currentUser.role || "tenant";
+        modal.style.display = 'block';
+    };
+
+    // Save Logic
+    saveBtn.onclick = async () => {
+        const updatedData = {
+            full_name: document.getElementById('editName').value,
+            address: document.getElementById('editAddress').value,
+            contact: document.getElementById('editContact').value,
+            role: document.getElementById('editRole').value,
+            email: currentUser.email
+        };
+
+        saveBtn.disabled = true;
+        saveBtn.innerText = "Updating...";
+
+        try {
+            const response = await fetch(`${API_BASE}/update-profile`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedData)
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                // Update local storage so the UI updates without relogging
+                currentUser.full_name = updatedData.full_name;
+                currentUser.address = updatedData.address;
+                currentUser.contact = updatedData.contact;
+                currentUser.role = updatedData.role;
+                localStorage.setItem('user', JSON.stringify(currentUser));
+
+                Swal.fire('Success!', 'Profile updated successfully.', 'success').then(() => {
+                    location.reload(); // Refresh to apply role changes (like showing/hiding post button)
+                });
+            } else {
+                // This captures the 403 error from your 30-day restriction logic
+                Swal.fire('Restricted', result.message || 'Failed to update', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Error', 'Could not connect to server', 'error');
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerText = "Update Profile";
+        }
+    };
+
+    // Close modal when clicking outside of it
+    window.onclick = (event) => {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    };
 }
