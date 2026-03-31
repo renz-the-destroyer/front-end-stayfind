@@ -46,18 +46,20 @@ async function loadListings() {
     }
 }
 
-// --- 3. RENDER HTML CARDS (MATCHED TO CLEVER CLOUD COLUMNS) ---
+// --- 3. RENDER HTML CARDS (FIXED DUPLICATE ISSUE) ---
 function renderListings(items) {
-    listingsGrid.innerHTML = "";
+    // CRITICAL: Clear the grid first to prevent duplicates
+    listingsGrid.innerHTML = ""; 
+    
     items.forEach(item => {
         const displayImage = item.images || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500';
         
         listingsGrid.innerHTML += `
-            <div class="listing-card">
+            <div class="listing-card" data-price="${item.price || 0}">
                 <img src="${displayImage}" class="listing-img" alt="${item.title || 'Listing'}">
                 <div class="listing-info">
                     <div class="price">₱${Number(item.price || 0).toLocaleString()} /mo</div>
-                    <div style="font-weight:bold; margin-top:5px; color:#333;">${item.title || 'Cozy Room'}</div>
+                    <div class="title-text" style="font-weight:bold; margin-top:5px; color:#333;">${item.title || 'Cozy Room'}</div>
                     <div class="location"><i class="fas fa-map-marker-alt"></i> ${item.location || 'Unknown'}</div>
                     <div class="details">
                         <span><i class="fas fa-bed"></i> ${item.rooms || 0} Rooms</span>
@@ -79,25 +81,34 @@ if (logoutLink) {
     };
 }
 
-// --- 5. SEARCH FILTER LOGIC ---
+// --- 5. SEARCH & PRICE FILTER LOGIC (UPDATED) ---
 const searchInput = document.getElementById('searchLoc');
-if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        const cards = document.querySelectorAll('.listing-card');
+const priceFilter = document.getElementById('maxPrice'); // Target your Max Price dropdown
+
+function filterListings() {
+    const term = searchInput ? searchInput.value.toLowerCase() : "";
+    const maxPrice = priceFilter ? parseInt(priceFilter.value) : Infinity;
+    const cards = document.querySelectorAll('.listing-card');
+    
+    cards.forEach(card => {
+        const locationText = card.querySelector('.location').innerText.toLowerCase();
+        const titleText = card.querySelector('.title-text').innerText.toLowerCase();
+        const price = parseInt(card.getAttribute('data-price'));
         
-        cards.forEach(card => {
-            const locationText = card.querySelector('.location').innerText.toLowerCase();
-            const titleText = card.querySelector('div[style*="font-weight:bold"]').innerText.toLowerCase();
-            
-            if (locationText.includes(term) || titleText.includes(term)) {
-                card.style.display = "block";
-            } else {
-                card.style.display = "none";
-            }
-        });
+        const matchesSearch = locationText.includes(term) || titleText.includes(term);
+        const matchesPrice = isNaN(maxPrice) || price <= maxPrice;
+
+        if (matchesSearch && matchesPrice) {
+            card.style.display = "block";
+        } else {
+            card.style.display = "none";
+        }
     });
 }
+
+if (searchInput) searchInput.addEventListener('input', filterListings);
+if (priceFilter) priceFilter.addEventListener('change', filterListings);
+
 
 // --- 6. SETTINGS MODAL LOGIC (FIXED POPUP LAYERING) ---
 function setupSettingsLogic() {
@@ -146,7 +157,6 @@ function setupSettingsLogic() {
                 currentUser.role = updatedData.role;
                 localStorage.setItem('user', JSON.stringify(currentUser));
 
-                // FIXED: Added target to ensure popup is in front of the modal
                 Swal.fire({
                     title: 'Success!',
                     text: 'Profile updated successfully.',
@@ -156,7 +166,6 @@ function setupSettingsLogic() {
                     location.reload(); 
                 });
             } else {
-                // FIXED: Added target to ensure popup is in front of the modal
                 Swal.fire({
                     title: 'Restricted',
                     text: result.message || 'Failed to update',
@@ -165,7 +174,6 @@ function setupSettingsLogic() {
                 });
             }
         } catch (err) {
-            // FIXED: Added target to ensure popup is in front of the modal
             Swal.fire({
                 title: 'Error',
                 text: 'Could not connect to server',
