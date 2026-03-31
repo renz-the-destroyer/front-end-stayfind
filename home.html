@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StayFind - Discover Your Next Home</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css?family=Montserrat:400,700');
+        * { box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
+        body { background: #f4f7f6; margin: 0; padding-top: 70px; }
+
+        nav { background: #0d47a1; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; position: fixed; top: 0; width: 100%; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .logo { color: white; font-weight: 800; font-size: 1.5rem; text-decoration: none; }
+        .logo span { color: #42a5f5; }
+        .nav-links { display: flex; align-items: center; }
+        .nav-links a { color: white; text-decoration: none; margin-left: 20px; font-size: 14px; transition: 0.3s; cursor: pointer; }
+        .nav-links a:hover { color: #42a5f5; }
+        .btn-post { background: #42a5f5; color: white !important; padding: 8px 15px; border-radius: 5px; font-weight: bold; display: none; }
+
+        .filter-section { background: white; padding: 20px 5%; display: flex; flex-wrap: wrap; gap: 15px; border-bottom: 1px solid #ddd; }
+        .filter-group { flex: 1; min-width: 200px; }
+        .filter-group label { display: block; font-size: 12px; font-weight: bold; color: #0d47a1; margin-bottom: 5px; }
+        select, input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; outline-color: #42a5f5; }
+
+        .container { padding: 30px 5%; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; }
+        .listing-card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s; position: relative; cursor: pointer; }
+        .listing-card:hover { transform: translateY(-5px); }
+        .listing-img { width: 100%; height: 200px; background: #eee; object-fit: cover; }
+        .listing-info { padding: 15px; }
+        .price { color: #0d47a1; font-size: 1.2rem; font-weight: 800; }
+        .location { font-size: 13px; color: #546e7a; margin: 5px 0; }
+        .details { display: flex; gap: 10px; font-size: 12px; color: #78909c; margin-top: 10px; }
+        
+        @media (max-width: 768px) { .nav-links a:not(.btn-post) { display: none; } .filter-group { min-width: 100%; } }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a href="home.html" class="logo">Stay<span>Find</span></a>
+        <div class="nav-links">
+            <a href="#" class="btn-post" id="postBtn"><i class="fas fa-plus"></i> Post Listing</a>
+            <a id="logoutLink"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </nav>
+
+    <div class="filter-section">
+        <div class="filter-group">
+            <label>Search Location</label>
+            <input type="text" id="searchLoc" placeholder="Search City/Area...">
+        </div>
+        <div class="filter-group">
+            <label>Max Price (₱)</label>
+            <select id="priceFilter">
+                <option value="all">All Prices</option>
+                <option value="5000">Under ₱5,000</option>
+                <option value="10000">Under ₱10,000</option>
+                <option value="20000">Under ₱20,000</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="container" id="listingsGrid">
+        </div>
+
+    <script src="home.js"></script>
+</body>
+</html>
