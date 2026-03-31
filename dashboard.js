@@ -11,9 +11,11 @@ window.onload = () => {
         return;
     }
 
-    // Pre-fill name from registration
-    document.getElementById('fullName').value = currentUser.name || "";
-    document.getElementById('loader').style.display = 'none';
+    // Pre-fill name from registration (Matches full_name in DB)
+    document.getElementById('fullName').value = currentUser.full_name || currentUser.name || "";
+    
+    const loader = document.getElementById('loader');
+    if (loader) loader.style.display = 'none';
     
     // Redirect if they already finished setup
     if(currentUser.role && currentUser.role !== 'pending') {
@@ -25,8 +27,10 @@ window.onload = () => {
 const tenantBox = document.getElementById('roleTenant');
 const landlordBox = document.getElementById('roleLandlord');
 
-tenantBox.addEventListener('click', () => setRole('tenant'));
-landlordBox.addEventListener('click', () => setRole('landlord'));
+if (tenantBox && landlordBox) {
+    tenantBox.addEventListener('click', () => setRole('tenant'));
+    landlordBox.addEventListener('click', () => setRole('landlord'));
+}
 
 function setRole(role) {
     userRole = role;
@@ -37,7 +41,7 @@ function setRole(role) {
     else landlordBox.classList.add('active');
 }
 
-// --- 3. SAVE PROFILE TO DATABASE ---
+// --- 3. SAVE PROFILE TO DATABASE (FIXED) ---
 document.getElementById('profileForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -49,41 +53,42 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
-    // In your Node backend, you likely use 'update' route. 
-    // We need to send the ID or Email to find the right record.
+    // Data package sent to backend
     const profileData = {
-        name: document.getElementById('fullName').value,
+        full_name: document.getElementById('fullName').value, // FIXED: Matches backend controller
         address: document.getElementById('address').value,
         contact: document.getElementById('contact').value,
         role: userRole,
-        email: currentUser.email // Using email to identify the user in the database
+        email: currentUser.email // Key used to find the user in DB
     };
 
     try {
-        // This calls your Node.js backend /api/update
-        const response = await fetch(`${API_BASE}/update`, {
-            method: 'PUT',
+        // FIXED: Endpoint changed to /update-profile to match your router
+        const response = await fetch(`${API_BASE}/update-profile`, {
+            method: 'POST', // Matches router.post in index.js
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(profileData)
         });
 
-        if (response.ok) {
-            // Update the user data in browser memory
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            // Update the user data in browser memory so home.html knows the role
             currentUser.role = userRole;
-            currentUser.name = profileData.name;
+            currentUser.full_name = profileData.full_name;
             localStorage.setItem('user', JSON.stringify(currentUser));
 
             Swal.fire({
                 icon: 'success',
                 title: 'Profile Completed!',
-                text: 'Welcome to StayFind, ' + profileData.name + '!',
+                text: 'Welcome to StayFind, ' + profileData.full_name + '!',
                 timer: 2000,
                 showConfirmButton: false
             }).then(() => {
                 window.location.href = "home.html";
             });
         } else {
-            throw new Error("Failed to update profile. Try again.");
+            throw new Error(result.message || "Failed to update profile. Try again.");
         }
     } catch (err) {
         btn.disabled = false;
@@ -93,7 +98,10 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
 });
 
 // --- 4. LOGOUT ---
-document.getElementById('logoutBtn').onclick = () => {
-    localStorage.removeItem('user');
-    window.location.href = "index.html";
-};
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+    logoutBtn.onclick = () => {
+        localStorage.removeItem('user');
+        window.location.href = "index.html";
+    };
+}
