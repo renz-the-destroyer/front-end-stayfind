@@ -31,8 +31,8 @@ document.getElementById('signUpForm').addEventListener('submit', async (e) => {
     
     // FIXED: Changed 'name' to 'full_name' to match your SQL database column
     signUpData = {
-        full_name: document.getElementById('regName').value,
-        email: document.getElementById('regEmail').value,
+        full_name: document.getElementById('regName').value.trim(),
+        email: document.getElementById('regEmail').value.trim().toLowerCase(),
         password: document.getElementById('regPassword').value,
         role: 'pending' 
     };
@@ -95,7 +95,6 @@ document.getElementById('verifyOtpBtn').addEventListener('click', async () => {
         } catch (error) {
             btn.disabled = false;
             btn.innerText = "Verify & Create Account";
-            // FIXED: Added console log to help you debug in F12
             console.error("Signup Error:", error);
             Swal.fire('Database Error', error.message, 'error');
         }
@@ -108,8 +107,10 @@ document.getElementById('verifyOtpBtn').addEventListener('click', async () => {
 document.getElementById('signInForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('signInBtn');
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
+    
+    // UPDATED: Added .trim() and .toLowerCase() to match data exactly
+    const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+    const password = document.getElementById('loginPassword').value.trim();
 
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner"></div> Signing in...';
@@ -120,10 +121,15 @@ document.getElementById('signInForm').addEventListener('submit', async (e) => {
         
         const users = await response.json();
         
-        const user = users.find(u => u.email === email && u.password === password);
+        // UPDATED: Improved match logic to ignore capitalization in emails
+        const user = users.find(u => 
+            u.email.toLowerCase().trim() === email && 
+            u.password.trim() === password
+        );
 
         if (user) {
             localStorage.setItem('user', JSON.stringify(user));
+            // Redirect based on role
             window.location.href = (user.role === 'pending') ? "dashboard.html" : "home.html";
         } else {
             throw new Error("Invalid email or password.");
@@ -131,7 +137,6 @@ document.getElementById('signInForm').addEventListener('submit', async (e) => {
     } catch (error) {
         btn.disabled = false;
         btn.innerText = "Sign In";
-        // FIXED: Added console log to help you debug in F12
         console.error("Login Error:", error);
         Swal.fire('Login Failed', error.message, 'error');
     }
