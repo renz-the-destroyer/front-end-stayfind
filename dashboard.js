@@ -4,29 +4,42 @@ const API_BASE = "https://stayfind-app-system.onrender.com/api";
 let userRole = null;
 let currentUser = JSON.parse(localStorage.getItem('user'));
 
+// --- 0. FORCE HIDE LOADER (Safety Timer) ---
+// If the page is still "loading" after 3 seconds, force it to show the form.
+setTimeout(() => {
+    const loader = document.getElementById('loadingScreen') || 
+                   document.querySelector('.loader-wrapper') || 
+                   document.querySelector('.spinner');
+    if (loader) {
+        console.log("Safety timer triggered: Hiding loader manually.");
+        loader.style.display = 'none';
+    }
+}, 3000);
+
 // --- 1. INITIALIZE PAGE ---
 window.onload = () => {
+    console.log("Current User in Storage:", currentUser);
+
     if (!currentUser) {
         window.location.href = "index.html";
         return;
     }
 
-    // Pre-fill name from registration (Matches full_name in DB)
+    // Pre-fill name from registration
     const nameInput = document.getElementById('fullName');
     if (nameInput) {
         nameInput.value = currentUser.full_name || currentUser.name || "";
     }
     
-    // UPDATED: Redirect if role is NOT pending (Case-insensitive check)
+    // Redirect if they already finished setup
     if(currentUser.role && currentUser.role.toLowerCase() !== 'pending') {
         window.location.href = "home.html";
+        return;
     }
 
-    // NEW: Hide the loading screen once the user data is processed
+    // Hide loader immediately if everything is okay
     const loader = document.getElementById('loadingScreen') || document.querySelector('.loader-wrapper');
-    if (loader) {
-        loader.style.display = 'none';
-    }
+    if (loader) loader.style.display = 'none';
 };
 
 // --- 2. ROLE SELECTION LOGIC ---
@@ -77,11 +90,10 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
         const result = await response.json();
 
         if (response.ok && result.success) {
-            // UPDATED: Sync all new fields to local storage
             currentUser.role = userRole;
             currentUser.full_name = profileData.full_name;
-            currentUser.address = profileData.address; // Added to sync
-            currentUser.contact = profileData.contact; // Added to sync
+            currentUser.address = profileData.address;
+            currentUser.contact = profileData.contact;
             
             localStorage.setItem('user', JSON.stringify(currentUser));
 
