@@ -4,42 +4,41 @@ const API_BASE = "https://stayfind-app-system.onrender.com/api";
 let userRole = null;
 let currentUser = JSON.parse(localStorage.getItem('user'));
 
-// --- 0. FORCE HIDE LOADER (Safety Timer) ---
-// If the page is still "loading" after 3 seconds, force it to show the form.
-setTimeout(() => {
-    const loader = document.getElementById('loadingScreen') || 
-                   document.querySelector('.loader-wrapper') || 
-                   document.querySelector('.spinner');
+// --- 0. IMMEDIATE HIDE FUNCTION ---
+function hideLoader() {
+    const loader = document.getElementById('loader'); // Matches your HTML ID
     if (loader) {
-        console.log("Safety timer triggered: Hiding loader manually.");
         loader.style.display = 'none';
+        console.log("Loader hidden successfully.");
     }
-}, 3000);
+}
+
+// Safety fallback: If window.onload takes too long, hide it after 2 seconds
+setTimeout(hideLoader, 2000);
 
 // --- 1. INITIALIZE PAGE ---
 window.onload = () => {
-    console.log("Current User in Storage:", currentUser);
+    console.log("Dashboard Loaded. User:", currentUser);
 
     if (!currentUser) {
         window.location.href = "index.html";
         return;
     }
 
-    // Pre-fill name from registration
+    // Pre-fill name from registration (Matches full_name in DB)
     const nameInput = document.getElementById('fullName');
     if (nameInput) {
         nameInput.value = currentUser.full_name || currentUser.name || "";
     }
     
-    // Redirect if they already finished setup
+    // Redirect if they already finished setup (Case-insensitive check)
     if(currentUser.role && currentUser.role.toLowerCase() !== 'pending') {
         window.location.href = "home.html";
         return;
     }
 
-    // Hide loader immediately if everything is okay
-    const loader = document.getElementById('loadingScreen') || document.querySelector('.loader-wrapper');
-    if (loader) loader.style.display = 'none';
+    // Success! Hide the loader now
+    hideLoader();
 };
 
 // --- 2. ROLE SELECTION LOGIC ---
@@ -90,6 +89,7 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
         const result = await response.json();
 
         if (response.ok && result.success) {
+            // Sync all new fields to local storage
             currentUser.role = userRole;
             currentUser.full_name = profileData.full_name;
             currentUser.address = profileData.address;
@@ -119,7 +119,8 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
 // --- 4. LOGOUT ---
 const logoutBtn = document.getElementById('logoutBtn');
 if (logoutBtn) {
-    logoutBtn.onclick = () => {
+    logoutBtn.onclick = (e) => {
+        e.preventDefault();
         localStorage.removeItem('user');
         window.location.href = "index.html";
     };
