@@ -31,7 +31,6 @@ async function loadListings() {
     listingsGrid.innerHTML = "<p style='text-align:center; grid-column: 1/-1;'>Loading stays...</p>";
     
     try {
-        // Pointed to /view which now calls getAllListings in the backend
         const response = await fetch(`${API_BASE}/view`);
         const data = await response.json();
 
@@ -54,7 +53,6 @@ function renderListings(items) {
     const savedListings = JSON.parse(localStorage.getItem('bookmarks')) || [];
     
     items.forEach(item => {
-        // Validation to ensure it's a listing and not a user object
         if (!item.title && !item.price) return;
 
         const isSaved = savedListings.includes(item.id);
@@ -83,6 +81,10 @@ function renderListings(items) {
         card.setAttribute('data-id', item.id);
         card.setAttribute('data-price', item.price || 0);
         card.setAttribute('data-rooms', item.rooms || 0);
+        
+        // OPEN DETAILS ON CLICK
+        card.onclick = () => showFullDetails(item);
+
         card.innerHTML = `
             <div class="save-btn ${isSaved ? 'active' : ''}" onclick="toggleBookmark(event, ${item.id})">
                 <i class="fas fa-heart"></i>
@@ -91,6 +93,9 @@ function renderListings(items) {
             <div class="listing-info">
                 <div class="price">₱${Number(item.price || 0).toLocaleString()} /mo</div>
                 <div class="title-text" style="font-weight:bold; margin-top:5px; color:#333;">${item.title || 'Cozy Room'}</div>
+                <div class="landlord-name" style="font-size:0.85rem; color:#007bff; margin-bottom:5px;">
+                    <i class="fas fa-user-tie"></i> ${item.landlord_name || 'Owner'}
+                </div>
                 <div class="location"><i class="fas fa-map-marker-alt"></i> ${item.location || 'Unknown'}</div>
                 <div class="details">
                     <span><i class="fas fa-bed"></i> ${item.rooms || 0} Rooms</span>
@@ -100,6 +105,33 @@ function renderListings(items) {
         `;
         listingsGrid.appendChild(card);
     });
+}
+
+// --- NEW: SHOW FULL DETAILS POPUP ---
+function showFullDetails(item) {
+    const detailModal = document.getElementById('detailsModal');
+    if (!detailModal) return;
+
+    // Fill Modal Text
+    document.getElementById('detTitle').innerText = item.title;
+    document.getElementById('detPrice').innerText = Number(item.price).toLocaleString();
+    document.getElementById('detLocation').innerText = item.location;
+    document.getElementById('detRooms').innerText = item.rooms;
+    document.getElementById('detSize').innerText = item.size;
+    document.getElementById('detAmenities').innerText = item.amenities || "None listed";
+    document.getElementById('detLandlord').innerText = item.landlord_name || "N/A";
+    document.getElementById('detContact').innerText = item.landlord_contact || "No contact provided";
+    document.getElementById('detType').innerText = item.category || "Apartment";
+
+    // Show Delete button ONLY if current user is the owner
+    const delContainer = document.getElementById('deleteBtnContainer');
+    if (delContainer) {
+        delContainer.innerHTML = (currentUser.id === item.user_id) 
+            ? `<button class="btn-delete" onclick="deleteListing(${item.id})">Delete Listing</button>` 
+            : "";
+    }
+
+    detailModal.style.display = 'block';
 }
 
 // --- 3.1 CAROUSEL MOVEMENT LOGIC ---
@@ -318,7 +350,6 @@ function setupPostListingLogic() {
         }
 
         try {
-            // FIXED: Target /add-listing to match index.js update
             const response = await fetch(`${API_BASE}/add-listing`, {
                 method: 'POST',
                 headers: { 
@@ -333,11 +364,9 @@ function setupPostListingLogic() {
                 .then(() => location.reload());
             } else {
                 const errResult = await response.json().catch(() => ({ message: "Submission Failed" }));
-                console.error("Server Error Response:", errResult);
                 Swal.fire({ title: 'Error', text: errResult.message || 'Failed to post', icon: 'error', target: '#postModal' });
             }
         } catch (err) {
-            console.error("Network Error:", err);
             Swal.fire({ title: 'Error', text: 'Could not connect to server', icon: 'error', target: '#postModal' });
         } finally {
             submitPostBtn.disabled = false;
@@ -409,8 +438,15 @@ function setupBookmarkToggles() {
     };
 }
 
+// Helper to close modals when clicking outside
 window.onclick = (event) => {
     if (event.target.classList.contains('modal')) {
         event.target.style.display = "none";
     }
 };
+
+// --- NEW: CLOSE MODAL FUNCTION ---
+function closeDetails() {
+    const modal = document.getElementById('detailsModal');
+    if (modal) modal.style.display = 'none';
+}
