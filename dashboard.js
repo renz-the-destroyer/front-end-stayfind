@@ -20,7 +20,9 @@ setTimeout(hideLoader, 2000);
 window.onload = () => {
     console.log("Dashboard Loaded. User:", currentUser);
 
-    if (!currentUser) {
+    // FIXED: Ensure we have a user object before trying to read properties
+    if (!currentUser || !currentUser.email) {
+        console.error("No valid user session found. Redirecting...");
         window.location.href = "index.html";
         return;
     }
@@ -28,6 +30,7 @@ window.onload = () => {
     // Pre-fill name from registration (Matches full_name in DB)
     const nameInput = document.getElementById('fullName');
     if (nameInput) {
+        // Fallback to name or empty string if full_name isn't set yet
         nameInput.value = currentUser.full_name || currentUser.name || "";
     }
     
@@ -72,9 +75,9 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
     const profileData = {
-        full_name: document.getElementById('fullName').value,
-        address: document.getElementById('address').value,
-        contact: document.getElementById('contact').value,
+        full_name: document.getElementById('fullName').value.trim(),
+        address: document.getElementById('address').value.trim(),
+        contact: document.getElementById('contact').value.trim(),
         role: userRole,
         email: currentUser.email 
     };
@@ -89,7 +92,7 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
         const result = await response.json();
 
         if (response.ok && result.success) {
-            // Sync all new fields to local storage
+            // Sync all new fields back to local storage
             currentUser.role = userRole;
             currentUser.full_name = profileData.full_name;
             currentUser.address = profileData.address;
@@ -121,7 +124,7 @@ const logoutBtn = document.getElementById('logoutBtn');
 if (logoutBtn) {
     logoutBtn.onclick = (e) => {
         e.preventDefault();
-        localStorage.removeItem('user');
+        localStorage.clear(); // Use clear to ensure all old session data is gone
         window.location.href = "index.html";
     };
 }
