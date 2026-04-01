@@ -31,10 +31,11 @@ async function loadListings() {
     listingsGrid.innerHTML = "<p style='text-align:center; grid-column: 1/-1;'>Loading stays...</p>";
     
     try {
+        // Pointed to /view which now calls getAllListings in the backend
         const response = await fetch(`${API_BASE}/view`);
         const data = await response.json();
 
-        if (!data || data.length === 0 || (data.length === 1 && !data[0].title)) {
+        if (!data || data.length === 0) {
             listingsGrid.innerHTML = "<p style='text-align:center; grid-column: 1/-1;'>No listings available yet.</p>";
             return;
         }
@@ -53,6 +54,7 @@ function renderListings(items) {
     const savedListings = JSON.parse(localStorage.getItem('bookmarks')) || [];
     
     items.forEach(item => {
+        // Validation to ensure it's a listing and not a user object
         if (!item.title && !item.price) return;
 
         const isSaved = savedListings.includes(item.id);
@@ -316,7 +318,7 @@ function setupPostListingLogic() {
         }
 
         try {
-            // Using template literal for a cleaner URL check
+            // FIXED: Target /add-listing to match index.js update
             const response = await fetch(`${API_BASE}/add-listing`, {
                 method: 'POST',
                 headers: { 
@@ -330,8 +332,7 @@ function setupPostListingLogic() {
                 Swal.fire({ title: 'Success!', text: 'Listing published.', icon: 'success', target: '#postModal' })
                 .then(() => location.reload());
             } else {
-                // Read the actual server message if possible
-                const errResult = await response.json().catch(() => ({ message: "Route Not Found (404)" }));
+                const errResult = await response.json().catch(() => ({ message: "Submission Failed" }));
                 console.error("Server Error Response:", errResult);
                 Swal.fire({ title: 'Error', text: errResult.message || 'Failed to post', icon: 'error', target: '#postModal' });
             }
