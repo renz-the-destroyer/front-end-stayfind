@@ -34,7 +34,8 @@ async function loadListings() {
         const response = await fetch(`${API_BASE}/view`);
         const data = await response.json();
 
-        if (!data || data.length === 0) {
+        // Check if data is empty or just contains an empty error object
+        if (!data || data.length === 0 || (data.length === 1 && !data[0].title)) {
             listingsGrid.innerHTML = "<p style='text-align:center;'>No listings available yet.</p>";
             return;
         }
@@ -46,12 +47,15 @@ async function loadListings() {
     }
 }
 
-// --- 3. RENDER HTML CARDS (FIXED DUPLICATE ISSUE) ---
+// --- 3. RENDER HTML CARDS (UPDATED TO PREVENT GHOST CARDS) ---
 function renderListings(items) {
     // CRITICAL: Clear the grid first to prevent duplicates
     listingsGrid.innerHTML = ""; 
     
     items.forEach(item => {
+        // SAFETY CHECK: Skip if item has no data (prevents "Unknown" cards)
+        if (!item.title && !item.price) return;
+
         const displayImage = item.images || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500';
         
         listingsGrid.innerHTML += `
@@ -81,13 +85,17 @@ if (logoutLink) {
     };
 }
 
-// --- 5. SEARCH & PRICE FILTER LOGIC (UPDATED) ---
+// --- 5. SEARCH & PRICE FILTER LOGIC (SYNCED WITH HTML) ---
 const searchInput = document.getElementById('searchLoc');
-const priceFilter = document.getElementById('maxPrice'); // Target your Max Price dropdown
+const priceFilter = document.getElementById('maxPrice'); // Target updated ID
 
 function filterListings() {
     const term = searchInput ? searchInput.value.toLowerCase() : "";
-    const maxPrice = priceFilter ? parseInt(priceFilter.value) : Infinity;
+    
+    // Handle the "Infinity" string from the dropdown
+    const filterValue = priceFilter ? priceFilter.value : "Infinity";
+    const maxPrice = filterValue === "Infinity" ? Infinity : parseInt(filterValue);
+    
     const cards = document.querySelectorAll('.listing-card');
     
     cards.forEach(card => {
