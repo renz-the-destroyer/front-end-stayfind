@@ -85,6 +85,8 @@ document.getElementById('verifyOtpBtn').addEventListener('click', async () => {
             const result = await response.json();
 
             if (response.ok) {
+                // ADDED: Clear old data before saving new user
+                localStorage.clear();
                 localStorage.setItem('user', JSON.stringify(result.user || signUpData));
                 Swal.fire('Success!', 'Account created successfully.', 'success').then(() => {
                     window.location.href = "dashboard.html";
@@ -108,7 +110,6 @@ document.getElementById('signInForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('signInBtn');
     
-    // UPDATED: Added .trim() and .toLowerCase() to match data exactly
     const email = document.getElementById('loginEmail').value.trim().toLowerCase();
     const password = document.getElementById('loginPassword').value.trim();
 
@@ -121,16 +122,22 @@ document.getElementById('signInForm').addEventListener('submit', async (e) => {
         
         const users = await response.json();
         
-        // UPDATED: Improved match logic to ignore capitalization in emails
         const user = users.find(u => 
             u.email.toLowerCase().trim() === email && 
             u.password.trim() === password
         );
 
         if (user) {
+            // ADDED: Clear old storage to prevent "stuck" sessions
+            localStorage.clear(); 
             localStorage.setItem('user', JSON.stringify(user));
-            // Redirect based on role
-            window.location.href = (user.role === 'pending') ? "dashboard.html" : "home.html";
+            
+            // UPDATED: Added .toLowerCase() to role check to make it more reliable
+            if (user.role && user.role.toLowerCase() === 'pending') {
+                window.location.href = "dashboard.html";
+            } else {
+                window.location.href = "home.html";
+            }
         } else {
             throw new Error("Invalid email or password.");
         }
