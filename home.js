@@ -21,7 +21,8 @@ window.onload = () => {
     console.log("Welcome back, " + (currentUser.full_name || currentUser.name));
 
     loadListings();
-    setupSettingsLogic(); // Initialize the new settings features
+    setupSettingsLogic(); // Initialize settings features
+    setupPostListingLogic(); // Initialize post listing features
 };
 
 // --- 2. FETCH LISTINGS FROM MYSQL ---
@@ -34,7 +35,6 @@ async function loadListings() {
         const response = await fetch(`${API_BASE}/view`);
         const data = await response.json();
 
-        // Check if data is empty or just contains an empty error object
         if (!data || data.length === 0 || (data.length === 1 && !data[0].title)) {
             listingsGrid.innerHTML = "<p style='text-align:center;'>No listings available yet.</p>";
             return;
@@ -47,19 +47,17 @@ async function loadListings() {
     }
 }
 
-// --- 3. RENDER HTML CARDS (UPDATED TO PREVENT GHOST CARDS) ---
+// --- 3. RENDER HTML CARDS ---
 function renderListings(items) {
-    // CRITICAL: Clear the grid first to prevent duplicates
     listingsGrid.innerHTML = ""; 
     
     items.forEach(item => {
-        // SAFETY CHECK: Skip if item has no data (prevents "Unknown" cards)
         if (!item.title && !item.price) return;
 
         const displayImage = item.images || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500';
         
         listingsGrid.innerHTML += `
-            <div class="listing-card" data-price="${item.price || 0}">
+            <div class="listing-card" data-price="${item.price || 0}" data-rooms="${item.rooms || 0}">
                 <img src="${displayImage}" class="listing-img" alt="${item.title || 'Listing'}">
                 <div class="listing-info">
                     <div class="price">₱${Number(item.price || 0).toLocaleString()} /mo</div>
@@ -85,28 +83,29 @@ if (logoutLink) {
     };
 }
 
-// --- 5. SEARCH & PRICE FILTER LOGIC (SYNCED WITH HTML) ---
-const searchInput = document.getElementById('searchLoc');
-const priceFilter = document.getElementById('maxPrice'); // Target updated ID
-
+// --- 5. SMART SEARCH & FILTERS LOGIC ---
 function filterListings() {
-    const term = searchInput ? searchInput.value.toLowerCase() : "";
+    const searchTerm = document.getElementById('searchLoc').value.toLowerCase();
+    const maxPriceValue = document.getElementById('maxPrice').value;
+    const maxPrice = maxPriceValue === "Infinity" ? Infinity : parseInt(maxPriceValue);
     
-    // Handle the "Infinity" string from the dropdown
-    const filterValue = priceFilter ? priceFilter.value : "Infinity";
-    const maxPrice = filterValue === "Infinity" ? Infinity : parseInt(filterValue);
-    
-    const cards = document.querySelectorAll('.listing-card');
-    
-    cards.forEach(card => {
-        const locationText = card.querySelector('.location').innerText.toLowerCase();
-        const titleText = card.querySelector('.title-text').innerText.toLowerCase();
-        const price = parseInt(card.getAttribute('data-price'));
-        
-        const matchesSearch = locationText.includes(term) || titleText.includes(term);
-        const matchesPrice = isNaN(maxPrice) || price <= maxPrice;
+    const minRooms = document.getElementById('roomFilter').value;
+    const locFilter = document.getElementById('locFilter').value.toLowerCase();
 
-        if (matchesSearch && matchesPrice) {
+    const cards = document.querySelectorAll('.listing-card');
+
+    cards.forEach(card => {
+        const titleText = card.querySelector('.title-text').innerText.toLowerCase();
+        const locationText = card.querySelector('.location').innerText.toLowerCase();
+        const price = parseInt(card.getAttribute('data-price'));
+        const rooms = parseInt(card.getAttribute('data-rooms'));
+
+        const matchesMainSearch = titleText.includes(searchTerm) || locationText.includes(searchTerm);
+        const matchesPrice = isNaN(maxPrice) || price <= maxPrice;
+        const matchesRooms = minRooms === "all" || rooms >= parseInt(minRooms);
+        const matchesSpecificLoc = locationText.includes(locFilter);
+
+        if (matchesMainSearch && matchesPrice && matchesRooms && matchesSpecificLoc) {
             card.style.display = "block";
         } else {
             card.style.display = "none";
@@ -114,11 +113,14 @@ function filterListings() {
     });
 }
 
-if (searchInput) searchInput.addEventListener('input', filterListings);
-if (priceFilter) priceFilter.addEventListener('change', filterListings);
+// Event listeners for real-time filtering
+document.getElementById('searchLoc').addEventListener('input', filterListings);
+document.getElementById('maxPrice').addEventListener('change', filterListings);
+document.getElementById('roomFilter').addEventListener('change', filterListings);
+document.getElementById('locFilter').addEventListener('input', filterListings);
 
 
-// --- 6. SETTINGS MODAL LOGIC (FIXED POPUP LAYERING) ---
+// --- 6. SETTINGS MODAL LOGIC ---
 function setupSettingsLogic() {
     const settingsBtn = document.getElementById('settingsBtn');
     const modal = document.getElementById('settingsModal');
@@ -126,7 +128,6 @@ function setupSettingsLogic() {
 
     if (!settingsBtn || !modal) return;
 
-    // Open Modal and Pre-fill data
     settingsBtn.onclick = () => {
         document.getElementById('editName').value = currentUser.full_name || currentUser.name || "";
         document.getElementById('editAddress').value = currentUser.address || "";
@@ -135,7 +136,6 @@ function setupSettingsLogic() {
         modal.style.display = 'block';
     };
 
-    // Save Logic
     saveBtn.onclick = async () => {
         const updatedData = {
             full_name: document.getElementById('editName').value,
@@ -158,11 +158,7 @@ function setupSettingsLogic() {
             const result = await response.json();
 
             if (response.ok && result.success) {
-                // Update local storage so the UI updates without relogging
-                currentUser.full_name = updatedData.full_name;
-                currentUser.address = updatedData.address;
-                currentUser.contact = updatedData.contact;
-                currentUser.role = updatedData.role;
+                Object.assign(currentUser, updatedData);
                 localStorage.setItem('user', JSON.stringify(currentUser));
 
                 Swal.fire({
@@ -170,34 +166,75 @@ function setupSettingsLogic() {
                     text: 'Profile updated successfully.',
                     icon: 'success',
                     target: '#settingsModal'
-                }).then(() => {
-                    location.reload(); 
-                });
+                }).then(() => location.reload());
             } else {
-                Swal.fire({
-                    title: 'Restricted',
-                    text: result.message || 'Failed to update',
-                    icon: 'error',
-                    target: '#settingsModal'
-                });
+                Swal.fire({ title: 'Restricted', text: result.message || 'Failed', icon: 'error', target: '#settingsModal' });
             }
         } catch (err) {
-            Swal.fire({
-                title: 'Error',
-                text: 'Could not connect to server',
-                icon: 'error',
-                target: '#settingsModal'
-            });
+            Swal.fire({ title: 'Error', text: 'Server error', icon: 'error', target: '#settingsModal' });
         } finally {
             saveBtn.disabled = false;
-            saveBtn.innerText = "Update Profile";
-        }
-    };
-
-    // Close modal when clicking outside of it
-    window.onclick = (event) => {
-        if (event.target == modal) {
-            modal.style.display = "none";
+            saveBtn.innerText = "Save Changes";
         }
     };
 }
+
+// --- 7. POST LISTING LOGIC ---
+function setupPostListingLogic() {
+    const postModal = document.getElementById('postModal');
+    const postBtn = document.getElementById('postBtn');
+    const submitPostBtn = document.getElementById('submitPostBtn');
+
+    if (!postBtn || !postModal) return;
+
+    postBtn.onclick = (e) => {
+        e.preventDefault();
+        postModal.style.display = 'block';
+    };
+
+    submitPostBtn.onclick = async () => {
+        const listingData = {
+            title: document.getElementById('postTitle').value,
+            price: document.getElementById('postPrice').value,
+            location: document.getElementById('postLocation').value,
+            rooms: document.getElementById('postRooms').value,
+            size: document.getElementById('postSize').value,
+            landlord_email: currentUser.email
+        };
+
+        if (!listingData.title || !listingData.price) {
+            Swal.fire({ title: 'Missing Info', text: 'Title and Price are required', icon: 'warning', target: '#postModal' });
+            return;
+        }
+
+        submitPostBtn.disabled = true;
+        submitPostBtn.innerText = "Publishing...";
+
+        try {
+            const response = await fetch(`${API_BASE}/add-listing`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(listingData)
+            });
+
+            if (response.ok) {
+                Swal.fire({ title: 'Success!', text: 'Listing published.', icon: 'success', target: '#postModal' })
+                .then(() => location.reload());
+            } else {
+                Swal.fire({ title: 'Error', text: 'Failed to post', icon: 'error', target: '#postModal' });
+            }
+        } catch (err) {
+            Swal.fire({ title: 'Error', text: 'Could not connect to server', icon: 'error', target: '#postModal' });
+        } finally {
+            submitPostBtn.disabled = false;
+            submitPostBtn.innerText = "Publish Listing";
+        }
+    };
+}
+
+// Global modal close logic
+window.onclick = (event) => {
+    if (event.target.classList.contains('modal')) {
+        event.target.style.display = "none";
+    }
+};
