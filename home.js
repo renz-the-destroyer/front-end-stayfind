@@ -126,12 +126,47 @@ function showFullDetails(item) {
     // Show Delete button ONLY if current user is the owner
     const delContainer = document.getElementById('deleteBtnContainer');
     if (delContainer) {
-        delContainer.innerHTML = (currentUser.id === item.user_id) 
+        // Ensure comparison works regardless of data type (string vs int)
+        const isOwner = String(currentUser.id) === String(item.user_id);
+        
+        delContainer.innerHTML = isOwner 
             ? `<button class="btn-delete" onclick="deleteListing(${item.id})">Delete Listing</button>` 
             : "";
     }
 
     detailModal.style.display = 'block';
+}
+
+// --- NEW: DELETE LISTING LOGIC ---
+async function deleteListing(listingId) {
+    const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: "This listing will be permanently removed.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ff5252',
+        cancelButtonColor: '#aaa',
+        confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            const response = await fetch(`${API_BASE}/delete-listing/${listingId}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: currentUser.id }) // Send user_id for backend verification
+            });
+
+            if (response.ok) {
+                Swal.fire('Deleted!', 'Your listing has been removed.', 'success')
+                .then(() => location.reload());
+            } else {
+                Swal.fire('Error', 'Unauthorized or failed to delete.', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Error', 'Could not connect to server.', 'error');
+        }
+    }
 }
 
 // --- 3.1 CAROUSEL MOVEMENT LOGIC ---
