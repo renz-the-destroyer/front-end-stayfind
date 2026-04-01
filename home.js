@@ -109,7 +109,7 @@ function moveCarousel(event, id, direction) {
     const container = document.getElementById(`carousel-${id}`);
     const track = container.querySelector('.carousel-track');
     const images = track.querySelectorAll('img');
-    const imgWidth = container.offsetWidth;
+    const imgWidth = container.clientWidth; // Use clientWidth for accurate mobile width
     
     let currentTransform = track.style.transform.replace('translateX(', '').replace('px)', '') || 0;
     let currentIdx = Math.abs(Math.round(parseInt(currentTransform) / imgWidth));
@@ -384,7 +384,7 @@ function setupBookmarkToggles() {
         viewSavedBtn.classList.remove('nav-active');
         const msg = document.getElementById('no-saved-msg');
         if(msg) msg.remove();
-        loadListings();
+        loadListings(); // Refresh to show everything
     };
 }
 
