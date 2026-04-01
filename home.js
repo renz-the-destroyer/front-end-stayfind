@@ -48,26 +48,39 @@ async function loadListings() {
     }
 }
 
-// --- 3. RENDER HTML CARDS (UPDATED WITH BOOKMARKS) ---
+// --- 3. RENDER HTML CARDS (UPDATED WITH CAROUSEL & BOOKMARKS) ---
 function renderListings(items) {
     listingsGrid.innerHTML = ""; 
     
-    // Get saved IDs from localStorage
     const savedListings = JSON.parse(localStorage.getItem('bookmarks')) || [];
     
     items.forEach(item => {
         if (!item.title && !item.price) return;
 
-        // Use the 'id' from your MySQL structure
         const isSaved = savedListings.includes(item.id);
-        const displayImage = item.images || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500';
+        
+        // Handle images: Split by comma if multiple images exist
+        const imgArray = item.images ? item.images.split(',') : ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500'];
+        
+        // Generate Carousel HTML
+        let carouselHTML = `
+            <div class="carousel-container" id="carousel-${item.id}">
+                <div class="carousel-track" style="transform: translateX(0px);">
+                    ${imgArray.map(img => `<img src="${img.trim()}" class="carousel-img">`).join('')}
+                </div>
+                ${imgArray.length > 1 ? `
+                    <button class="carousel-btn prev-btn" onclick="moveCarousel(event, ${item.id}, -1)"><i class="fas fa-chevron-left"></i></button>
+                    <button class="carousel-btn next-btn" onclick="moveCarousel(event, ${item.id}, 1)"><i class="fas fa-chevron-right"></i></button>
+                ` : ''}
+            </div>
+        `;
         
         listingsGrid.innerHTML += `
             <div class="listing-card" data-id="${item.id}" data-price="${item.price || 0}" data-rooms="${item.rooms || 0}">
                 <div class="save-btn ${isSaved ? 'active' : ''}" onclick="toggleBookmark(event, ${item.id})">
                     <i class="fas fa-heart"></i>
                 </div>
-                <img src="${displayImage}" class="listing-img" alt="${item.title || 'Listing'}">
+                ${carouselHTML}
                 <div class="listing-info">
                     <div class="price">₱${Number(item.price || 0).toLocaleString()} /mo</div>
                     <div class="title-text" style="font-weight:bold; margin-top:5px; color:#333;">${item.title || 'Cozy Room'}</div>
@@ -80,6 +93,27 @@ function renderListings(items) {
             </div>
         `;
     });
+}
+
+// --- 3.1 CAROUSEL MOVEMENT LOGIC ---
+function moveCarousel(event, id, direction) {
+    event.stopPropagation(); // Stop card click
+    const container = document.getElementById(`carousel-${id}`);
+    const track = container.querySelector('.carousel-track');
+    const images = track.querySelectorAll('img');
+    const imgWidth = container.offsetWidth;
+    
+    // Calculate current index based on transform value
+    let currentTransform = track.style.transform.replace('translateX(', '').replace('px)', '') || 0;
+    let currentIdx = Math.abs(Math.round(parseInt(currentTransform) / imgWidth));
+    
+    let newIdx = currentIdx + direction;
+    
+    // Infinite loop logic
+    if (newIdx < 0) newIdx = images.length - 1;
+    if (newIdx >= images.length) newIdx = 0;
+    
+    track.style.transform = `translateX(-${newIdx * imgWidth}px)`;
 }
 
 // --- 4. LOGOUT ---
@@ -122,7 +156,6 @@ function filterListings() {
     });
 }
 
-// Quick Reset function for the "Browse All" button
 function resetFilters() {
     document.getElementById('searchLoc').value = "";
     document.getElementById('maxPrice').value = "Infinity";
@@ -130,7 +163,6 @@ function resetFilters() {
     document.getElementById('locFilter').value = "";
     filterListings();
     
-    // Ensure we are back in "Browse" mode visually
     const viewAllBtn = document.getElementById('viewAllBtn');
     const viewSavedBtn = document.getElementById('viewSavedBtn');
     if(viewAllBtn) viewAllBtn.classList.add('nav-active');
@@ -203,13 +235,29 @@ function setupSettingsLogic() {
     };
 }
 
-// --- 7. POST LISTING LOGIC ---
+// --- 7. POST LISTING LOGIC (WITH IMAGE UPLOAD) ---
 function setupPostListingLogic() {
     const postModal = document.getElementById('postModal');
     const postBtn = document.getElementById('postBtn');
     const submitPostBtn = document.getElementById('submitPostBtn');
+    const imageInput = document.getElementById('postImages');
+    const previewDiv = document.getElementById('imagePreview');
 
     if (!postBtn || !postModal) return;
+
+    // Image Preview Logic
+    if (imageInput) {
+        imageInput.onchange = () => {
+            previewDiv.innerHTML = "";
+            Array.from(imageInput.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewDiv.innerHTML += `<img src="${e.target.result}" style="width:60px; height:60px; object-fit:cover; border-radius:5px; border:1px solid #ddd;">`;
+                };
+                reader.readAsDataURL(file);
+            });
+        };
+    }
 
     postBtn.onclick = (e) => {
         e.preventDefault();
@@ -217,13 +265,30 @@ function setupPostListingLogic() {
     };
 
     submitPostBtn.onclick = async () => {
+        // Convert all selected images to Base64 strings
+        const imageFiles = Array.from(imageInput.files);
+        const toBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+
+        let base64Images = [];
+        try {
+            base64Images = await Promise.all(imageFiles.map(file => toBase64(file)));
+        } catch (e) {
+            console.error("Image conversion error", e);
+        }
+
         const listingData = {
             title: document.getElementById('postTitle').value,
             price: document.getElementById('postPrice').value,
             location: document.getElementById('postLocation').value,
             rooms: document.getElementById('postRooms').value,
             size: document.getElementById('postSize').value,
-            user_id: currentUser.id // Updated to match your MySQL user_id column
+            images: base64Images.join(','), // Store multiple images as comma-separated string
+            user_id: currentUser.id
         };
 
         if (!listingData.title || !listingData.price) {
@@ -258,9 +323,8 @@ function setupPostListingLogic() {
 
 // --- 8. BOOKMARK SYSTEM LOGIC ---
 function toggleBookmark(event, listingId) {
-    event.stopPropagation(); // Prevents triggering any card click events
+    event.stopPropagation();
     let saved = JSON.parse(localStorage.getItem('bookmarks')) || [];
-    
     const iconWrapper = event.currentTarget;
     
     if (saved.includes(listingId)) {
@@ -279,7 +343,6 @@ function toggleBookmark(event, listingId) {
         });
         Toast.fire({ icon: 'success', title: 'Added to bookmarks' });
     }
-    
     localStorage.setItem('bookmarks', JSON.stringify(saved));
 }
 
@@ -309,7 +372,7 @@ function setupBookmarkToggles() {
     viewAllBtn.onclick = () => {
         viewAllBtn.classList.add('nav-active');
         viewSavedBtn.classList.remove('nav-active');
-        loadListings(); // Refresh to show all
+        loadListings();
     };
 }
 
