@@ -11,13 +11,11 @@ window.onload = () => {
         return;
     }
 
-    // Show "Post" button only if user is a landlord
     const postBtn = document.getElementById('postBtn');
     if (postBtn && currentUser.role === 'landlord') {
         postBtn.style.display = 'inline-block';
     }
 
-    // Greet the user
     console.log("Welcome back, " + (currentUser.full_name || currentUser.name || "User"));
 
     loadListings();
@@ -59,7 +57,6 @@ function renderListings(items) {
 
         const isSaved = savedListings.includes(item.id);
         
-        // Split images or use placeholder
         let imgArray = [];
         if (item.images && item.images.trim() !== "") {
             imgArray = item.images.split(',').map(img => img.trim());
@@ -109,7 +106,7 @@ function moveCarousel(event, id, direction) {
     const container = document.getElementById(`carousel-${id}`);
     const track = container.querySelector('.carousel-track');
     const images = track.querySelectorAll('img');
-    const imgWidth = container.clientWidth; // Updated for better accuracy
+    const imgWidth = container.clientWidth; 
     
     let currentTransform = track.style.transform.replace('translateX(', '').replace('px)', '') || 0;
     let currentIdx = Math.abs(Math.round(parseInt(currentTransform) / imgWidth));
@@ -172,7 +169,6 @@ function resetFilters() {
     loadListings();
 }
 
-// Event listeners for real-time filtering
 if(document.getElementById('searchLoc')) document.getElementById('searchLoc').addEventListener('input', filterListings);
 if(document.getElementById('maxPrice')) document.getElementById('maxPrice').addEventListener('change', filterListings);
 if(document.getElementById('roomFilter')) document.getElementById('roomFilter').addEventListener('change', filterListings);
@@ -265,7 +261,6 @@ function setupPostListingLogic() {
         postModal.style.display = 'block';
     };
 
-    // Helper: Compress images before sending to prevent "Payload Too Large" errors
     const compressImage = (file) => {
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -302,13 +297,13 @@ function setupPostListingLogic() {
 
         const listingData = {
             user_id: currentUser.id,
-            title: document.getElementById('postTitle').value,
-            category: document.getElementById('postCategory') ? document.getElementById('postCategory').value : "Apartment",
-            price: document.getElementById('postPrice').value,
-            location: document.getElementById('postLocation').value,
-            rooms: document.getElementById('postRooms').value || 0,
-            size: document.getElementById('postSize').value || 0,
-            amenities: document.getElementById('postAmenities') ? document.getElementById('postAmenities').value : "",
+            title: document.getElementById('postTitle').value.trim(),
+            category: document.getElementById('postCategory')?.value || "Apartment",
+            price: parseFloat(document.getElementById('postPrice').value) || 0,
+            location: document.getElementById('postLocation').value.trim(),
+            rooms: parseInt(document.getElementById('postRooms').value) || 0,
+            size: parseFloat(document.getElementById('postSize').value) || 0,
+            amenities: document.getElementById('postAmenities')?.value || "",
             images: base64Images.join(','), 
             thumbnail: base64Images.length > 0 ? base64Images[0] : "" 
         };
@@ -321,9 +316,13 @@ function setupPostListingLogic() {
         }
 
         try {
+            // Using template literal for a cleaner URL check
             const response = await fetch(`${API_BASE}/add-listing`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
                 body: JSON.stringify(listingData)
             });
 
@@ -331,10 +330,13 @@ function setupPostListingLogic() {
                 Swal.fire({ title: 'Success!', text: 'Listing published.', icon: 'success', target: '#postModal' })
                 .then(() => location.reload());
             } else {
-                const errResult = await response.json();
+                // Read the actual server message if possible
+                const errResult = await response.json().catch(() => ({ message: "Route Not Found (404)" }));
+                console.error("Server Error Response:", errResult);
                 Swal.fire({ title: 'Error', text: errResult.message || 'Failed to post', icon: 'error', target: '#postModal' });
             }
         } catch (err) {
+            console.error("Network Error:", err);
             Swal.fire({ title: 'Error', text: 'Could not connect to server', icon: 'error', target: '#postModal' });
         } finally {
             submitPostBtn.disabled = false;
