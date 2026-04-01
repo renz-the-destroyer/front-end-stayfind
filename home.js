@@ -235,7 +235,7 @@ function setupSettingsLogic() {
     };
 }
 
-// --- 7. POST LISTING LOGIC (WITH IMAGE UPLOAD) ---
+// --- 7. POST LISTING LOGIC (UPDATED FOR DB COMPATIBILITY) ---
 function setupPostListingLogic() {
     const postModal = document.getElementById('postModal');
     const postBtn = document.getElementById('postBtn');
@@ -265,7 +265,6 @@ function setupPostListingLogic() {
     };
 
     submitPostBtn.onclick = async () => {
-        // Convert all selected images to Base64 strings
         const imageFiles = Array.from(imageInput.files);
         const toBase64 = file => new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -281,13 +280,17 @@ function setupPostListingLogic() {
             console.error("Image conversion error", e);
         }
 
+        // Gather all data including new fields for Category, Amenities, and Thumbnail
         const listingData = {
             title: document.getElementById('postTitle').value,
+            category: document.getElementById('postCategory') ? document.getElementById('postCategory').value : "Apartment",
             price: document.getElementById('postPrice').value,
             location: document.getElementById('postLocation').value,
-            rooms: document.getElementById('postRooms').value,
-            size: document.getElementById('postSize').value,
-            images: base64Images.join(','), // Store multiple images as comma-separated string
+            rooms: document.getElementById('postRooms').value || 0,
+            size: document.getElementById('postSize').value || 0,
+            amenities: document.getElementById('postAmenities') ? document.getElementById('postAmenities').value : "",
+            images: base64Images.join(','), 
+            thumbnail: base64Images.length > 0 ? base64Images[0] : "", // Use first image as thumbnail
             user_id: currentUser.id
         };
 
@@ -310,7 +313,8 @@ function setupPostListingLogic() {
                 Swal.fire({ title: 'Success!', text: 'Listing published.', icon: 'success', target: '#postModal' })
                 .then(() => location.reload());
             } else {
-                Swal.fire({ title: 'Error', text: 'Failed to post', icon: 'error', target: '#postModal' });
+                const errResult = await response.json();
+                Swal.fire({ title: 'Error', text: errResult.message || 'Failed to post', icon: 'error', target: '#postModal' });
             }
         } catch (err) {
             Swal.fire({ title: 'Error', text: 'Could not connect to server', icon: 'error', target: '#postModal' });
