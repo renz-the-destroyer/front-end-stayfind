@@ -23,6 +23,7 @@ window.onload = () => {
     loadListings();
     setupSettingsLogic(); // Initialize settings features
     setupPostListingLogic(); // Initialize post listing features
+    setupBookmarkToggles(); // Initialize the Browse/Saved view toggles
 };
 
 // --- 2. FETCH LISTINGS FROM MYSQL ---
@@ -47,17 +48,25 @@ async function loadListings() {
     }
 }
 
-// --- 3. RENDER HTML CARDS ---
+// --- 3. RENDER HTML CARDS (UPDATED WITH BOOKMARKS) ---
 function renderListings(items) {
     listingsGrid.innerHTML = ""; 
+    
+    // Get saved IDs from localStorage
+    const savedListings = JSON.parse(localStorage.getItem('bookmarks')) || [];
     
     items.forEach(item => {
         if (!item.title && !item.price) return;
 
+        // Use the 'id' from your MySQL structure
+        const isSaved = savedListings.includes(item.id);
         const displayImage = item.images || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500';
         
         listingsGrid.innerHTML += `
-            <div class="listing-card" data-price="${item.price || 0}" data-rooms="${item.rooms || 0}">
+            <div class="listing-card" data-id="${item.id}" data-price="${item.price || 0}" data-rooms="${item.rooms || 0}">
+                <div class="save-btn ${isSaved ? 'active' : ''}" onclick="toggleBookmark(event, ${item.id})">
+                    <i class="fas fa-heart"></i>
+                </div>
                 <img src="${displayImage}" class="listing-img" alt="${item.title || 'Listing'}">
                 <div class="listing-info">
                     <div class="price">₱${Number(item.price || 0).toLocaleString()} /mo</div>
@@ -111,6 +120,21 @@ function filterListings() {
             card.style.display = "none";
         }
     });
+}
+
+// Quick Reset function for the "Browse All" button
+function resetFilters() {
+    document.getElementById('searchLoc').value = "";
+    document.getElementById('maxPrice').value = "Infinity";
+    document.getElementById('roomFilter').value = "all";
+    document.getElementById('locFilter').value = "";
+    filterListings();
+    
+    // Ensure we are back in "Browse" mode visually
+    const viewAllBtn = document.getElementById('viewAllBtn');
+    const viewSavedBtn = document.getElementById('viewSavedBtn');
+    if(viewAllBtn) viewAllBtn.classList.add('nav-active');
+    if(viewSavedBtn) viewSavedBtn.classList.remove('nav-active');
 }
 
 // Event listeners for real-time filtering
@@ -199,7 +223,7 @@ function setupPostListingLogic() {
             location: document.getElementById('postLocation').value,
             rooms: document.getElementById('postRooms').value,
             size: document.getElementById('postSize').value,
-            landlord_email: currentUser.email
+            user_id: currentUser.id // Updated to match your MySQL user_id column
         };
 
         if (!listingData.title || !listingData.price) {
@@ -229,6 +253,63 @@ function setupPostListingLogic() {
             submitPostBtn.disabled = false;
             submitPostBtn.innerText = "Publish Listing";
         }
+    };
+}
+
+// --- 8. BOOKMARK SYSTEM LOGIC ---
+function toggleBookmark(event, listingId) {
+    event.stopPropagation(); // Prevents triggering any card click events
+    let saved = JSON.parse(localStorage.getItem('bookmarks')) || [];
+    
+    const iconWrapper = event.currentTarget;
+    
+    if (saved.includes(listingId)) {
+        saved = saved.filter(id => id !== listingId);
+        iconWrapper.classList.remove('active');
+    } else {
+        saved.push(listingId);
+        iconWrapper.classList.add('active');
+        
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true
+        });
+        Toast.fire({ icon: 'success', title: 'Added to bookmarks' });
+    }
+    
+    localStorage.setItem('bookmarks', JSON.stringify(saved));
+}
+
+function setupBookmarkToggles() {
+    const viewAllBtn = document.getElementById('viewAllBtn');
+    const viewSavedBtn = document.getElementById('viewSavedBtn');
+
+    if (!viewAllBtn || !viewSavedBtn) return;
+
+    viewSavedBtn.onclick = () => {
+        const savedIds = JSON.parse(localStorage.getItem('bookmarks')) || [];
+        const allCards = document.querySelectorAll('.listing-card');
+        
+        viewSavedBtn.classList.add('nav-active');
+        viewAllBtn.classList.remove('nav-active');
+
+        allCards.forEach(card => {
+            const id = parseInt(card.getAttribute('data-id'));
+            card.style.display = savedIds.includes(id) ? "block" : "none";
+        });
+        
+        if (savedIds.length === 0) {
+            listingsGrid.innerHTML = "<p style='text-align:center; grid-column: 1/-1;'>You haven't saved any listings yet.</p>";
+        }
+    };
+
+    viewAllBtn.onclick = () => {
+        viewAllBtn.classList.add('nav-active');
+        viewSavedBtn.classList.remove('nav-active');
+        loadListings(); // Refresh to show all
     };
 }
 
