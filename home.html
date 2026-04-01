@@ -9,7 +9,9 @@
     <style>
         @import url('https://fonts.googleapis.com/css?family=Montserrat:400,700');
         * { box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
-        body { background: #f4f7f6; margin: 0; padding-top: 70px; }
+        
+        /* Added padding-bottom for mobile nav space */
+        body { background: #f4f7f6; margin: 0; padding-top: 70px; padding-bottom: 70px; }
 
         /* NAVBAR */
         nav { background: #0d47a1; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; position: fixed; top: 0; width: 100%; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -75,7 +77,7 @@
         /* MODERN FILTER STYLING */
         .filter-container {
             background: #fff;
-            padding: 30px 5%;
+            padding: 20px 5%;
             box-shadow: 0 4px 20px rgba(0,0,0,0.08);
             margin-bottom: 20px;
         }
@@ -201,12 +203,42 @@
         .price { color: #0d47a1; font-size: 1.2rem; font-weight: 800; }
         .location { font-size: 13px; color: #546e7a; margin: 5px 0; }
         .details { display: flex; gap: 10px; font-size: 12px; color: #78909c; margin-top: 10px; }
+
+        /* MOBILE BOTTOM NAVIGATION */
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #fff;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 1000;
+        }
+        .mobile-nav a {
+            color: #555;
+            text-decoration: none;
+            font-size: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .mobile-nav span { font-size: 10px; margin-top: 2px; }
         
-        /* MOBILE RESPONSIVENESS */
+        /* MOBILE RESPONSIVENESS FIXES */
         @media (max-width: 768px) { 
+            nav { padding: 10px 5%; }
             .nav-links a:not(.btn-post) { display: none; } 
             .filter-layout-wrapper { flex-direction: column; }
-            .modal-content { width: 95%; padding: 20px; top: 50%; }
+            .advanced-filters { flex-direction: column; align-items: stretch; gap: 10px; }
+            .filter-item { min-width: 100%; }
+            .modal-content { width: 95%; padding: 20px; }
+            .container { grid-template-columns: 1fr; padding: 15px; }
+            .mobile-nav { display: flex; }
+            .search-box-wrapper { flex-direction: row; }
+            .search-btn { padding: 10px 15px; font-size: 14px; }
         }
     </style>
 </head>
@@ -222,6 +254,13 @@
             <a id="logoutLink"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </nav>
+
+    <div class="mobile-nav">
+        <a href="home.html"><i class="fas fa-search"></i><span>Explore</span></a>
+        <a onclick="document.getElementById('viewSavedBtn').click()"><i class="fas fa-heart"></i><span>Saved</span></a>
+        <a onclick="document.getElementById('settingsBtn').click()"><i class="fas fa-user"></i><span>Profile</span></a>
+        <a onclick="document.getElementById('logoutLink').click()"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+    </div>
 
     <div id="settingsModal" class="modal">
         <div class="modal-content">
