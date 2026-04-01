@@ -109,7 +109,7 @@ function moveCarousel(event, id, direction) {
     const container = document.getElementById(`carousel-${id}`);
     const track = container.querySelector('.carousel-track');
     const images = track.querySelectorAll('img');
-    const imgWidth = container.clientWidth; // Use clientWidth for accurate mobile width
+    const imgWidth = container.clientWidth; // Updated for better accuracy
     
     let currentTransform = track.style.transform.replace('translateX(', '').replace('px)', '') || 0;
     let currentIdx = Math.abs(Math.round(parseInt(currentTransform) / imgWidth));
@@ -265,18 +265,37 @@ function setupPostListingLogic() {
         postModal.style.display = 'block';
     };
 
-    submitPostBtn.onclick = async () => {
-        const imageFiles = Array.from(imageInput.files);
-        const toBase64 = file => new Promise((resolve, reject) => {
+    // Helper: Compress images before sending to prevent "Payload Too Large" errors
+    const compressImage = (file) => {
+        return new Promise((resolve) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800; 
+                    const scaleSize = MAX_WIDTH / img.width;
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = img.height * scaleSize;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.7)); 
+                };
+            };
         });
+    };
+
+    submitPostBtn.onclick = async () => {
+        const imageFiles = Array.from(imageInput.files);
+        
+        submitPostBtn.disabled = true;
+        submitPostBtn.innerText = "Processing...";
 
         let base64Images = [];
         try {
-            base64Images = await Promise.all(imageFiles.map(file => toBase64(file)));
+            base64Images = await Promise.all(imageFiles.map(file => compressImage(file)));
         } catch (e) {
             console.error("Image conversion error", e);
         }
@@ -296,11 +315,10 @@ function setupPostListingLogic() {
 
         if (!listingData.title || !listingData.price || !listingData.location) {
             Swal.fire({ title: 'Missing Info', text: 'Title, Price, and Location are required', icon: 'warning', target: '#postModal' });
+            submitPostBtn.disabled = false;
+            submitPostBtn.innerText = "Publish Listing";
             return;
         }
-
-        submitPostBtn.disabled = true;
-        submitPostBtn.innerText = "Publishing...";
 
         try {
             const response = await fetch(`${API_BASE}/add-listing`, {
@@ -384,7 +402,7 @@ function setupBookmarkToggles() {
         viewSavedBtn.classList.remove('nav-active');
         const msg = document.getElementById('no-saved-msg');
         if(msg) msg.remove();
-        loadListings(); // Refresh to show everything
+        loadListings(); 
     };
 }
 
