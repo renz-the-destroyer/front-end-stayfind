@@ -117,22 +117,26 @@ document.getElementById('signInForm').addEventListener('submit', async (e) => {
     btn.innerHTML = '<div class="spinner"></div> Signing in...';
 
     try {
-        const response = await fetch(`${API_BASE}/view`);
+        // UPDATED: Now fetches from /users instead of /view to get the correct table
+        // ADDED: ?t= timestamp to force fresh data and bypass browser cache (304)
+        const response = await fetch(`${API_BASE}/users?t=${Date.now()}`);
+        
         if (!response.ok) throw new Error("Server reached but returned an error.");
         
         const users = await response.json();
         
+        // Match user credentials
         const user = users.find(u => 
             u.email.toLowerCase().trim() === email && 
-            u.password.trim() === password
+            u.password.toString().trim() === password
         );
 
         if (user) {
-            // ADDED: Clear old storage to prevent "stuck" sessions
+            // Clear old storage to prevent "stuck" sessions
             localStorage.clear(); 
             localStorage.setItem('user', JSON.stringify(user));
             
-            // UPDATED: Added .toLowerCase() to role check to make it more reliable
+            // Redirect based on role
             if (user.role && user.role.toLowerCase() === 'pending') {
                 window.location.href = "dashboard.html";
             } else {
