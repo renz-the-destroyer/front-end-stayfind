@@ -17,9 +17,15 @@ window.onload = () => {
         nameInput.value = currentUser.full_name || currentUser.name || "";
     }
     
-    // Redirect if they already finished setup
-    if(currentUser.role && currentUser.role !== 'pending') {
+    // UPDATED: Redirect if role is NOT pending (Case-insensitive check)
+    if(currentUser.role && currentUser.role.toLowerCase() !== 'pending') {
         window.location.href = "home.html";
+    }
+
+    // NEW: Hide the loading screen once the user data is processed
+    const loader = document.getElementById('loadingScreen') || document.querySelector('.loader-wrapper');
+    if (loader) {
+        loader.style.display = 'none';
     }
 };
 
@@ -89,7 +95,6 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
                 window.location.href = "home.html";
             });
         } else {
-            // This will now correctly show the 30-day message if the bypass fails
             throw new Error(result.message || "Failed to update profile.");
         }
     } catch (err) {
