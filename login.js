@@ -29,7 +29,6 @@ document.getElementById('signUpForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('signUpBtn');
     
-    // FIXED: Changed 'name' to 'full_name' to match your SQL database column
     signUpData = {
         full_name: document.getElementById('regName').value.trim(),
         email: document.getElementById('regEmail').value.trim().toLowerCase(),
@@ -85,9 +84,19 @@ document.getElementById('verifyOtpBtn').addEventListener('click', async () => {
             const result = await response.json();
 
             if (response.ok) {
-                // ADDED: Clear old data before saving new user
                 localStorage.clear();
-                localStorage.setItem('user', JSON.stringify(result.user || signUpData));
+                
+                // CRITICAL UPDATE: Ensure we save the actual ID from the database
+                // We merge the result from server (which has the ID) with our signUpData
+                const userToSave = {
+                    ...signUpData,
+                    id: result.id || result.userId || result.insertId // Handles different backend return formats
+                };
+                // Remove password from local storage for security
+                delete userToSave.password;
+
+                localStorage.setItem('user', JSON.stringify(userToSave));
+                
                 Swal.fire('Success!', 'Account created successfully.', 'success').then(() => {
                     window.location.href = "dashboard.html";
                 });
@@ -117,26 +126,21 @@ document.getElementById('signInForm').addEventListener('submit', async (e) => {
     btn.innerHTML = '<div class="spinner"></div> Signing in...';
 
     try {
-        // UPDATED: Now fetches from /users instead of /view to get the correct table
-        // ADDED: ?t= timestamp to force fresh data and bypass browser cache (304)
         const response = await fetch(`${API_BASE}/users?t=${Date.now()}`);
         
         if (!response.ok) throw new Error("Server reached but returned an error.");
         
         const users = await response.json();
         
-        // Match user credentials
         const user = users.find(u => 
             u.email.toLowerCase().trim() === email && 
             u.password.toString().trim() === password
         );
 
         if (user) {
-            // Clear old storage to prevent "stuck" sessions
             localStorage.clear(); 
             localStorage.setItem('user', JSON.stringify(user));
             
-            // Redirect based on role
             if (user.role && user.role.toLowerCase() === 'pending') {
                 window.location.href = "dashboard.html";
             } else {
