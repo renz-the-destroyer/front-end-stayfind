@@ -86,13 +86,24 @@ document.getElementById('verifyOtpBtn').addEventListener('click', async () => {
             if (response.ok) {
                 localStorage.clear();
                 
-                // CRITICAL UPDATE: Ensure we save the actual ID from the database
-                // We merge the result from server (which has the ID) with our signUpData
+                // --- ENHANCED ID CAPTURE ---
+                let finalUserId = result.id || result.userId || result.insertId;
+
+                // FALLBACK: If the server didn't return the ID in the result, 
+                // we fetch the user list to find the ID of the email we just registered.
+                if (!finalUserId) {
+                    const userFetch = await fetch(`${API_BASE}/users`);
+                    const allUsers = await userFetch.json();
+                    const justCreated = allUsers.find(u => u.email.toLowerCase() === signUpData.email.toLowerCase());
+                    if (justCreated) finalUserId = justCreated.id;
+                }
+                
                 const userToSave = {
                     ...signUpData,
-                    id: result.id || result.userId || result.insertId // Handles different backend return formats
+                    id: finalUserId // Now we are 99% sure we have an ID
                 };
-                // Remove password from local storage for security
+
+                // Remove password for security
                 delete userToSave.password;
 
                 localStorage.setItem('user', JSON.stringify(userToSave));
