@@ -127,25 +127,24 @@ function showFullDetails(item) {
     document.getElementById('detContact').innerText = item.landlord_contact || "No contact provided";
     document.getElementById('detType').innerText = item.category || "Apartment";
 
-    // Check ownership
-    const isOwner = String(currentUser.id) === String(item.user_id);
+    // Check ownership safely
+    const isOwner = currentUser && currentUser.id && item.user_id && String(currentUser.id) === String(item.user_id);
 
     // --- REVIEWS LOGIC ---
-    // 1. Hide rating stars if user is the owner
     const ratingArea = document.getElementById('ratingInputArea');
     if (ratingArea) {
         ratingArea.style.display = isOwner ? 'none' : 'block';
     }
 
-    // 2. Reset rating and text
+    // Reset rating and text
     selectedRating = 0;
     resetStars();
     document.getElementById('commentText').value = "";
 
-    // 3. Load existing comments
+    // Load existing comments
     loadComments(item.id);
 
-    // 4. Update the post button click event
+    // Update the post button click event
     const postCommentBtn = document.getElementById('postCommentBtn');
     postCommentBtn.onclick = () => submitComment(item.id, isOwner);
 
@@ -190,7 +189,7 @@ function resetStars() {
 
 async function loadComments(listingId) {
     const list = document.getElementById('commentsDisplayList');
-    const revCountBadge = document.getElementById('revCount'); // SELECT THE YELLOW BADGE
+    const revCountBadge = document.getElementById('revCount'); 
     
     list.innerHTML = "<p style='font-size:12px; color:gray;'>Loading reviews...</p>";
 
@@ -198,7 +197,6 @@ async function loadComments(listingId) {
         const res = await fetch(`${API_BASE}/get-reviews/${listingId}`);
         const reviews = await res.json();
         
-        // UPDATE THE YELLOW BADGE NUMBER
         if (revCountBadge) {
             revCountBadge.innerText = reviews.length;
         }
@@ -226,7 +224,17 @@ async function loadComments(listingId) {
 async function submitComment(listingId, isOwner) {
     const commentText = document.getElementById('commentText').value.trim();
     
-    // Validation: Tenants must rate AND/OR comment. Landlords just need to comment (reply).
+    // --- UPDATED SECURITY CHECK ---
+    if (!currentUser || !currentUser.id) {
+        Swal.fire({ 
+            title: 'Session Error', 
+            text: 'User ID not found. Please log out and log in again.', 
+            icon: 'error',
+            target: '#detailsModal'
+        });
+        return;
+    }
+
     if (!commentText && selectedRating === 0) {
         Swal.fire({ title: 'Empty', text: 'Please add a rating or a comment.', icon: 'warning', target: '#detailsModal' });
         return;
@@ -237,7 +245,7 @@ async function submitComment(listingId, isOwner) {
         user_id: currentUser.id,
         user_name: currentUser.full_name || currentUser.name || "User",
         comment: commentText,
-        rating: isOwner ? null : selectedRating // Landlords don't send a rating to their own post
+        rating: isOwner ? null : selectedRating 
     };
 
     try {
@@ -251,12 +259,14 @@ async function submitComment(listingId, isOwner) {
             document.getElementById('commentText').value = "";
             selectedRating = 0;
             resetStars();
-            loadComments(listingId); // THIS REFRESHES BOTH LIST AND YELLOW BADGE
+            loadComments(listingId);
         } else {
-            Swal.fire({ title: 'Error', text: 'Failed to post review.', icon: 'error', target: '#detailsModal' });
+            const errData = await response.json();
+            Swal.fire({ title: 'Error', text: errData.message || 'Failed to post review.', icon: 'error', target: '#detailsModal' });
         }
     } catch (err) {
         console.error("Review Error:", err);
+        Swal.fire({ title: 'Error', text: 'Server connection failed.', icon: 'error', target: '#detailsModal' });
     }
 }
 
@@ -277,7 +287,7 @@ async function deleteListing(listingId) {
             const response = await fetch(`${API_BASE}/delete-listing/${listingId}`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: currentUser.id }) // Send user_id for backend verification
+                body: JSON.stringify({ user_id: currentUser.id }) 
             });
 
             if (response.ok) {
@@ -366,7 +376,7 @@ if(document.getElementById('maxPrice')) document.getElementById('maxPrice').addE
 if(document.getElementById('roomFilter')) document.getElementById('roomFilter').addEventListener('change', filterListings);
 if(document.getElementById('locFilter')) document.getElementById('locFilter').addEventListener('input', filterListings);
 
-// --- 6. SETTINGS MODAL LOGIC (UPDATED for Trimming and Sync) ---
+// --- 6. SETTINGS MODAL LOGIC ---
 function setupSettingsLogic() {
     const settingsBtn = document.getElementById('settingsBtn');
     const modal = document.getElementById('settingsModal');
