@@ -4,6 +4,9 @@ const API_BASE = "https://stayfind-app-system.onrender.com/api";
 const currentUser = JSON.parse(localStorage.getItem('user'));
 const listingsGrid = document.getElementById('listingsGrid');
 
+// Global variable to track selected stars
+let selectedRating = 0;
+
 // --- 1. SECURITY & ROLE CHECK ---
 window.onload = () => {
     if (!currentUser) {
@@ -22,6 +25,7 @@ window.onload = () => {
     setupSettingsLogic(); 
     setupPostListingLogic(); 
     setupBookmarkToggles(); 
+    setupStarRatingLogic(); // Initialize star click listeners
 };
 
 // --- 2. FETCH LISTINGS FROM MYSQL ---
@@ -107,7 +111,7 @@ function renderListings(items) {
     });
 }
 
-// --- NEW: SHOW FULL DETAILS POPUP ---
+// --- NEW: SHOW FULL DETAILS POPUP (UPDATED with Review Logic) ---
 function showFullDetails(item) {
     const detailModal = document.getElementById('detailsModal');
     if (!detailModal) return;
@@ -123,18 +127,129 @@ function showFullDetails(item) {
     document.getElementById('detContact').innerText = item.landlord_contact || "No contact provided";
     document.getElementById('detType').innerText = item.category || "Apartment";
 
+    // Check ownership
+    const isOwner = String(currentUser.id) === String(item.user_id);
+
+    // --- REVIEWS LOGIC ---
+    // 1. Hide rating stars if user is the owner
+    const ratingArea = document.getElementById('ratingInputArea');
+    if (ratingArea) {
+        ratingArea.style.display = isOwner ? 'none' : 'block';
+    }
+
+    // 2. Reset rating and text
+    selectedRating = 0;
+    resetStars();
+    document.getElementById('commentText').value = "";
+
+    // 3. Load existing comments
+    loadComments(item.id);
+
+    // 4. Update the post button click event
+    const postCommentBtn = document.getElementById('postCommentBtn');
+    postCommentBtn.onclick = () => submitComment(item.id, isOwner);
+
     // Show Delete button ONLY if current user is the owner
     const delContainer = document.getElementById('deleteBtnContainer');
     if (delContainer) {
-        // Ensure comparison works regardless of data type (string vs int)
-        const isOwner = String(currentUser.id) === String(item.user_id);
-        
         delContainer.innerHTML = isOwner 
             ? `<button class="btn-delete" onclick="deleteListing(${item.id})">Delete Listing</button>` 
             : "";
     }
 
     detailModal.style.display = 'block';
+}
+
+// --- NEW: REVIEW & COMMENT FUNCTIONS ---
+
+function setupStarRatingLogic() {
+    const stars = document.querySelectorAll('#starContainer i');
+    stars.forEach(star => {
+        star.onclick = (e) => {
+            selectedRating = parseInt(e.target.getAttribute('data-value'));
+            updateStarDisplay(selectedRating);
+        };
+    });
+}
+
+function updateStarDisplay(val) {
+    const stars = document.querySelectorAll('#starContainer i');
+    stars.forEach(s => {
+        if (parseInt(s.getAttribute('data-value')) <= val) {
+            s.classList.add('active');
+        } else {
+            s.classList.remove('active');
+        }
+    });
+}
+
+function resetStars() {
+    const stars = document.querySelectorAll('#starContainer i');
+    stars.forEach(s => s.classList.remove('active'));
+}
+
+async function loadComments(listingId) {
+    const list = document.getElementById('commentsDisplayList');
+    list.innerHTML = "<p style='font-size:12px; color:gray;'>Loading reviews...</p>";
+
+    try {
+        const res = await fetch(`${API_BASE}/get-reviews/${listingId}`);
+        const reviews = await res.json();
+        
+        list.innerHTML = reviews.length ? "" : "<p style='color:gray; font-size:12px;'>No reviews yet.</p>";
+        
+        reviews.forEach(rev => {
+            const starIcons = rev.rating ? `<span style="color:#ffc107; margin-left:5px;">${'★'.repeat(rev.rating)}${'☆'.repeat(5-rev.rating)}</span>` : "";
+            list.innerHTML += `
+                <div class="comment-item">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="font-size:13px;">${rev.user_name}</strong>
+                        ${starIcons}
+                    </div>
+                    <p style="margin: 5px 0 0 0; font-size:13px; color:#555;">${rev.comment}</p>
+                </div>
+            `;
+        });
+    } catch (err) {
+        list.innerHTML = "<p style='color:red;'>Error loading reviews.</p>";
+    }
+}
+
+async function submitComment(listingId, isOwner) {
+    const commentText = document.getElementById('commentText').value.trim();
+    
+    // Validation: Tenants must rate AND/OR comment. Landlords just need to comment (reply).
+    if (!commentText && selectedRating === 0) {
+        Swal.fire({ title: 'Empty', text: 'Please add a rating or a comment.', icon: 'warning', target: '#detailsModal' });
+        return;
+    }
+
+    const reviewData = {
+        listing_id: listingId,
+        user_id: currentUser.id,
+        user_name: currentUser.full_name || currentUser.name || "User",
+        comment: commentText,
+        rating: isOwner ? null : selectedRating // Landlords don't send a rating to their own post
+    };
+
+    try {
+        const response = await fetch(`${API_BASE}/add-review`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(reviewData)
+        });
+
+        if (response.ok) {
+            document.getElementById('commentText').value = "";
+            selectedRating = 0;
+            resetStars();
+            loadComments(listingId);
+        } else {
+            Swal.fire({ title: 'Error', text: 'Failed to post review.', icon: 'error', target: '#detailsModal' });
+        }
+    } catch (err) {
+        console.error("Review Error:", err);
+    }
 }
 
 // --- NEW: DELETE LISTING LOGIC ---
@@ -260,7 +375,6 @@ function setupSettingsLogic() {
     };
 
     saveBtn.onclick = async () => {
-        // Trimming data here ensures we don't send accidental spaces to the server
         const updatedData = {
             full_name: document.getElementById('editName').value.trim(),
             address: document.getElementById('editAddress').value.trim(),
@@ -281,10 +395,7 @@ function setupSettingsLogic() {
 
             const result = await response.json();
 
-            // Check if response is successful (handling both .success or .status keys)
             if (response.ok && (result.success || result.status === 'success')) {
-                
-                // Sync the local user object immediately with the cleaned data
                 const newUserObj = { ...currentUser, ...updatedData };
                 localStorage.setItem('user', JSON.stringify(newUserObj));
 
@@ -295,7 +406,6 @@ function setupSettingsLogic() {
                     target: '#settingsModal'
                 }).then(() => location.reload());
             } else {
-                // This shows the 30-day block message if returned by server
                 Swal.fire({ 
                     title: 'Notice', 
                     text: result.message || 'Failed to update profile', 
