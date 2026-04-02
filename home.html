@@ -51,6 +51,12 @@
             max-height: 90vh;
             overflow-y: auto;
         }
+
+        /* FIX: Ensure SweetAlert2 is always on top of modals */
+        .swal2-container {
+            z-index: 9999 !important;
+        }
+
         .modal-content h3 { color: #0d47a1; margin-top: 0; text-align: center; margin-bottom: 20px; }
         .modal-content label { display: block; font-size: 12px; font-weight: bold; color: #555; margin-bottom: 5px; }
         .modal-content input, .modal-content select { 
@@ -86,6 +92,7 @@
         .star-rating i.active { color: #ffc107; }
         .comment-item { border-bottom: 1px solid #eee; padding: 10px 0; }
         .comment-item:last-child { border: none; }
+        .review-badge { background: #ffc107; color: #333; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-left: 10px; vertical-align: middle; }
 
         /* MODERN FILTER STYLING */
         .filter-container {
@@ -363,7 +370,7 @@
             </div>
 
             <div style="margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px;">
-                <h4 style="margin-bottom: 15px; color: #333;">Reviews & Comments</h4>
+                <h4 style="margin-bottom: 15px; color: #333;">Reviews & Comments <span id="revCount" class="review-badge">0</span></h4>
                 
                 <div id="ratingInputArea" style="margin-bottom: 15px;">
                     <label style="margin-bottom: 8px;">Rate this stay:</label>
