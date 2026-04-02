@@ -190,11 +190,18 @@ function resetStars() {
 
 async function loadComments(listingId) {
     const list = document.getElementById('commentsDisplayList');
+    const revCountBadge = document.getElementById('revCount'); // SELECT THE YELLOW BADGE
+    
     list.innerHTML = "<p style='font-size:12px; color:gray;'>Loading reviews...</p>";
 
     try {
         const res = await fetch(`${API_BASE}/get-reviews/${listingId}`);
         const reviews = await res.json();
+        
+        // UPDATE THE YELLOW BADGE NUMBER
+        if (revCountBadge) {
+            revCountBadge.innerText = reviews.length;
+        }
         
         list.innerHTML = reviews.length ? "" : "<p style='color:gray; font-size:12px;'>No reviews yet.</p>";
         
@@ -212,6 +219,7 @@ async function loadComments(listingId) {
         });
     } catch (err) {
         list.innerHTML = "<p style='color:red;'>Error loading reviews.</p>";
+        if (revCountBadge) revCountBadge.innerText = "0";
     }
 }
 
@@ -243,7 +251,7 @@ async function submitComment(listingId, isOwner) {
             document.getElementById('commentText').value = "";
             selectedRating = 0;
             resetStars();
-            loadComments(listingId);
+            loadComments(listingId); // THIS REFRESHES BOTH LIST AND YELLOW BADGE
         } else {
             Swal.fire({ title: 'Error', text: 'Failed to post review.', icon: 'error', target: '#detailsModal' });
         }
