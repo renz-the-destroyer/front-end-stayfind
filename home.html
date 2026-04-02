@@ -278,11 +278,17 @@
             <input type="text" id="editAddress" placeholder="Your Address">
             <label>Contact</label>
             <input type="text" id="editContact" placeholder="Phone Number">
+            
+            <p style="font-size: 11px; color: #e53935; margin-top: -15px; margin-bottom: 15px;">* Name, Address, and Contact can only be changed once a month.</p>
+
             <label>Your Role</label>
             <select id="editRole">
                 <option value="tenant">Tenant</option>
                 <option value="landlord">Landlord</option>
             </select>
+
+            <p style="font-size: 11px; color: #43a047; margin-top: -15px; margin-bottom: 15px;">* Account role can be changed anytime.</p>
+
             <button id="saveSettingsBtn" style="width:100%; padding:14px; background:#0d47a1; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size: 15px;">Save Changes</button>
             <button onclick="document.getElementById('settingsModal').style.display='none'" style="width:100%; margin-top:15px; background:none; border:none; color:gray; cursor:pointer; font-size: 13px;">Cancel</button>
         </div>
