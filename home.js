@@ -243,7 +243,7 @@ if(document.getElementById('maxPrice')) document.getElementById('maxPrice').addE
 if(document.getElementById('roomFilter')) document.getElementById('roomFilter').addEventListener('change', filterListings);
 if(document.getElementById('locFilter')) document.getElementById('locFilter').addEventListener('input', filterListings);
 
-// --- 6. SETTINGS MODAL LOGIC ---
+// --- 6. SETTINGS MODAL LOGIC (UPDATED for Trimming and Sync) ---
 function setupSettingsLogic() {
     const settingsBtn = document.getElementById('settingsBtn');
     const modal = document.getElementById('settingsModal');
@@ -260,10 +260,11 @@ function setupSettingsLogic() {
     };
 
     saveBtn.onclick = async () => {
+        // Trimming data here ensures we don't send accidental spaces to the server
         const updatedData = {
-            full_name: document.getElementById('editName').value,
-            address: document.getElementById('editAddress').value,
-            contact: document.getElementById('editContact').value,
+            full_name: document.getElementById('editName').value.trim(),
+            address: document.getElementById('editAddress').value.trim(),
+            contact: document.getElementById('editContact').value.trim(),
             role: document.getElementById('editRole').value,
             email: currentUser.email
         };
@@ -280,9 +281,12 @@ function setupSettingsLogic() {
 
             const result = await response.json();
 
+            // Check if response is successful (handling both .success or .status keys)
             if (response.ok && (result.success || result.status === 'success')) {
-                Object.assign(currentUser, updatedData);
-                localStorage.setItem('user', JSON.stringify(currentUser));
+                
+                // Sync the local user object immediately with the cleaned data
+                const newUserObj = { ...currentUser, ...updatedData };
+                localStorage.setItem('user', JSON.stringify(newUserObj));
 
                 Swal.fire({
                     title: 'Success!',
@@ -291,7 +295,13 @@ function setupSettingsLogic() {
                     target: '#settingsModal'
                 }).then(() => location.reload());
             } else {
-                Swal.fire({ title: 'Error', text: result.message || 'Failed to update profile', icon: 'error', target: '#settingsModal' });
+                // This shows the 30-day block message if returned by server
+                Swal.fire({ 
+                    title: 'Notice', 
+                    text: result.message || 'Failed to update profile', 
+                    icon: 'info', 
+                    target: '#settingsModal' 
+                });
             }
         } catch (err) {
             Swal.fire({ title: 'Error', text: 'Server error', icon: 'error', target: '#settingsModal' });
