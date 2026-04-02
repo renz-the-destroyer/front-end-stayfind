@@ -81,6 +81,12 @@
         .prev-btn { left: 10px; }
         .next-btn { right: 10px; }
 
+        /* STAR RATING STYLES */
+        .star-rating i { color: #ccc; font-size: 1.5rem; cursor: pointer; transition: color 0.2s; }
+        .star-rating i.active { color: #ffc107; }
+        .comment-item { border-bottom: 1px solid #eee; padding: 10px 0; }
+        .comment-item:last-child { border: none; }
+
         /* MODERN FILTER STYLING */
         .filter-container {
             background: #fff;
@@ -354,6 +360,29 @@
                 <h4><i class="fas fa-id-card"></i> Landlord Contact Info</h4>
                 <p><strong>Name:</strong> <span id="detLandlord"></span></p>
                 <p><strong>Contact:</strong> <span id="detContact"></span></p>
+            </div>
+
+            <div style="margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px;">
+                <h4 style="margin-bottom: 15px; color: #333;">Reviews & Comments</h4>
+                
+                <div id="ratingInputArea" style="margin-bottom: 15px;">
+                    <label style="margin-bottom: 8px;">Rate this stay:</label>
+                    <div class="star-rating" id="starContainer">
+                        <i class="fas fa-star" data-value="1"></i>
+                        <i class="fas fa-star" data-value="2"></i>
+                        <i class="fas fa-star" data-value="3"></i>
+                        <i class="fas fa-star" data-value="4"></i>
+                        <i class="fas fa-star" data-value="5"></i>
+                    </div>
+                </div>
+
+                <div class="comment-form">
+                    <textarea id="commentText" placeholder="Write a comment or reply..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; resize:none; height:70px; font-size:13px;"></textarea>
+                    <button id="postCommentBtn" style="width:100%; margin-top:10px; padding:10px; background:#42a5f5; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Post Comment</button>
+                </div>
+
+                <div id="commentsDisplayList" style="margin-top: 20px; max-height: 250px; overflow-y: auto;">
+                    </div>
             </div>
 
             <div id="deleteBtnContainer"></div>
