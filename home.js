@@ -31,6 +31,7 @@ window.onload = () => {
     setupPostListingLogic(); 
     setupBookmarkToggles(); 
     setupStarRatingLogic(); // Initialize star click listeners
+    setupModalCloseLogic(); // ADDED: Ensure close buttons work
 };
 
 // --- 2. FETCH LISTINGS FROM MYSQL (Updated for Landlord Privacy) ---
@@ -277,7 +278,7 @@ function resetStars() {
     stars.forEach(s => s.classList.remove('active'));
 }
 
-// --- 6. REVIEWS & COMMENTS (FIXED NESTING LOGIC) ---
+// --- 6. REVIEWS & COMMENTS (FIXED NESTING & GROUPING) ---
 async function loadComments(listingId) {
     const list = document.getElementById('commentsDisplayList');
     const revCountBadge = document.getElementById('revCount'); 
@@ -291,51 +292,49 @@ async function loadComments(listingId) {
         if (revCountBadge) revCountBadge.innerText = reviews.length;
         list.innerHTML = reviews.length ? "" : "<p style='color:gray; font-size:12px;'>No reviews yet.</p>";
 
-        // Separate reviews into two groups: Main Comments and Replies
-        const mainReviews = reviews.filter(rev => !rev.parent_id || rev.parent_id === "null" || rev.parent_id === 0);
-        const allReplies = reviews.filter(rev => rev.parent_id && rev.parent_id !== "null" && rev.parent_id !== 0);
+        // Filter: Separate top-level reviews and landlord replies
+        const mainReviews = reviews.filter(rev => !rev.parent_id || rev.parent_id === 0 || rev.parent_id === "null");
+        const replies = reviews.filter(rev => rev.parent_id && rev.parent_id !== 0 && rev.parent_id !== "null");
 
         mainReviews.forEach(rev => {
             const starIcons = rev.rating ? `<span style="color:#ffc107; margin-left:5px;">${'★'.repeat(rev.rating)}${'☆'.repeat(5-rev.rating)}</span>` : "";
             
-            // Only landlords see the reply button on main reviews
             const replyLink = (currentUser.role === 'landlord') 
                 ? `<span onclick="prepareReply('${rev.id}', '${rev.user_name}')" style="color:#007bff; font-size:11px; cursor:pointer; margin-left:10px;"><i class="fas fa-reply"></i> Reply</span>` 
                 : "";
 
-            // Start building the HTML for this main review and its child replies
-            let threadHTML = `
-                <div class="comment-item" id="comment-${rev.id}">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="font-size:13px;">
-                            ${rev.user_name} ${replyLink}
-                        </strong>
-                        ${starIcons}
+            // Grouping parent and its replies together in a container
+            let groupHTML = `
+                <div class="comment-group" style="margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
+                    <div class="comment-item">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong style="font-size:13px;">${rev.user_name} ${replyLink}</strong>
+                            ${starIcons}
+                        </div>
+                        <p style="margin: 5px 0 0 0; font-size:13px; color:#333;">${rev.comment}</p>
                     </div>
-                    <p style="margin: 5px 0 0 0; font-size:13px; color:#333;">${rev.comment}</p>
-                </div>
             `;
 
-            // Nest matching replies directly under this parent
-            const matchingReplies = allReplies.filter(r => String(r.parent_id) === String(rev.id));
+            // Nest matching replies immediately after this main comment
+            const matchingReplies = replies.filter(r => String(r.parent_id) === String(rev.id));
             matchingReplies.forEach(reply => {
-                threadHTML += `
-                    <div class="comment-item" style="background:#f0f7ff; border-left: 4px solid #007bff; margin-left: 20px; margin-top: 5px;">
+                groupHTML += `
+                    <div class="comment-item" style="background:#f0f7ff; border-left: 4px solid #007bff; margin-left: 20px; margin-top:8px; padding:5px 10px; border-radius:4px;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <strong style="font-size:13px;">
                                 ${reply.user_name} <span style="color:#007bff; font-size:10px; margin-left:5px;">[LANDLORD]</span>
                             </strong>
                         </div>
-                        <p style="margin: 5px 0 0 0; font-size:13px; color:#333;">${reply.comment}</p>
+                        <p style="margin: 3px 0 0 0; font-size:13px; color:#333;">${reply.comment}</p>
                     </div>
                 `;
             });
 
-            list.innerHTML += threadHTML;
+            groupHTML += `</div>`; // Close group
+            list.innerHTML += groupHTML;
         });
 
     } catch (err) {
-        console.error("Load Comments Error:", err);
         list.innerHTML = "<p style='color:red;'>Error loading reviews.</p>";
         if (revCountBadge) revCountBadge.innerText = "0";
     }
@@ -373,12 +372,6 @@ async function submitComment(listingId, isOwner) {
     
     if (!currentUser || !currentUser.id) {
         Swal.fire({ title: 'Session Error', text: 'User ID not found. Please log out and log in again.', icon: 'error', target: '#detailsModal' });
-        return;
-    }
-
-    // UPDATED VALIDATION: Ensure selectedCommentId is set if landlord is replying
-    if (isOwner && !selectedCommentId) {
-        Swal.fire({ title: 'Select Review', text: 'Please click "Reply" on a specific review first.', icon: 'warning', target: '#detailsModal' });
         return;
     }
 
@@ -746,7 +739,6 @@ async function toggleBookmark(event, listingId) {
     }
 }
 
-// --- 13. PERSISTENT BOOKMARK SYSTEM ---
 function setupBookmarkToggles() {
     const viewAllBtn = document.getElementById('viewAllBtn');
     const viewSavedBtn = document.getElementById('viewSavedBtn');
@@ -771,10 +763,10 @@ function setupBookmarkToggles() {
             }
         });
 
-        // Display a message if the bookmark list is empty
+        // Show empty message
         const existingMsg = document.getElementById('noSavedMsg');
         if (found === 0) {
-            if (!existingMsg) {
+            if(!existingMsg) {
                 const msg = document.createElement('p');
                 msg.id = 'noSavedMsg';
                 msg.style = "text-align:center; grid-column: 1/-1; color:gray; padding:20px;";
@@ -787,13 +779,23 @@ function setupBookmarkToggles() {
     };
 
     viewAllBtn.onclick = () => {
-        const existingMsg = document.getElementById('noSavedMsg');
-        if (existingMsg) existingMsg.remove();
+        const noMsg = document.getElementById('noSavedMsg');
+        if(noMsg) noMsg.remove();
 
         viewAllBtn.classList.add('nav-active');
         viewSavedBtn.classList.remove('nav-active');
-        
-        // Reload all listings to refresh the grid properly
         loadListings();
     };
+}
+
+// --- 14. MODAL CLOSE LOGIC (Ensures Close Buttons Work) ---
+function setupModalCloseLogic() {
+    document.querySelectorAll('.close, .btn-close, #closeModal, [onclick*="display=\'none\'"]').forEach(btn => {
+        btn.onclick = () => {
+            document.getElementById('detailsModal').style.display = 'none';
+            document.getElementById('postModal').style.display = 'none';
+            document.getElementById('settingsModal').style.display = 'none';
+            cancelReply();
+        };
+    });
 }
