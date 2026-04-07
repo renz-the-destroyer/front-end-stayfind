@@ -746,6 +746,7 @@ async function toggleBookmark(event, listingId) {
     }
 }
 
+// --- 13. PERSISTENT BOOKMARK SYSTEM ---
 function setupBookmarkToggles() {
     const viewAllBtn = document.getElementById('viewAllBtn');
     const viewSavedBtn = document.getElementById('viewSavedBtn');
@@ -759,15 +760,40 @@ function setupBookmarkToggles() {
         viewSavedBtn.classList.add('nav-active');
         viewAllBtn.classList.remove('nav-active');
 
+        let found = 0;
         allCards.forEach(card => {
             const id = parseInt(card.getAttribute('data-id'));
-            card.style.display = savedIds.includes(id) ? "block" : "none";
+            if (savedIds.includes(id)) {
+                card.style.display = "block";
+                found++;
+            } else {
+                card.style.display = "none";
+            }
         });
+
+        // Display a message if the bookmark list is empty
+        const existingMsg = document.getElementById('noSavedMsg');
+        if (found === 0) {
+            if (!existingMsg) {
+                const msg = document.createElement('p');
+                msg.id = 'noSavedMsg';
+                msg.style = "text-align:center; grid-column: 1/-1; color:gray; padding:20px;";
+                msg.innerText = "You haven't saved any listings yet.";
+                listingsGrid.appendChild(msg);
+            }
+        } else if (existingMsg) {
+            existingMsg.remove();
+        }
     };
 
     viewAllBtn.onclick = () => {
+        const existingMsg = document.getElementById('noSavedMsg');
+        if (existingMsg) existingMsg.remove();
+
         viewAllBtn.classList.add('nav-active');
         viewSavedBtn.classList.remove('nav-active');
+        
+        // Reload all listings to refresh the grid properly
         loadListings();
     };
 }
