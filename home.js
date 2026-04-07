@@ -182,7 +182,6 @@ function showFullDetails(item) {
             
             document.getElementById('editListingBtn').onclick = () => openEditModal(item);
         } else {
-            // FIXED: If not owner, clear the container completely
             delContainer.innerHTML = "";
         }
     }
@@ -292,7 +291,6 @@ async function loadComments(listingId) {
         list.innerHTML = reviews.length ? "" : "<p style='color:gray; font-size:12px;'>No reviews yet.</p>";
         
         reviews.forEach(rev => {
-            // UPDATED: Highlight landlord replies
             const isLandlordReply = rev.is_reply === 1;
             const starIcons = (rev.rating && !isLandlordReply) ? `<span style="color:#ffc107; margin-left:5px;">${'★'.repeat(rev.rating)}${'☆'.repeat(5-rev.rating)}</span>` : "";
             
@@ -333,7 +331,7 @@ async function submitComment(listingId, isOwner) {
         user_name: currentUser.full_name || currentUser.name || "User",
         comment: commentText,
         rating: isOwner ? 0 : selectedRating,
-        is_reply: isOwner ? 1 : 0 // If owner is posting, mark it as a reply
+        is_reply: isOwner ? 1 : 0 
     };
 
     try {
@@ -415,7 +413,7 @@ if (logoutLink) {
     logoutLink.onclick = (e) => {
         e.preventDefault();
         localStorage.removeItem('user');
-        localStorage.removeItem('bookmarks'); // Clean local bookmarks on logout
+        localStorage.removeItem('bookmarks'); 
         window.location.href = "index.html";
     };
 }
