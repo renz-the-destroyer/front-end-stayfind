@@ -29,7 +29,7 @@
         .modal { 
             display: none; 
             position: fixed; 
-            z-index: 1500; 
+            z-index: 1500; /* Details Modal Layer */
             left: 0; 
             top: 0; 
             width: 100%; 
@@ -37,6 +37,12 @@
             background: rgba(0,0,0,0.6); 
             backdrop-filter: blur(3px); 
         }
+
+        /* FIX: Ensure Post/Edit Modal is ALWAYS in front of Details Modal */
+        #postModal {
+            z-index: 2000 !important;
+        }
+
         .modal-content { 
             background: white; 
             position: relative;
@@ -52,7 +58,7 @@
             overflow-y: auto;
         }
 
-        /* FIX: Ensure SweetAlert2 is always on top of modals */
+        /* FIX: Ensure SweetAlert2 is always on top of everything */
         .swal2-container {
             z-index: 9999 !important;
         }
@@ -73,7 +79,15 @@
         .landlord-info-box { background: #e3f2fd; padding: 15px; border-radius: 10px; margin-top: 20px; }
         .landlord-info-box h4 { margin: 0 0 10px 0; color: #0d47a1; font-size: 14px; }
         .landlord-info-box p { margin: 5px 0; font-size: 13px; color: #333; }
-        .btn-delete { background: #ff5252; color: white; border: none; padding: 10px; border-radius: 5px; width: 100%; margin-top: 15px; font-weight: bold; cursor: pointer; }
+        
+        /* BUTTON STYLES FOR EDIT/DELETE */
+        .btn-delete { background: #ff5252; color: white; border: none; padding: 12px; border-radius: 8px; flex: 1; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-delete:hover { background: #e53935; }
+        
+        .btn-edit { background: #0d47a1; color: white; border: none; padding: 12px; border-radius: 8px; flex: 1; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-edit:hover { background: #0a367a; }
+
+        #deleteBtnContainer { display: flex; gap: 10px; margin-top: 20px; }
 
         /* --- CAROUSEL STYLES --- */
         .carousel-container { position: relative; width: 100%; height: 200px; overflow: hidden; background: #eee; }
@@ -309,7 +323,7 @@
 
     <div id="postModal" class="modal">
         <div class="modal-content">
-            <h3>Post New Listing</h3>
+            <h3 id="postModalTitle">Post New Listing</h3>
             
             <label>Listing Title</label>
             <input type="text" id="postTitle" placeholder="e.g. Modern Studio Apartment">
