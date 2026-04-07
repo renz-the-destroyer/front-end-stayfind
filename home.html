@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>StayFind - Discover Your Next Home</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -10,8 +10,13 @@
         @import url('https://fonts.googleapis.com/css?family=Montserrat:400,700');
         * { box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
         
-        /* Added padding-bottom for mobile nav space */
-        body { background: #f4f7f6; margin: 0; padding-top: 70px; padding-bottom: 70px; }
+        /* Added padding-bottom for mobile nav space and safe areas */
+        body { 
+            background: #f4f7f6; 
+            margin: 0; 
+            padding-top: 70px; 
+            padding-bottom: calc(80px + env(safe-area-inset-bottom)); 
+        }
 
         /* NAVBAR */
         nav { background: #0d47a1; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; position: fixed; top: 0; width: 100%; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -90,7 +95,7 @@
         #deleteBtnContainer { display: flex; gap: 10px; margin-top: 20px; }
 
         /* --- CAROUSEL STYLES --- */
-        .carousel-container { position: relative; width: 100%; height: 200px; overflow: hidden; background: #eee; }
+        .carousel-container { position: relative; width: 100%; height: 200px; overflow: hidden; background: #eee; border-radius: 8px; }
         .carousel-track { display: flex; transition: transform 0.4s ease-in-out; height: 100%; }
         .carousel-img { min-width: 100%; height: 200px; object-fit: cover; }
         .carousel-btn {
@@ -249,6 +254,7 @@
             box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
             justify-content: space-around;
             padding: 10px 0;
+            padding-bottom: calc(10px + env(safe-area-inset-bottom));
             z-index: 1000;
         }
         .mobile-nav a {
@@ -337,7 +343,7 @@
             </select>
 
             <label>Price (₱ per month)</label>
-            <input type="number" id="postPrice" placeholder="5000">
+            <input type="number" id="postPrice" placeholder="5000" min="0">
             
             <label>Location / Address</label>
             <input type="text" id="postLocation" placeholder="e.g. Los Baños, Laguna">
@@ -345,11 +351,11 @@
             <div style="display: flex; gap: 10px;">
                 <div style="flex: 1;">
                     <label>Rooms</label>
-                    <input type="number" id="postRooms" value="1">
+                    <input type="number" id="postRooms" value="1" min="0">
                 </div>
                 <div style="flex: 1;">
                     <label>Size (sqm)</label>
-                    <input type="number" id="postSize" placeholder="25">
+                    <input type="number" id="postSize" placeholder="25" min="0">
                 </div>
             </div>
 
@@ -413,17 +419,17 @@
     </div>
 
     <div class="filter-container">
-        <div class="search-box-wrapper">
+        <form onsubmit="event.preventDefault(); filterListings();" class="search-box-wrapper">
             <i class="fas fa-search search-icon"></i>
-            <input type="text" id="searchLoc" placeholder="Search by title, location, or amenities...">
-            <button class="search-btn" onclick="filterListings()">Search</button>
-        </div>
+            <input type="text" id="searchLoc" placeholder="Search by title, location, or amenities..." autocomplete="off">
+            <button type="submit" class="search-btn">Search</button>
+        </form>
 
         <div class="filter-layout-wrapper">
             <div class="advanced-filters">
                 <div class="filter-item">
                     <label>Price Range (₱)</label>
-                    <select id="maxPrice">
+                    <select id="maxPrice" onchange="filterListings()">
                         <option value="Infinity">Any Price</option>
                         <option value="5000">Under ₱5,000</option>
                         <option value="10000">Under ₱10,000</option>
@@ -432,7 +438,7 @@
                 </div>
                 <div class="filter-item">
                     <label>Rooms</label>
-                    <select id="roomFilter">
+                    <select id="roomFilter" onchange="filterListings()">
                         <option value="all">Any</option>
                         <option value="1">1+ Room</option>
                         <option value="2">2+ Rooms</option>
@@ -441,7 +447,7 @@
                 </div>
                 <div class="filter-item">
                     <label>Location</label>
-                    <input type="text" id="locFilter" placeholder="e.g., Los Baños">
+                    <input type="text" id="locFilter" placeholder="e.g., Los Baños" oninput="filterListings()">
                 </div>
                 <button class="apply-filters-btn" onclick="filterListings()">
                     <i class="fas fa-filter"></i> Apply Filters
