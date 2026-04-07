@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="StayFind - Discover your next home, apartment, bedspace, or condo.">
     <title>StayFind - Discover Your Next Home</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -291,34 +292,36 @@
     <nav>
         <a href="home.html" class="logo">Stay<span>Find</span></a>
         <div class="nav-links">
-            <a id="viewAllBtn" class="nav-active">Browse</a>
-            <a id="viewSavedBtn"><i class="fas fa-heart"></i> Saved</a>
-            <a href="#" class="btn-post" id="postBtn"><i class="fas fa-plus"></i> Post</a>
-            <a id="settingsBtn"><i class="fas fa-cog"></i> Settings</a>
-            <a id="logoutLink"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            <a id="viewAllBtn" class="nav-active" aria-label="Browse all listings">Browse</a>
+            <a id="viewSavedBtn" aria-label="View saved listings"><i class="fas fa-heart" aria-hidden="true"></i> Saved</a>
+            <a href="#" class="btn-post" id="postBtn" aria-label="Post a new listing"><i class="fas fa-plus" aria-hidden="true"></i> Post</a>
+            <a id="settingsBtn" aria-label="Account Settings"><i class="fas fa-cog" aria-hidden="true"></i> Settings</a>
+            <a id="logoutLink" aria-label="Logout"><i class="fas fa-sign-out-alt" aria-hidden="true"></i> Logout</a>
         </div>
     </nav>
 
     <div class="mobile-nav">
-        <a href="home.html"><i class="fas fa-search"></i><span>Explore</span></a>
-        <a onclick="document.getElementById('viewSavedBtn').click()"><i class="fas fa-heart"></i><span>Saved</span></a>
-        <a onclick="document.getElementById('settingsBtn').click()"><i class="fas fa-user"></i><span>Profile</span></a>
-        <a onclick="document.getElementById('logoutLink').click()"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+        <a href="home.html" aria-label="Explore"><i class="fas fa-search" aria-hidden="true"></i><span>Explore</span></a>
+        <a onclick="document.getElementById('viewSavedBtn').click()" aria-label="Saved"><i class="fas fa-heart" aria-hidden="true"></i><span>Saved</span></a>
+        <a onclick="document.getElementById('settingsBtn').click()" aria-label="Profile Settings"><i class="fas fa-user" aria-hidden="true"></i><span>Profile</span></a>
+        <a onclick="document.getElementById('logoutLink').click()" aria-label="Logout"><i class="fas fa-sign-out-alt" aria-hidden="true"></i><span>Logout</span></a>
     </div>
 
-    <div id="settingsModal" class="modal">
+    <div id="settingsModal" class="modal" role="dialog" aria-labelledby="settingsTitle" aria-modal="true">
         <div class="modal-content">
-            <h3>Account Settings</h3>
-            <label>Full Name</label>
+            <h3 id="settingsTitle">Account Settings</h3>
+            <label for="editName">Full Name</label>
             <input type="text" id="editName" placeholder="Your Full Name">
-            <label>Address</label>
+            
+            <label for="editAddress">Address</label>
             <input type="text" id="editAddress" placeholder="Your Address">
-            <label>Contact</label>
+            
+            <label for="editContact">Contact</label>
             <input type="text" id="editContact" placeholder="Phone Number">
             
             <p style="font-size: 11px; color: #e53935; margin-top: -15px; margin-bottom: 15px;">* Name, Address, and Contact can only be changed once a month.</p>
 
-            <label>Your Role</label>
+            <label for="editRole">Your Role</label>
             <select id="editRole">
                 <option value="tenant">Tenant</option>
                 <option value="landlord">Landlord</option>
@@ -326,19 +329,19 @@
 
             <p style="font-size: 11px; color: #43a047; margin-top: -15px; margin-bottom: 15px;">* Account role can be changed anytime.</p>
 
-            <button id="saveSettingsBtn" style="width:100%; padding:14px; background:#0d47a1; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size: 15px;">Save Changes</button>
-            <button onclick="document.getElementById('settingsModal').style.display='none'" style="width:100%; margin-top:15px; background:none; border:none; color:gray; cursor:pointer; font-size: 13px;">Cancel</button>
+            <button type="button" id="saveSettingsBtn" style="width:100%; padding:14px; background:#0d47a1; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size: 15px;">Save Changes</button>
+            <button type="button" onclick="document.getElementById('settingsModal').style.display='none'" style="width:100%; margin-top:15px; background:none; border:none; color:gray; cursor:pointer; font-size: 13px;">Cancel</button>
         </div>
     </div>
 
-    <div id="postModal" class="modal">
+    <div id="postModal" class="modal" role="dialog" aria-labelledby="postModalTitle" aria-modal="true">
         <div class="modal-content">
             <h3 id="postModalTitle">Post New Listing</h3>
             
-            <label>Listing Title</label>
+            <label for="postTitle">Listing Title</label>
             <input type="text" id="postTitle" placeholder="e.g. Modern Studio Apartment">
             
-            <label>Property Category</label>
+            <label for="postCategory">Property Category</label>
             <select id="postCategory">
                 <option value="Apartment">Apartment</option>
                 <option value="House">House</option>
@@ -346,36 +349,36 @@
                 <option value="Condo">Condo</option>
             </select>
 
-            <label>Price (₱ per month)</label>
+            <label for="postPrice">Price (₱ per month)</label>
             <input type="number" id="postPrice" placeholder="5000" min="0">
             
-            <label>Location / Address</label>
+            <label for="postLocation">Location / Address</label>
             <input type="text" id="postLocation" placeholder="e.g. Los Baños, Laguna">
             
             <div style="display: flex; gap: 10px;">
                 <div style="flex: 1;">
-                    <label>Rooms</label>
+                    <label for="postRooms">Rooms</label>
                     <input type="number" id="postRooms" value="1" min="0">
                 </div>
                 <div style="flex: 1;">
-                    <label>Size (sqm)</label>
+                    <label for="postSize">Size (sqm)</label>
                     <input type="number" id="postSize" placeholder="25" min="0">
                 </div>
             </div>
 
-            <label>Amenities</label>
+            <label for="postAmenities">Amenities</label>
             <input type="text" id="postAmenities" placeholder="e.g. WiFi, Aircon, Parking">
 
-            <label>Listing Photos (Select Multiple)</label>
+            <label for="postImages">Listing Photos (Select Multiple)</label>
             <input type="file" id="postImages" accept="image/*" multiple style="border:none; padding:5px 0;">
             <div id="imagePreview" style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 20px;"></div>
 
-            <button id="submitPostBtn" style="width:100%; padding:14px; background:#42a5f5; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Publish Listing</button>
-            <button onclick="document.getElementById('postModal').style.display='none'" style="width:100%; margin-top:15px; background:none; border:none; color:gray; cursor:pointer;">Cancel</button>
+            <button type="button" id="submitPostBtn" style="width:100%; padding:14px; background:#42a5f5; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Publish Listing</button>
+            <button type="button" onclick="document.getElementById('postModal').style.display='none'" style="width:100%; margin-top:15px; background:none; border:none; color:gray; cursor:pointer;">Cancel</button>
         </div>
     </div>
 
-    <div id="detailsModal" class="modal">
+    <div id="detailsModal" class="modal" role="dialog" aria-labelledby="detTitle" aria-modal="true">
         <div class="modal-content" style="max-width: 500px;">
             <div class="detail-header">
                 <h2 id="detTitle" style="margin:0; color:#0d47a1;">Listing Details</h2>
@@ -390,7 +393,7 @@
             <p><strong>Amenities:</strong> <span id="detAmenities"></span></p>
 
             <div class="landlord-info-box">
-                <h4><i class="fas fa-id-card"></i> Landlord Contact Info</h4>
+                <h4><i class="fas fa-id-card" aria-hidden="true"></i> Landlord Contact Info</h4>
                 <p><strong>Name:</strong> <span id="detLandlord"></span></p>
                 <p><strong>Contact:</strong> <span id="detContact"></span></p>
             </div>
@@ -401,47 +404,47 @@
                 <div id="replyingToStatus" style="display: none; background: #e3f2fd; padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 10px; border-left: 4px solid #42a5f5;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span>Replying to: <strong id="replyTargetName">User</strong></span>
-                        <i class="fas fa-times" id="cancelReplyBtn" style="cursor: pointer; color: #f44336; padding: 5px;"></i>
+                        <i class="fas fa-times" id="cancelReplyBtn" style="cursor: pointer; color: #f44336; padding: 5px;" aria-label="Cancel Reply"></i>
                     </div>
                 </div>
 
                 <div id="ratingInputArea" style="margin-bottom: 15px;">
-                    <label id="ratingLabel" style="margin-bottom: 8px;">Rate this stay:</label>
+                    <label id="ratingLabel" style="margin-bottom: 8px; display: block;">Rate this stay:</label>
                     <div class="star-rating" id="starContainer">
-                        <i class="fas fa-star" data-value="1"></i>
-                        <i class="fas fa-star" data-value="2"></i>
-                        <i class="fas fa-star" data-value="3"></i>
-                        <i class="fas fa-star" data-value="4"></i>
-                        <i class="fas fa-star" data-value="5"></i>
+                        <i class="fas fa-star" data-value="1" aria-label="1 star"></i>
+                        <i class="fas fa-star" data-value="2" aria-label="2 stars"></i>
+                        <i class="fas fa-star" data-value="3" aria-label="3 stars"></i>
+                        <i class="fas fa-star" data-value="4" aria-label="4 stars"></i>
+                        <i class="fas fa-star" data-value="5" aria-label="5 stars"></i>
                     </div>
                 </div>
 
                 <div class="comment-form">
-                    <textarea id="commentText" placeholder="Write a comment or reply..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; resize:none; height:70px; font-size:13px;"></textarea>
-                    <button id="postCommentBtn" style="width:100%; margin-top:10px; padding:10px; background:#42a5f5; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Post Comment</button>
+                    <textarea id="commentText" placeholder="Write a comment or reply..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; resize:none; height:70px; font-size:13px;" aria-label="Comment Box"></textarea>
+                    <button type="button" id="postCommentBtn" style="width:100%; margin-top:10px; padding:10px; background:#42a5f5; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Post Comment</button>
                 </div>
 
                 <div id="commentsDisplayList" style="margin-top: 20px; max-height: 250px; overflow-y: auto;">
-                    </div>
+                </div>
             </div>
 
             <div id="deleteBtnContainer"></div>
 
-            <button onclick="closeDetails()" style="width:100%; margin-top:20px; padding:12px; background:#eee; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Close</button>
+            <button type="button" onclick="closeDetails()" style="width:100%; margin-top:20px; padding:12px; background:#eee; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Close</button>
         </div>
     </div>
 
     <div class="filter-container">
         <form onsubmit="event.preventDefault(); filterListings();" class="search-box-wrapper">
-            <i class="fas fa-search search-icon"></i>
-            <input type="text" id="searchLoc" placeholder="Search by title, location, or amenities..." autocomplete="off">
+            <i class="fas fa-search search-icon" aria-hidden="true"></i>
+            <input type="text" id="searchLoc" placeholder="Search by title, location, or amenities..." autocomplete="off" aria-label="Search">
             <button type="submit" class="search-btn">Search</button>
         </form>
 
         <div class="filter-layout-wrapper">
             <div class="advanced-filters">
                 <div class="filter-item">
-                    <label>Price Range (₱)</label>
+                    <label for="maxPrice">Price Range (₱)</label>
                     <select id="maxPrice" onchange="filterListings()">
                         <option value="Infinity">Any Price</option>
                         <option value="5000">Under ₱5,000</option>
@@ -450,7 +453,7 @@
                     </select>
                 </div>
                 <div class="filter-item">
-                    <label>Rooms</label>
+                    <label for="roomFilter">Rooms</label>
                     <select id="roomFilter" onchange="filterListings()">
                         <option value="all">Any</option>
                         <option value="1">1+ Room</option>
@@ -459,17 +462,17 @@
                     </select>
                 </div>
                 <div class="filter-item">
-                    <label>Location</label>
+                    <label for="locFilter">Location</label>
                     <input type="text" id="locFilter" placeholder="e.g., Los Baños" oninput="filterListings()">
                 </div>
-                <button class="apply-filters-btn" onclick="filterListings()">
-                    <i class="fas fa-filter"></i> Apply Filters
+                <button type="button" class="apply-filters-btn" onclick="filterListings()">
+                    <i class="fas fa-filter" aria-hidden="true"></i> Apply Filters
                 </button>
             </div>
 
             <div class="quick-actions">
                 <h4>Quick actions</h4>
-                <button class="browse-all-btn" onclick="resetFilters()">Clear Filters</button>
+                <button type="button" class="browse-all-btn" onclick="resetFilters()">Clear Filters</button>
             </div>
         </div>
     </div>
