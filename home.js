@@ -277,7 +277,7 @@ function resetStars() {
     stars.forEach(s => s.classList.remove('active'));
 }
 
-// --- 6. REVIEWS & COMMENTS (UPDATED FOR CORRECT NESTING) ---
+// --- 6. REVIEWS & COMMENTS (FIXED NESTING LOGIC) ---
 async function loadComments(listingId) {
     const list = document.getElementById('commentsDisplayList');
     const revCountBadge = document.getElementById('revCount'); 
@@ -291,20 +291,21 @@ async function loadComments(listingId) {
         if (revCountBadge) revCountBadge.innerText = reviews.length;
         list.innerHTML = reviews.length ? "" : "<p style='color:gray; font-size:12px;'>No reviews yet.</p>";
 
-        // Filter: Separate top-level comments and landlord replies
-        const mainReviews = reviews.filter(rev => !rev.parent_id);
-        const replies = reviews.filter(rev => rev.parent_id);
+        // Separate reviews into two groups: Main Comments and Replies
+        const mainReviews = reviews.filter(rev => !rev.parent_id || rev.parent_id === "null" || rev.parent_id === 0);
+        const allReplies = reviews.filter(rev => rev.parent_id && rev.parent_id !== "null" && rev.parent_id !== 0);
 
         mainReviews.forEach(rev => {
             const starIcons = rev.rating ? `<span style="color:#ffc107; margin-left:5px;">${'★'.repeat(rev.rating)}${'☆'.repeat(5-rev.rating)}</span>` : "";
             
+            // Only landlords see the reply button on main reviews
             const replyLink = (currentUser.role === 'landlord') 
                 ? `<span onclick="prepareReply('${rev.id}', '${rev.user_name}')" style="color:#007bff; font-size:11px; cursor:pointer; margin-left:10px;"><i class="fas fa-reply"></i> Reply</span>` 
                 : "";
 
-            // Render Main Review
-            list.innerHTML += `
-                <div class="comment-item">
+            // Start building the HTML for this main review and its child replies
+            let threadHTML = `
+                <div class="comment-item" id="comment-${rev.id}">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <strong style="font-size:13px;">
                             ${rev.user_name} ${replyLink}
@@ -315,11 +316,11 @@ async function loadComments(listingId) {
                 </div>
             `;
 
-            // Render matching replies right after the parent
-            const matchingReplies = replies.filter(r => String(r.parent_id) === String(rev.id));
+            // Nest matching replies directly under this parent
+            const matchingReplies = allReplies.filter(r => String(r.parent_id) === String(rev.id));
             matchingReplies.forEach(reply => {
-                list.innerHTML += `
-                    <div class="comment-item" style="background:#f0f7ff; border-left: 4px solid #007bff; margin-left: 20px;">
+                threadHTML += `
+                    <div class="comment-item" style="background:#f0f7ff; border-left: 4px solid #007bff; margin-left: 20px; margin-top: 5px;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <strong style="font-size:13px;">
                                 ${reply.user_name} <span style="color:#007bff; font-size:10px; margin-left:5px;">[LANDLORD]</span>
@@ -329,9 +330,12 @@ async function loadComments(listingId) {
                     </div>
                 `;
             });
+
+            list.innerHTML += threadHTML;
         });
 
     } catch (err) {
+        console.error("Load Comments Error:", err);
         list.innerHTML = "<p style='color:red;'>Error loading reviews.</p>";
         if (revCountBadge) revCountBadge.innerText = "0";
     }
@@ -372,6 +376,12 @@ async function submitComment(listingId, isOwner) {
         return;
     }
 
+    // UPDATED VALIDATION: Ensure selectedCommentId is set if landlord is replying
+    if (isOwner && !selectedCommentId) {
+        Swal.fire({ title: 'Select Review', text: 'Please click "Reply" on a specific review first.', icon: 'warning', target: '#detailsModal' });
+        return;
+    }
+
     if (!commentText && (isOwner || selectedRating === 0)) {
         Swal.fire({ title: 'Empty', text: 'Please type a message.', icon: 'warning', target: '#detailsModal' });
         return;
@@ -384,7 +394,7 @@ async function submitComment(listingId, isOwner) {
         comment: commentText,
         rating: isOwner ? 0 : selectedRating,
         is_reply: isOwner ? 1 : 0,
-        parent_id: selectedCommentId // --- ADDED: Link reply to original comment ---
+        parent_id: selectedCommentId // Link reply to original comment
     };
 
     try {
@@ -398,7 +408,7 @@ async function submitComment(listingId, isOwner) {
             document.getElementById('commentText').value = "";
             selectedRating = 0;
             resetStars();
-            cancelReply(); // --- ADDED: Reset UI after successful reply ---
+            cancelReply(); // Reset UI after successful reply
             loadComments(listingId);
         } else {
             const errData = await response.json();
@@ -749,39 +759,15 @@ function setupBookmarkToggles() {
         viewSavedBtn.classList.add('nav-active');
         viewAllBtn.classList.remove('nav-active');
 
-        let found = 0;
         allCards.forEach(card => {
             const id = parseInt(card.getAttribute('data-id'));
-            if (savedIds.includes(id)) {
-                card.style.display = "block";
-                found++;
-            } else {
-                card.style.display = "none";
-            }
+            card.style.display = savedIds.includes(id) ? "block" : "none";
         });
-        
-        if (found === 0) {
-            listingsGrid.innerHTML = "<p id='no-saved-msg' style='text-align:center; grid-column: 1/-1;'>You haven't saved any listings yet.</p>";
-        }
     };
 
     viewAllBtn.onclick = () => {
         viewAllBtn.classList.add('nav-active');
         viewSavedBtn.classList.remove('nav-active');
-        const msg = document.getElementById('no-saved-msg');
-        if(msg) msg.remove();
-        loadListings(); 
+        loadListings();
     };
-}
-
-// --- 14. MODAL & CLOSING UTILITIES ---
-window.onclick = (event) => {
-    if (event.target.classList.contains('modal')) {
-        event.target.style.display = "none";
-    }
-};
-
-function closeDetails() {
-    const modal = document.getElementById('detailsModal');
-    if (modal) modal.style.display = 'none';
 }
