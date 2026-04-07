@@ -6,6 +6,8 @@ const listingsGrid = document.getElementById('listingsGrid');
 
 // Global variable to track selected stars
 let selectedRating = 0;
+// --- ADDED: Track which comment is being replied to ---
+let selectedCommentId = null; 
 
 // --- 1. SECURITY & ROLE CHECK ---
 window.onload = () => {
@@ -162,6 +164,8 @@ function showFullDetails(item) {
     postCommentBtn.innerText = isOwner ? "Post Reply" : "Submit Review";
 
     selectedRating = 0;
+    // --- ADDED: Reset reply status when opening details ---
+    cancelReply(); 
     resetStars();
     document.getElementById('commentText').value = "";
 
@@ -294,11 +298,17 @@ async function loadComments(listingId) {
             const isLandlordReply = rev.is_reply === 1;
             const starIcons = (rev.rating && !isLandlordReply) ? `<span style="color:#ffc107; margin-left:5px;">${'★'.repeat(rev.rating)}${'☆'.repeat(5-rev.rating)}</span>` : "";
             
+            // --- ADDED: Only show "Reply" link to Landlords on Tenant comments ---
+            const replyLink = (currentUser.role === 'landlord' && !isLandlordReply) 
+                ? `<span onclick="prepareReply('${rev.id}', '${rev.user_name}')" style="color:#007bff; font-size:11px; cursor:pointer; margin-left:10px;"><i class="fas fa-reply"></i> Reply</span>` 
+                : "";
+
             list.innerHTML += `
                 <div class="comment-item" style="${isLandlordReply ? 'background:#f0f7ff; border-left: 4px solid #007bff; margin-left: 20px;' : ''}">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <strong style="font-size:13px;">
                             ${rev.user_name} ${isLandlordReply ? '<span style="color:#007bff; font-size:10px; margin-left:5px;">[LANDLORD]</span>' : ''}
+                            ${replyLink}
                         </strong>
                         ${starIcons}
                     </div>
@@ -311,6 +321,33 @@ async function loadComments(listingId) {
         if (revCountBadge) revCountBadge.innerText = "0";
     }
 }
+
+// --- ADDED: Helper functions for Reply Logic ---
+window.prepareReply = function(commentId, userName) {
+    selectedCommentId = commentId;
+    const statusDiv = document.getElementById('replyingToStatus');
+    const nameSpan = document.getElementById('replyTargetName');
+    const textarea = document.getElementById('commentText');
+
+    if(statusDiv) statusDiv.style.display = 'flex';
+    if(nameSpan) nameSpan.innerText = userName;
+    
+    textarea.placeholder = `Replying to ${userName}...`;
+    textarea.focus();
+    document.getElementById('postCommentBtn').innerText = "Post Reply";
+};
+
+window.cancelReply = function() {
+    selectedCommentId = null;
+    const statusDiv = document.getElementById('replyingToStatus');
+    if(statusDiv) statusDiv.style.display = 'none';
+    
+    const textarea = document.getElementById('commentText');
+    if(textarea) textarea.placeholder = "Write a comment or reply...";
+    
+    const btn = document.getElementById('postCommentBtn');
+    if(btn) btn.innerText = currentUser.role === 'landlord' ? "Post Reply" : "Submit Review";
+};
 
 async function submitComment(listingId, isOwner) {
     const commentText = document.getElementById('commentText').value.trim();
@@ -331,7 +368,8 @@ async function submitComment(listingId, isOwner) {
         user_name: currentUser.full_name || currentUser.name || "User",
         comment: commentText,
         rating: isOwner ? 0 : selectedRating,
-        is_reply: isOwner ? 1 : 0 
+        is_reply: isOwner ? 1 : 0,
+        parent_id: selectedCommentId // --- ADDED: Link reply to original comment ---
     };
 
     try {
@@ -345,6 +383,7 @@ async function submitComment(listingId, isOwner) {
             document.getElementById('commentText').value = "";
             selectedRating = 0;
             resetStars();
+            cancelReply(); // --- ADDED: Reset UI after successful reply ---
             loadComments(listingId);
         } else {
             const errData = await response.json();
