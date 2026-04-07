@@ -42,9 +42,7 @@
             backdrop-filter: blur(3px); 
         }
 
-        #postModal {
-            z-index: 2000 !important;
-        }
+        #postModal { z-index: 2000 !important; }
 
         .modal-content { 
             background: white; 
@@ -61,9 +59,7 @@
             overflow-y: auto;
         }
 
-        .swal2-container {
-            z-index: 9999 !important;
-        }
+        .swal2-container { z-index: 9999 !important; }
 
         .modal-content h3 { color: #0d47a1; margin-top: 0; text-align: center; margin-bottom: 20px; }
         .modal-content label { display: block; font-size: 12px; font-weight: bold; color: #555; margin-bottom: 5px; }
@@ -102,13 +98,17 @@
 
         .star-rating i { color: #ccc; font-size: 1.5rem; cursor: pointer; transition: color 0.2s; }
         .star-rating i.active { color: #ffc107; }
-        .comment-item { border-bottom: 1px solid #eee; padding: 10px 0; }
-        .comment-item:last-child { border: none; }
         
-        /* UPDATED STYLES FOR REPLIES */
+        /* COMMENT & REPLY STYLES */
+        .comment-item { border-bottom: 1px solid #eee; padding: 10px 0; position: relative; }
+        .comment-item:last-child { border: none; }
         .review-badge { background: #ffc107; color: #333; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-left: 10px; vertical-align: middle; }
         .landlord-reply-badge { background: #0d47a1; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 5px; text-transform: uppercase; }
-        .reply-item { margin-left: 30px; border-left: 3px solid #42a5f5; padding-left: 10px; background: #f9f9f9; }
+        .reply-item { margin-left: 30px; border-left: 3px solid #42a5f5; padding-left: 10px; background: #f9f9f9; margin-top: 5px; border-radius: 4px; }
+        
+        /* New styling for the select/reply action */
+        .reply-link { color: #42a5f5; font-size: 11px; cursor: pointer; font-weight: bold; text-decoration: none; margin-top: 5px; display: inline-block; }
+        .reply-link:hover { text-decoration: underline; }
 
         .filter-container { background: #fff; padding: 20px 5%; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 20px; }
         .search-box-wrapper { display: flex; align-items: center; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 5px 15px; margin-bottom: 20px; transition: 0.3s; }
@@ -189,17 +189,13 @@
             <input type="text" id="editAddress" placeholder="Your Address">
             <label>Contact</label>
             <input type="text" id="editContact" placeholder="Phone Number">
-            
             <p style="font-size: 11px; color: #e53935; margin-top: -15px; margin-bottom: 15px;">* Name, Address, and Contact can only be changed once a month.</p>
-
             <label>Your Role</label>
             <select id="editRole">
                 <option value="tenant">Tenant</option>
                 <option value="landlord">Landlord</option>
             </select>
-
             <p style="font-size: 11px; color: #43a047; margin-top: -15px; margin-bottom: 15px;">* Account role can be changed anytime.</p>
-
             <button id="saveSettingsBtn" style="width:100%; padding:14px; background:#0d47a1; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size: 15px;">Save Changes</button>
             <button onclick="document.getElementById('settingsModal').style.display='none'" style="width:100%; margin-top:15px; background:none; border:none; color:gray; cursor:pointer; font-size: 13px;">Cancel</button>
         </div>
@@ -208,10 +204,8 @@
     <div id="postModal" class="modal">
         <div class="modal-content">
             <h3 id="postModalTitle">Post New Listing</h3>
-            
             <label>Listing Title</label>
             <input type="text" id="postTitle" placeholder="e.g. Modern Studio Apartment">
-            
             <label>Property Category</label>
             <select id="postCategory">
                 <option value="Apartment">Apartment</option>
@@ -219,31 +213,19 @@
                 <option value="Bedspace">Bedspace</option>
                 <option value="Condo">Condo</option>
             </select>
-
             <label>Price (₱ per month)</label>
             <input type="number" id="postPrice" placeholder="5000" min="0">
-            
             <label>Location / Address</label>
             <input type="text" id="postLocation" placeholder="e.g. Los Baños, Laguna">
-            
             <div style="display: flex; gap: 10px;">
-                <div style="flex: 1;">
-                    <label>Rooms</label>
-                    <input type="number" id="postRooms" value="1" min="0">
-                </div>
-                <div style="flex: 1;">
-                    <label>Size (sqm)</label>
-                    <input type="number" id="postSize" placeholder="25" min="0">
-                </div>
+                <div style="flex: 1;"><label>Rooms</label><input type="number" id="postRooms" value="1" min="0"></div>
+                <div style="flex: 1;"><label>Size (sqm)</label><input type="number" id="postSize" placeholder="25" min="0"></div>
             </div>
-
             <label>Amenities</label>
             <input type="text" id="postAmenities" placeholder="e.g. WiFi, Aircon, Parking">
-
             <label>Listing Photos (Select Multiple)</label>
             <input type="file" id="postImages" accept="image/*" multiple style="border:none; padding:5px 0;">
             <div id="imagePreview" style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 20px;"></div>
-
             <button id="submitPostBtn" style="width:100%; padding:14px; background:#42a5f5; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Publish Listing</button>
             <button onclick="document.getElementById('postModal').style.display='none'" style="width:100%; margin-top:15px; background:none; border:none; color:gray; cursor:pointer;">Cancel</button>
         </div>
@@ -255,7 +237,6 @@
                 <h2 id="detTitle" style="margin:0; color:#0d47a1;">Listing Details</h2>
                 <p id="detLocation" style="color:gray; font-size:14px;"></p>
             </div>
-            
             <p><strong>Price:</strong> ₱<span id="detPrice"></span>/mo</p>
             <p><strong>Type:</strong> <span id="detType"></span></p>
             <p><strong>Specs:</strong> <span id="detRooms"></span> Rooms | <span id="detSize"></span> sqm</p>
@@ -282,6 +263,10 @@
                 </div>
 
                 <div class="comment-form">
+                    <div id="replyingToIndicator" style="display:none; background:#e3f2fd; padding:8px; border-radius:5px; font-size:12px; color:#0d47a1; margin-bottom:10px; border-left: 4px solid #42a5f5;">
+                        <i class="fas fa-reply"></i> Replying to <strong id="replyAuthorName">User</strong>
+                    </div>
+                    
                     <textarea id="commentText" placeholder="Write a comment..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; resize:none; height:70px; font-size:13px;"></textarea>
                     <button id="postCommentBtn" style="width:100%; margin-top:10px; padding:10px; background:#42a5f5; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Post Comment</button>
                     <button id="cancelReplyBtn" style="display:none; width:100%; margin-top:5px; background:none; border:none; color:red; cursor:pointer; font-size:12px;">Cancel Reply Mode</button>
@@ -292,7 +277,6 @@
             </div>
 
             <div id="deleteBtnContainer"></div>
-
             <button onclick="closeDetails()" style="width:100%; margin-top:20px; padding:12px; background:#eee; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Close</button>
         </div>
     </div>
@@ -303,7 +287,6 @@
             <input type="text" id="searchLoc" placeholder="Search by title, location, or amenities..." autocomplete="off">
             <button type="submit" class="search-btn">Search</button>
         </form>
-
         <div class="filter-layout-wrapper">
             <div class="advanced-filters">
                 <div class="filter-item">
@@ -332,7 +315,6 @@
                     <i class="fas fa-filter"></i> Apply Filters
                 </button>
             </div>
-
             <div class="quick-actions">
                 <h4>Quick actions</h4>
                 <button class="browse-all-btn" onclick="resetFilters()">Clear Filters</button>
