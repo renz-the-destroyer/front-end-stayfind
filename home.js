@@ -6,8 +6,6 @@ const listingsGrid = document.getElementById('listingsGrid');
 
 // Global variable to track selected stars
 let selectedRating = 0;
-// --- ADDED: Track which comment is being replied to ---
-let selectedCommentId = null; 
 
 // --- 1. SECURITY & ROLE CHECK ---
 window.onload = () => {
@@ -31,35 +29,6 @@ window.onload = () => {
     setupPostListingLogic(); 
     setupBookmarkToggles(); 
     setupStarRatingLogic(); // Initialize star click listeners
-    
-    // --- ADDED: Initialize the visual reply indicator UI ---
-    createReplyIndicatorUI();
-};
-
-// --- ADDED: Create the visual "Replying to" status bar ---
-function createReplyIndicatorUI() {
-    const textarea = document.getElementById('commentText');
-    if (!textarea || document.getElementById('replyingToStatus')) return;
-
-    const statusDiv = document.createElement('div');
-    statusDiv.id = 'replyingToStatus';
-    statusDiv.style = "display:none; align-items:center; justify-content:space-between; background:#e7f3ff; padding:8px 12px; border-radius:5px; margin-bottom:10px; border-left:4px solid #007bff; transition: all 0.3s ease;";
-    statusDiv.innerHTML = `
-        <span style="font-size:12px; color:#0056b3;">
-            <i class="fas fa-reply"></i> Replying to <strong id="replyTargetName">User</strong>
-        </span>
-        <i class="fas fa-times" onclick="cancelReply()" style="cursor:pointer; color:#888;"></i>
-    `;
-    
-    // Insert it right above the textarea
-    textarea.parentNode.insertBefore(statusDiv, textarea);
-}
-
-// --- ADDED: Close Details Modal properly ---
-window.closeDetails = () => {
-    const modal = document.getElementById('detailsModal');
-    if(modal) modal.style.display = 'none';
-    cancelReply(); // Reset the reply indicator when closing
 };
 
 // --- 2. FETCH LISTINGS FROM MYSQL (Updated for Landlord Privacy) ---
@@ -167,9 +136,6 @@ function showFullDetails(item) {
     const detailModal = document.getElementById('detailsModal');
     if (!detailModal) return;
 
-    // Ensure the reply UI exists just in case it wasn't caught on load
-    createReplyIndicatorUI();
-
     document.getElementById('detTitle').innerText = item.title;
     document.getElementById('detPrice').innerText = Number(item.price).toLocaleString();
     document.getElementById('detLocation').innerText = item.location;
@@ -196,8 +162,6 @@ function showFullDetails(item) {
     postCommentBtn.innerText = isOwner ? "Post Reply" : "Submit Review";
 
     selectedRating = 0;
-    // --- ADDED: Reset reply status when opening details ---
-    cancelReply(); 
     resetStars();
     document.getElementById('commentText').value = "";
 
@@ -309,7 +273,7 @@ function resetStars() {
     stars.forEach(s => s.classList.remove('active'));
 }
 
-// --- 6. REVIEWS & COMMENTS (UPDATED FOR CORRECT NESTING) ---
+// --- 6. REVIEWS & COMMENTS (Updated for Replies) ---
 async function loadComments(listingId) {
     const list = document.getElementById('commentsDisplayList');
     const revCountBadge = document.getElementById('revCount'); 
@@ -320,90 +284,33 @@ async function loadComments(listingId) {
         const res = await fetch(`${API_BASE}/get-reviews/${listingId}`);
         const reviews = await res.json();
         
-        if (revCountBadge) revCountBadge.innerText = reviews.length;
+        if (revCountBadge) {
+            revCountBadge.innerText = reviews.length;
+        }
+        
         list.innerHTML = reviews.length ? "" : "<p style='color:gray; font-size:12px;'>No reviews yet.</p>";
-
-        // Filter: Separate top-level comments and landlord replies
-        const mainReviews = reviews.filter(rev => !rev.parent_id || rev.parent_id === 0);
-        const replies = reviews.filter(rev => rev.parent_id > 0);
-
-        mainReviews.forEach(rev => {
-            const starIcons = rev.rating ? `<span style="color:#ffc107; margin-left:5px;">${'★'.repeat(rev.rating)}${'☆'.repeat(5-rev.rating)}</span>` : "";
+        
+        reviews.forEach(rev => {
+            const isLandlordReply = rev.is_reply === 1;
+            const starIcons = (rev.rating && !isLandlordReply) ? `<span style="color:#ffc107; margin-left:5px;">${'★'.repeat(rev.rating)}${'☆'.repeat(5-rev.rating)}</span>` : "";
             
-            const replyLink = (currentUser.role === 'landlord') 
-                ? `<span onclick="prepareReply('${rev.id}', '${rev.user_name}')" style="color:#007bff; font-size:11px; cursor:pointer; margin-left:10px;"><i class="fas fa-reply"></i> Reply</span>` 
-                : "";
-
-            // Render Main Review
             list.innerHTML += `
-                <div class="comment-item" style="margin-bottom: 5px;">
+                <div class="comment-item" style="padding: 10px; border-radius: 5px; margin-bottom: 8px; ${isLandlordReply ? 'background:#f0f7ff; border-left: 4px solid #007bff; margin-left: 20px;' : 'background:#f9f9f9;'}">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <strong style="font-size:13px;">
-                            ${rev.user_name} ${replyLink}
+                            ${rev.user_name} ${isLandlordReply ? '<span style="color:#007bff; font-size:10px; margin-left:5px;">[LANDLORD]</span>' : ''}
                         </strong>
                         ${starIcons}
                     </div>
                     <p style="margin: 5px 0 0 0; font-size:13px; color:#333;">${rev.comment}</p>
                 </div>
             `;
-
-            // Render matching replies right after the parent
-            const matchingReplies = replies.filter(r => String(r.parent_id) === String(rev.id));
-            matchingReplies.forEach(reply => {
-                list.innerHTML += `
-                    <div class="comment-item" style="background:#f0f7ff; border-left: 4px solid #007bff; margin-left: 20px; margin-bottom: 10px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <strong style="font-size:13px;">
-                                ${reply.user_name} <span style="color:#007bff; font-size:10px; margin-left:5px;">[LANDLORD]</span>
-                            </strong>
-                        </div>
-                        <p style="margin: 5px 0 0 0; font-size:13px; color:#333;">${reply.comment}</p>
-                    </div>
-                `;
-            });
-            
-            // Add a separator space after each thread
-            list.innerHTML += `<div style="border-bottom:1px solid #eee; margin-bottom:15px; margin-top:5px;"></div>`;
         });
-
     } catch (err) {
         list.innerHTML = "<p style='color:red;'>Error loading reviews.</p>";
         if (revCountBadge) revCountBadge.innerText = "0";
     }
 }
-
-// --- ADDED: Helper functions for Reply Logic ---
-window.prepareReply = function(commentId, userName) {
-    selectedCommentId = commentId;
-    const statusDiv = document.getElementById('replyingToStatus');
-    const nameSpan = document.getElementById('replyTargetName');
-    const textarea = document.getElementById('commentText');
-
-    if(statusDiv) statusDiv.style.display = 'flex';
-    if(nameSpan) nameSpan.innerText = userName;
-    
-    if(textarea) {
-        textarea.placeholder = `Replying to ${userName}...`;
-        textarea.focus();
-        // Scroll the view smoothly down to the text area so the landlord knows they are typing a reply
-        textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    document.getElementById('postCommentBtn').innerText = "Post Reply";
-};
-
-window.cancelReply = function() {
-    selectedCommentId = null;
-    const statusDiv = document.getElementById('replyingToStatus');
-    if(statusDiv) statusDiv.style.display = 'none';
-    
-    const textarea = document.getElementById('commentText');
-    if(textarea) textarea.placeholder = "Write a comment or reply...";
-    
-    const btn = document.getElementById('postCommentBtn');
-    if(btn && currentUser) {
-        btn.innerText = currentUser.role === 'landlord' ? "Post Reply" : "Submit Review";
-    }
-};
 
 async function submitComment(listingId, isOwner) {
     const commentText = document.getElementById('commentText').value.trim();
@@ -413,8 +320,13 @@ async function submitComment(listingId, isOwner) {
         return;
     }
 
-    if (!commentText && (isOwner || selectedRating === 0)) {
+    if (!commentText) {
         Swal.fire({ title: 'Empty', text: 'Please type a message.', icon: 'warning', target: '#detailsModal' });
+        return;
+    }
+
+    if (!isOwner && selectedRating === 0) {
+        Swal.fire({ title: 'Missing Rating', text: 'Please select a star rating.', icon: 'warning', target: '#detailsModal' });
         return;
     }
 
@@ -424,8 +336,7 @@ async function submitComment(listingId, isOwner) {
         user_name: currentUser.full_name || currentUser.name || "User",
         comment: commentText,
         rating: isOwner ? 0 : selectedRating,
-        is_reply: isOwner ? 1 : 0,
-        parent_id: selectedCommentId || 0 // --- ADDED: Link reply to original comment ---
+        is_reply: isOwner ? 1 : 0 
     };
 
     try {
@@ -439,7 +350,6 @@ async function submitComment(listingId, isOwner) {
             document.getElementById('commentText').value = "";
             selectedRating = 0;
             resetStars();
-            cancelReply(); // --- ADDED: Reset UI after successful reply ---
             loadComments(listingId);
         } else {
             const errData = await response.json();
@@ -540,10 +450,10 @@ function filterListings() {
 }
 
 function resetFilters() {
-    document.getElementById('searchLoc').value = "";
-    document.getElementById('maxPrice').value = "Infinity";
-    document.getElementById('roomFilter').value = "all";
-    document.getElementById('locFilter').value = "";
+    if(document.getElementById('searchLoc')) document.getElementById('searchLoc').value = "";
+    if(document.getElementById('maxPrice')) document.getElementById('maxPrice').value = "Infinity";
+    if(document.getElementById('roomFilter')) document.getElementById('roomFilter').value = "all";
+    if(document.getElementById('locFilter')) document.getElementById('locFilter').value = "";
     
     const viewAllBtn = document.getElementById('viewAllBtn');
     const viewSavedBtn = document.getElementById('viewSavedBtn');
@@ -757,7 +667,7 @@ async function toggleBookmark(event, listingId) {
 
     if (currentUser && currentUser.id) {
         try {
-            await fetch(`${API_BASE}/toggle-bookmark`, {
+            const response = await fetch(`${API_BASE}/toggle-bookmark`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
@@ -767,7 +677,7 @@ async function toggleBookmark(event, listingId) {
                 })
             });
             
-            if (isAdding) {
+            if (response.ok && isAdding) {
                 const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
                 Toast.fire({ icon: 'success', title: 'Saved to bookmarks' });
             }
@@ -790,29 +700,47 @@ function setupBookmarkToggles() {
         viewSavedBtn.classList.add('nav-active');
         viewAllBtn.classList.remove('nav-active');
 
-        let found = 0;
+        let foundCount = 0;
         allCards.forEach(card => {
             const id = parseInt(card.getAttribute('data-id'));
             if (savedIds.includes(id)) {
                 card.style.display = "block";
-                found++;
+                foundCount++;
             } else {
                 card.style.display = "none";
             }
         });
         
-        if (found === 0) {
-            // Optional: You can handle empty saved list logic here if needed
-            console.log("No saved properties found");
+        // Remove existing msg if any
+        const existingMsg = document.getElementById('no-saved-msg');
+        if (existingMsg) existingMsg.remove();
+
+        if (foundCount === 0) {
+            const msg = document.createElement('p');
+            msg.id = 'no-saved-msg';
+            msg.style = "text-align:center; grid-column: 1/-1; margin-top: 20px; color: gray;";
+            msg.innerText = "You haven't saved any listings yet.";
+            listingsGrid.appendChild(msg);
         }
     };
-    
+
     viewAllBtn.onclick = () => {
         viewAllBtn.classList.add('nav-active');
         viewSavedBtn.classList.remove('nav-active');
-        const allCards = document.querySelectorAll('.listing-card');
-        allCards.forEach(card => {
-            card.style.display = "block";
-        });
+        const msg = document.getElementById('no-saved-msg');
+        if(msg) msg.remove();
+        loadListings(); 
     };
 }
+
+// --- 14. MODAL & CLOSING UTILITIES ---
+window.onclick = (event) => {
+    if (event.target.classList.contains('modal')) {
+        event.target.style.display = "none";
+    }
+};
+
+window.closeDetails = function() {
+    const modal = document.getElementById('detailsModal');
+    if (modal) modal.style.display = 'none';
+};
