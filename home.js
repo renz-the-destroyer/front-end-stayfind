@@ -50,11 +50,26 @@ async function loadListings() {
     }
 }
 
-// --- 3. RENDER HTML CARDS ---
-function renderListings(items) {
+// --- 3. RENDER HTML CARDS (Includes DB Bookmark Sync) ---
+async function renderListings(items) {
     listingsGrid.innerHTML = ""; 
     
-    const savedListings = JSON.parse(localStorage.getItem('bookmarks')) || [];
+    let savedListings = JSON.parse(localStorage.getItem('bookmarks')) || [];
+    
+    // SYNC: Fetch bookmarks from DB to prevent loss on logout/refresh
+    if (currentUser && currentUser.id) {
+        try {
+            const favRes = await fetch(`${API_BASE}/get-bookmarks/${currentUser.id}`);
+            if (favRes.ok) {
+                const favData = await favRes.json();
+                // Map the DB results to an array of IDs
+                savedListings = favData.map(item => item.listing_id);
+                localStorage.setItem('bookmarks', JSON.stringify(savedListings));
+            }
+        } catch (err) { 
+            console.log("Database bookmark sync failed, using local backup."); 
+        }
+    }
     
     items.forEach(item => {
         if (!item.title && !item.price) return;
@@ -86,7 +101,6 @@ function renderListings(items) {
         card.setAttribute('data-price', item.price || 0);
         card.setAttribute('data-rooms', item.rooms || 0);
         
-        // OPEN DETAILS ON CLICK
         card.onclick = () => showFullDetails(item);
 
         card.innerHTML = `
@@ -111,12 +125,11 @@ function renderListings(items) {
     });
 }
 
-// --- NEW: SHOW FULL DETAILS POPUP (UPDATED with Review Logic) ---
+// --- 4. SHOW FULL DETAILS POPUP ---
 function showFullDetails(item) {
     const detailModal = document.getElementById('detailsModal');
     if (!detailModal) return;
 
-    // Fill Modal Text
     document.getElementById('detTitle').innerText = item.title;
     document.getElementById('detPrice').innerText = Number(item.price).toLocaleString();
     document.getElementById('detLocation').innerText = item.location;
@@ -127,28 +140,22 @@ function showFullDetails(item) {
     document.getElementById('detContact').innerText = item.landlord_contact || "No contact provided";
     document.getElementById('detType').innerText = item.category || "Apartment";
 
-    // Check ownership safely
     const isOwner = currentUser && currentUser.id && item.user_id && String(currentUser.id) === String(item.user_id);
 
-    // --- REVIEWS LOGIC ---
     const ratingArea = document.getElementById('ratingInputArea');
     if (ratingArea) {
         ratingArea.style.display = isOwner ? 'none' : 'block';
     }
 
-    // Reset rating and text
     selectedRating = 0;
     resetStars();
     document.getElementById('commentText').value = "";
 
-    // Load existing comments
     loadComments(item.id);
 
-    // Update the post button click event
     const postCommentBtn = document.getElementById('postCommentBtn');
     postCommentBtn.onclick = () => submitComment(item.id, isOwner);
 
-    // Show Delete button ONLY if current user is the owner
     const delContainer = document.getElementById('deleteBtnContainer');
     if (delContainer) {
         delContainer.innerHTML = isOwner 
@@ -159,8 +166,7 @@ function showFullDetails(item) {
     detailModal.style.display = 'block';
 }
 
-// --- NEW: REVIEW & COMMENT FUNCTIONS ---
-
+// --- 5. STAR RATING LOGIC ---
 function setupStarRatingLogic() {
     const stars = document.querySelectorAll('#starContainer i');
     stars.forEach(star => {
@@ -187,6 +193,7 @@ function resetStars() {
     stars.forEach(s => s.classList.remove('active'));
 }
 
+// --- 6. REVIEWS & COMMENTS ---
 async function loadComments(listingId) {
     const list = document.getElementById('commentsDisplayList');
     const revCountBadge = document.getElementById('revCount'); 
@@ -224,14 +231,8 @@ async function loadComments(listingId) {
 async function submitComment(listingId, isOwner) {
     const commentText = document.getElementById('commentText').value.trim();
     
-    // --- UPDATED SECURITY CHECK ---
     if (!currentUser || !currentUser.id) {
-        Swal.fire({ 
-            title: 'Session Error', 
-            text: 'User ID not found. Please log out and log in again.', 
-            icon: 'error',
-            target: '#detailsModal'
-        });
+        Swal.fire({ title: 'Session Error', text: 'User ID not found. Please log out and log in again.', icon: 'error', target: '#detailsModal' });
         return;
     }
 
@@ -270,7 +271,7 @@ async function submitComment(listingId, isOwner) {
     }
 }
 
-// --- NEW: DELETE LISTING LOGIC ---
+// --- 7. DELETE LISTING ---
 async function deleteListing(listingId) {
     const result = await Swal.fire({
         title: 'Are you sure?',
@@ -302,7 +303,7 @@ async function deleteListing(listingId) {
     }
 }
 
-// --- 3.1 CAROUSEL MOVEMENT LOGIC ---
+// --- 8. CAROUSEL MOVEMENT ---
 function moveCarousel(event, id, direction) {
     event.stopPropagation();
     const container = document.getElementById(`carousel-${id}`);
@@ -321,17 +322,18 @@ function moveCarousel(event, id, direction) {
     track.style.transform = `translateX(-${newIdx * imgWidth}px)`;
 }
 
-// --- 4. LOGOUT ---
+// --- 9. LOGOUT LOGIC ---
 const logoutLink = document.getElementById('logoutLink');
 if (logoutLink) {
     logoutLink.onclick = (e) => {
         e.preventDefault();
         localStorage.removeItem('user');
+        localStorage.removeItem('bookmarks'); // Clean local bookmarks on logout
         window.location.href = "index.html";
     };
 }
 
-// --- 5. SMART SEARCH & FILTERS ---
+// --- 10. FILTERING & SEARCH ---
 function filterListings() {
     const searchTerm = document.getElementById('searchLoc').value.toLowerCase();
     const maxPriceValue = document.getElementById('maxPrice').value;
@@ -376,7 +378,7 @@ if(document.getElementById('maxPrice')) document.getElementById('maxPrice').addE
 if(document.getElementById('roomFilter')) document.getElementById('roomFilter').addEventListener('change', filterListings);
 if(document.getElementById('locFilter')) document.getElementById('locFilter').addEventListener('input', filterListings);
 
-// --- 6. SETTINGS MODAL LOGIC ---
+// --- 11. PROFILE SETTINGS ---
 function setupSettingsLogic() {
     const settingsBtn = document.getElementById('settingsBtn');
     const modal = document.getElementById('settingsModal');
@@ -424,12 +426,7 @@ function setupSettingsLogic() {
                     target: '#settingsModal'
                 }).then(() => location.reload());
             } else {
-                Swal.fire({ 
-                    title: 'Notice', 
-                    text: result.message || 'Failed to update profile', 
-                    icon: 'info', 
-                    target: '#settingsModal' 
-                });
+                Swal.fire({ title: 'Notice', text: result.message || 'Failed to update profile', icon: 'info', target: '#settingsModal' });
             }
         } catch (err) {
             Swal.fire({ title: 'Error', text: 'Server error', icon: 'error', target: '#settingsModal' });
@@ -440,7 +437,7 @@ function setupSettingsLogic() {
     };
 }
 
-// --- 7. POST LISTING LOGIC ---
+// --- 12. POST NEW LISTING ---
 function setupPostListingLogic() {
     const postModal = document.getElementById('postModal');
     const postBtn = document.getElementById('postBtn');
@@ -525,16 +522,12 @@ function setupPostListingLogic() {
         try {
             const response = await fetch(`${API_BASE}/add-listing`, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                 body: JSON.stringify(listingData)
             });
 
             if (response.ok) {
-                Swal.fire({ title: 'Success!', text: 'Listing published.', icon: 'success', target: '#postModal' })
-                .then(() => location.reload());
+                Swal.fire({ title: 'Success!', text: 'Listing published.', icon: 'success', target: '#postModal' }).then(() => location.reload());
             } else {
                 const errResult = await response.json().catch(() => ({ message: "Submission Failed" }));
                 Swal.fire({ title: 'Error', text: errResult.message || 'Failed to post', icon: 'error', target: '#postModal' });
@@ -548,29 +541,44 @@ function setupPostListingLogic() {
     };
 }
 
-// --- 8. BOOKMARK SYSTEM ---
-function toggleBookmark(event, listingId) {
+// --- 13. UPDATED: PERSISTENT BOOKMARK SYSTEM ---
+async function toggleBookmark(event, listingId) {
     event.stopPropagation();
     let saved = JSON.parse(localStorage.getItem('bookmarks')) || [];
     const iconWrapper = event.currentTarget;
-    
-    if (saved.includes(listingId)) {
-        saved = saved.filter(id => id !== listingId);
-        iconWrapper.classList.remove('active');
-    } else {
+    const isAdding = !saved.includes(listingId);
+
+    // Update UI and Local Storage immediately
+    if (isAdding) {
         saved.push(listingId);
         iconWrapper.classList.add('active');
-        
-        const Toast = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 2000,
-            timerProgressBar: true
-        });
-        Toast.fire({ icon: 'success', title: 'Added to bookmarks' });
+    } else {
+        saved = saved.filter(id => id !== listingId);
+        iconWrapper.classList.remove('active');
     }
     localStorage.setItem('bookmarks', JSON.stringify(saved));
+
+    // SYNC WITH DATABASE (Crucial for persistence)
+    if (currentUser && currentUser.id) {
+        try {
+            await fetch(`${API_BASE}/toggle-bookmark`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    userId: currentUser.id, 
+                    listingId: listingId,
+                    action: isAdding ? 'add' : 'remove'
+                })
+            });
+            
+            if (isAdding) {
+                const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+                Toast.fire({ icon: 'success', title: 'Saved to bookmarks' });
+            }
+        } catch (err) { 
+            console.error("Bookmark sync error:", err); 
+        }
+    }
 }
 
 function setupBookmarkToggles() {
@@ -611,14 +619,13 @@ function setupBookmarkToggles() {
     };
 }
 
-// Helper to close modals when clicking outside
+// --- 14. MODAL & CLOSING UTILITIES ---
 window.onclick = (event) => {
     if (event.target.classList.contains('modal')) {
         event.target.style.display = "none";
     }
 };
 
-// --- NEW: CLOSE MODAL FUNCTION ---
 function closeDetails() {
     const modal = document.getElementById('detailsModal');
     if (modal) modal.style.display = 'none';
