@@ -131,7 +131,7 @@ async function renderListings(items) {
     });
 }
 
-// --- 4. SHOW FULL DETAILS POPUP ---
+// --- 4. SHOW FULL DETAILS POPUP (Updated with Strict Ownership) ---
 function showFullDetails(item) {
     const detailModal = document.getElementById('detailsModal');
     if (!detailModal) return;
@@ -146,11 +146,14 @@ function showFullDetails(item) {
     document.getElementById('detContact').innerText = item.landlord_contact || "No contact provided";
     document.getElementById('detType').innerText = item.category || "Apartment";
 
-    const isOwner = currentUser && currentUser.id && item.user_id && String(currentUser.id) === String(item.user_id);
+    // FIXED: Strict Ownership Check
+    const isOwner = currentUser && 
+                    currentUser.role === 'landlord' && 
+                    String(currentUser.id) === String(item.user_id);
 
     const ratingArea = document.getElementById('ratingInputArea');
     if (ratingArea) {
-        // Tenants see the star rating, Landlords (Owners) just see the comment box to "Reply"
+        // Tenants see the star rating, Landlords (Owners) hide it to "Reply"
         ratingArea.style.display = isOwner ? 'none' : 'block';
     }
 
@@ -168,15 +171,19 @@ function showFullDetails(item) {
 
     const delContainer = document.getElementById('deleteBtnContainer');
     if (delContainer) {
-        delContainer.innerHTML = isOwner 
-            ? `<button class="btn-edit" id="editListingBtn" style="background:#007bff; color:white; padding:8px 15px; border:none; border-radius:5px; cursor:pointer; margin-right:10px;">
-                    <i class="fas fa-edit"></i> Edit Listing
-               </button>
-               <button class="btn-delete" onclick="deleteListing(${item.id})">Delete Listing</button>` 
-            : "";
-        
         if (isOwner) {
+            delContainer.innerHTML = `
+                <button class="btn-edit" id="editListingBtn" style="background:#007bff; color:white; padding:8px 15px; border:none; border-radius:5px; cursor:pointer; margin-right:10px;">
+                    <i class="fas fa-edit"></i> Edit Listing
+                </button>
+                <button class="btn-delete" onclick="deleteListing(${item.id})" style="background:#ff5252; color:white; padding:8px 15px; border:none; border-radius:5px; cursor:pointer;">
+                    <i class="fas fa-trash"></i> Delete Listing
+                </button>`;
+            
             document.getElementById('editListingBtn').onclick = () => openEditModal(item);
+        } else {
+            // FIXED: If not owner, clear the container completely
+            delContainer.innerHTML = "";
         }
     }
 
