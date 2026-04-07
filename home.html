@@ -110,13 +110,33 @@
         /* STAR RATING STYLES */
         .star-rating i { color: #ccc; font-size: 1.5rem; cursor: pointer; transition: color 0.2s; }
         .star-rating i.active { color: #ffc107; }
-        .comment-item { border-bottom: 1px solid #eee; padding: 10px 0; position: relative; }
+        
+        /* --- UPDATED COMMENT & REPLY STYLES --- */
+        .comment-item { border-bottom: 1px solid #eee; padding: 12px 0; position: relative; }
         .comment-item:last-child { border: none; }
+        
+        .comment-item.is-reply { 
+            margin-left: 30px; 
+            border-left: 3px solid #42a5f5; 
+            padding-left: 15px; 
+            background: #f9fbfd; 
+            margin-top: 5px; 
+            border-bottom: none;
+        }
+
         .review-badge { background: #ffc107; color: #333; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-left: 10px; vertical-align: middle; }
+        
+        .landlord-badge { 
+            color: #42a5f5; 
+            font-weight: bold; 
+            font-size: 10px; 
+            text-transform: uppercase; 
+            margin-left: 5px; 
+        }
 
         /* REPLY LINK STYLES */
-        .reply-link { font-size: 11px; color: #42a5f5; cursor: pointer; font-weight: bold; margin-left: 10px; text-decoration: underline; }
-        .reply-link:hover { color: #0d47a1; }
+        .reply-link { font-size: 11px; color: #42a5f5; cursor: pointer; font-weight: bold; margin-left: 10px; display: inline-flex; align-items: center; gap: 4px; }
+        .reply-link:hover { color: #0d47a1; text-decoration: underline; }
 
         /* MODERN FILTER STYLING */
         .filter-container {
@@ -421,10 +441,10 @@
 
                 <div class="comment-form">
                     <textarea id="commentText" placeholder="Write a comment or reply..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; resize:none; height:70px; font-size:13px;" aria-label="Comment Box"></textarea>
-                    <button type="button" id="postCommentBtn" style="width:100%; margin-top:10px; padding:10px; background:#42a5f5; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Post Comment</button>
+                    <button type="button" id="postCommentBtn" style="width:100%; margin-top:10px; padding:10px; background:#42a5f5; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Post Reply</button>
                 </div>
 
-                <div id="commentsDisplayList" style="margin-top: 20px; max-height: 250px; overflow-y: auto;">
+                <div id="commentsDisplayList" style="margin-top: 20px; max-height: 300px; overflow-y: auto;">
                 </div>
             </div>
 
