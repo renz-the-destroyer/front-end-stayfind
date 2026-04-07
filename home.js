@@ -158,12 +158,78 @@ function showFullDetails(item) {
 
     const delContainer = document.getElementById('deleteBtnContainer');
     if (delContainer) {
+        // UPDATED: Added Edit Button alongside Delete Button for owners
         delContainer.innerHTML = isOwner 
-            ? `<button class="btn-delete" onclick="deleteListing(${item.id})">Delete Listing</button>` 
+            ? `<button class="btn-edit" id="editListingBtn" style="background:#007bff; color:white; padding:8px 15px; border:none; border-radius:5px; cursor:pointer; margin-right:10px;">
+                    <i class="fas fa-edit"></i> Edit Listing
+               </button>
+               <button class="btn-delete" onclick="deleteListing(${item.id})">Delete Listing</button>` 
             : "";
+        
+        if (isOwner) {
+            document.getElementById('editListingBtn').onclick = () => openEditModal(item);
+        }
     }
 
     detailModal.style.display = 'block';
+}
+
+// --- NEW: OPEN EDIT MODAL FUNCTION ---
+function openEditModal(item) {
+    const postModal = document.getElementById('postModal');
+    if (!postModal) return;
+
+    // Reuse the Post Modal but change content
+    postModal.style.display = 'block';
+    document.querySelector('#postModal h2').innerText = "Edit Your Listing";
+    const submitBtn = document.getElementById('submitPostBtn');
+    submitBtn.innerText = "Save Changes";
+
+    // Fill form with existing data
+    document.getElementById('postTitle').value = item.title;
+    document.getElementById('postPrice').value = item.price;
+    document.getElementById('postLocation').value = item.location;
+    document.getElementById('postRooms').value = item.rooms;
+    document.getElementById('postSize').value = item.size;
+    if(document.getElementById('postAmenities')) document.getElementById('postAmenities').value = item.amenities || "";
+    if(document.getElementById('postCategory')) document.getElementById('postCategory').value = item.category || "Apartment";
+
+    // Update the click logic for the button
+    submitBtn.onclick = async () => {
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Saving...";
+
+        const updatedData = {
+            listingId: item.id,
+            user_id: currentUser.id,
+            title: document.getElementById('postTitle').value.trim(),
+            category: document.getElementById('postCategory')?.value || "Apartment",
+            price: parseFloat(document.getElementById('postPrice').value) || 0,
+            location: document.getElementById('postLocation').value.trim(),
+            rooms: parseInt(document.getElementById('postRooms').value) || 0,
+            size: parseFloat(document.getElementById('postSize').value) || 0,
+            amenities: document.getElementById('postAmenities')?.value || ""
+        };
+
+        try {
+            const response = await fetch(`${API_BASE}/update-listing`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedData)
+            });
+
+            if (response.ok) {
+                Swal.fire({ title: 'Updated!', text: 'Your listing has been updated.', icon: 'success' }).then(() => location.reload());
+            } else {
+                Swal.fire('Error', 'Failed to update listing.', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Error', 'Server connection error.', 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Save Changes";
+        }
+    };
 }
 
 // --- 5. STAR RATING LOGIC ---
@@ -462,6 +528,9 @@ function setupPostListingLogic() {
 
     postBtn.onclick = (e) => {
         e.preventDefault();
+        // Reset modal to "Post Mode"
+        document.querySelector('#postModal h2').innerText = "Post a Listing";
+        submitPostBtn.innerText = "Publish Listing";
         postModal.style.display = 'block';
     };
 
@@ -487,6 +556,11 @@ function setupPostListingLogic() {
     };
 
     submitPostBtn.onclick = async () => {
+        // ... (The default Logic for creating a NEW post)
+        // Note: The logic for EDITING is handled separately in openEditModal()
+        // but if this button is clicked when not in Edit Mode, it runs this:
+        if (submitPostBtn.innerText === "Save Changes") return; 
+
         const imageFiles = Array.from(imageInput.files);
         
         submitPostBtn.disabled = true;
