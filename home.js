@@ -31,7 +31,35 @@ window.onload = () => {
     setupPostListingLogic(); 
     setupBookmarkToggles(); 
     setupStarRatingLogic(); // Initialize star click listeners
-    setupModalCloseLogic(); // ADDED: Ensure close buttons work
+    
+    // --- ADDED: Initialize the visual reply indicator UI ---
+    createReplyIndicatorUI();
+};
+
+// --- ADDED: Create the visual "Replying to" status bar ---
+function createReplyIndicatorUI() {
+    const textarea = document.getElementById('commentText');
+    if (!textarea || document.getElementById('replyingToStatus')) return;
+
+    const statusDiv = document.createElement('div');
+    statusDiv.id = 'replyingToStatus';
+    statusDiv.style = "display:none; align-items:center; justify-content:space-between; background:#e7f3ff; padding:8px 12px; border-radius:5px; margin-bottom:10px; border-left:4px solid #007bff; transition: all 0.3s ease;";
+    statusDiv.innerHTML = `
+        <span style="font-size:12px; color:#0056b3;">
+            <i class="fas fa-reply"></i> Replying to <strong id="replyTargetName">User</strong>
+        </span>
+        <i class="fas fa-times" onclick="cancelReply()" style="cursor:pointer; color:#888;"></i>
+    `;
+    
+    // Insert it right above the textarea
+    textarea.parentNode.insertBefore(statusDiv, textarea);
+}
+
+// --- ADDED: Close Details Modal properly ---
+window.closeDetails = () => {
+    const modal = document.getElementById('detailsModal');
+    if(modal) modal.style.display = 'none';
+    cancelReply(); // Reset the reply indicator when closing
 };
 
 // --- 2. FETCH LISTINGS FROM MYSQL (Updated for Landlord Privacy) ---
@@ -138,6 +166,9 @@ async function renderListings(items) {
 function showFullDetails(item) {
     const detailModal = document.getElementById('detailsModal');
     if (!detailModal) return;
+
+    // Ensure the reply UI exists just in case it wasn't caught on load
+    createReplyIndicatorUI();
 
     document.getElementById('detTitle').innerText = item.title;
     document.getElementById('detPrice').innerText = Number(item.price).toLocaleString();
@@ -278,7 +309,7 @@ function resetStars() {
     stars.forEach(s => s.classList.remove('active'));
 }
 
-// --- 6. REVIEWS & COMMENTS (FIXED NESTING & GROUPING) ---
+// --- 6. REVIEWS & COMMENTS (UPDATED FOR CORRECT NESTING) ---
 async function loadComments(listingId) {
     const list = document.getElementById('commentsDisplayList');
     const revCountBadge = document.getElementById('revCount'); 
@@ -292,9 +323,9 @@ async function loadComments(listingId) {
         if (revCountBadge) revCountBadge.innerText = reviews.length;
         list.innerHTML = reviews.length ? "" : "<p style='color:gray; font-size:12px;'>No reviews yet.</p>";
 
-        // Filter: Separate top-level reviews and landlord replies
-        const mainReviews = reviews.filter(rev => !rev.parent_id || rev.parent_id === 0 || rev.parent_id === "null");
-        const replies = reviews.filter(rev => rev.parent_id && rev.parent_id !== 0 && rev.parent_id !== "null");
+        // Filter: Separate top-level comments and landlord replies
+        const mainReviews = reviews.filter(rev => !rev.parent_id || rev.parent_id === 0);
+        const replies = reviews.filter(rev => rev.parent_id > 0);
 
         mainReviews.forEach(rev => {
             const starIcons = rev.rating ? `<span style="color:#ffc107; margin-left:5px;">${'★'.repeat(rev.rating)}${'☆'.repeat(5-rev.rating)}</span>` : "";
@@ -303,35 +334,36 @@ async function loadComments(listingId) {
                 ? `<span onclick="prepareReply('${rev.id}', '${rev.user_name}')" style="color:#007bff; font-size:11px; cursor:pointer; margin-left:10px;"><i class="fas fa-reply"></i> Reply</span>` 
                 : "";
 
-            // Grouping parent and its replies together in a container
-            let groupHTML = `
-                <div class="comment-group" style="margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
-                    <div class="comment-item">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <strong style="font-size:13px;">${rev.user_name} ${replyLink}</strong>
-                            ${starIcons}
-                        </div>
-                        <p style="margin: 5px 0 0 0; font-size:13px; color:#333;">${rev.comment}</p>
+            // Render Main Review
+            list.innerHTML += `
+                <div class="comment-item" style="margin-bottom: 5px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="font-size:13px;">
+                            ${rev.user_name} ${replyLink}
+                        </strong>
+                        ${starIcons}
                     </div>
+                    <p style="margin: 5px 0 0 0; font-size:13px; color:#333;">${rev.comment}</p>
+                </div>
             `;
 
-            // Nest matching replies immediately after this main comment
+            // Render matching replies right after the parent
             const matchingReplies = replies.filter(r => String(r.parent_id) === String(rev.id));
             matchingReplies.forEach(reply => {
-                groupHTML += `
-                    <div class="comment-item" style="background:#f0f7ff; border-left: 4px solid #007bff; margin-left: 20px; margin-top:8px; padding:5px 10px; border-radius:4px;">
+                list.innerHTML += `
+                    <div class="comment-item" style="background:#f0f7ff; border-left: 4px solid #007bff; margin-left: 20px; margin-bottom: 10px;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <strong style="font-size:13px;">
                                 ${reply.user_name} <span style="color:#007bff; font-size:10px; margin-left:5px;">[LANDLORD]</span>
                             </strong>
                         </div>
-                        <p style="margin: 3px 0 0 0; font-size:13px; color:#333;">${reply.comment}</p>
+                        <p style="margin: 5px 0 0 0; font-size:13px; color:#333;">${reply.comment}</p>
                     </div>
                 `;
             });
-
-            groupHTML += `</div>`; // Close group
-            list.innerHTML += groupHTML;
+            
+            // Add a separator space after each thread
+            list.innerHTML += `<div style="border-bottom:1px solid #eee; margin-bottom:15px; margin-top:5px;"></div>`;
         });
 
     } catch (err) {
@@ -350,8 +382,12 @@ window.prepareReply = function(commentId, userName) {
     if(statusDiv) statusDiv.style.display = 'flex';
     if(nameSpan) nameSpan.innerText = userName;
     
-    textarea.placeholder = `Replying to ${userName}...`;
-    textarea.focus();
+    if(textarea) {
+        textarea.placeholder = `Replying to ${userName}...`;
+        textarea.focus();
+        // Scroll the view smoothly down to the text area so the landlord knows they are typing a reply
+        textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
     document.getElementById('postCommentBtn').innerText = "Post Reply";
 };
 
@@ -364,7 +400,9 @@ window.cancelReply = function() {
     if(textarea) textarea.placeholder = "Write a comment or reply...";
     
     const btn = document.getElementById('postCommentBtn');
-    if(btn) btn.innerText = currentUser.role === 'landlord' ? "Post Reply" : "Submit Review";
+    if(btn && currentUser) {
+        btn.innerText = currentUser.role === 'landlord' ? "Post Reply" : "Submit Review";
+    }
 };
 
 async function submitComment(listingId, isOwner) {
@@ -387,7 +425,7 @@ async function submitComment(listingId, isOwner) {
         comment: commentText,
         rating: isOwner ? 0 : selectedRating,
         is_reply: isOwner ? 1 : 0,
-        parent_id: selectedCommentId // Link reply to original comment
+        parent_id: selectedCommentId || 0 // --- ADDED: Link reply to original comment ---
     };
 
     try {
@@ -401,7 +439,7 @@ async function submitComment(listingId, isOwner) {
             document.getElementById('commentText').value = "";
             selectedRating = 0;
             resetStars();
-            cancelReply(); // Reset UI after successful reply
+            cancelReply(); // --- ADDED: Reset UI after successful reply ---
             loadComments(listingId);
         } else {
             const errData = await response.json();
@@ -762,40 +800,19 @@ function setupBookmarkToggles() {
                 card.style.display = "none";
             }
         });
-
-        // Show empty message
-        const existingMsg = document.getElementById('noSavedMsg');
+        
         if (found === 0) {
-            if(!existingMsg) {
-                const msg = document.createElement('p');
-                msg.id = 'noSavedMsg';
-                msg.style = "text-align:center; grid-column: 1/-1; color:gray; padding:20px;";
-                msg.innerText = "You haven't saved any listings yet.";
-                listingsGrid.appendChild(msg);
-            }
-        } else if (existingMsg) {
-            existingMsg.remove();
+            // Optional: You can handle empty saved list logic here if needed
+            console.log("No saved properties found");
         }
     };
-
+    
     viewAllBtn.onclick = () => {
-        const noMsg = document.getElementById('noSavedMsg');
-        if(noMsg) noMsg.remove();
-
         viewAllBtn.classList.add('nav-active');
         viewSavedBtn.classList.remove('nav-active');
-        loadListings();
+        const allCards = document.querySelectorAll('.listing-card');
+        allCards.forEach(card => {
+            card.style.display = "block";
+        });
     };
-}
-
-// --- 14. MODAL CLOSE LOGIC (Ensures Close Buttons Work) ---
-function setupModalCloseLogic() {
-    document.querySelectorAll('.close, .btn-close, #closeModal, [onclick*="display=\'none\'"]').forEach(btn => {
-        btn.onclick = () => {
-            document.getElementById('detailsModal').style.display = 'none';
-            document.getElementById('postModal').style.display = 'none';
-            document.getElementById('settingsModal').style.display = 'none';
-            cancelReply();
-        };
-    });
 }
