@@ -277,7 +277,7 @@ function resetStars() {
     stars.forEach(s => s.classList.remove('active'));
 }
 
-// --- 6. REVIEWS & COMMENTS (Updated for Replies) ---
+// --- 6. REVIEWS & COMMENTS (UPDATED FOR CORRECT NESTING) ---
 async function loadComments(listingId) {
     const list = document.getElementById('commentsDisplayList');
     const revCountBadge = document.getElementById('revCount'); 
@@ -288,34 +288,49 @@ async function loadComments(listingId) {
         const res = await fetch(`${API_BASE}/get-reviews/${listingId}`);
         const reviews = await res.json();
         
-        if (revCountBadge) {
-            revCountBadge.innerText = reviews.length;
-        }
-        
+        if (revCountBadge) revCountBadge.innerText = reviews.length;
         list.innerHTML = reviews.length ? "" : "<p style='color:gray; font-size:12px;'>No reviews yet.</p>";
-        
-        reviews.forEach(rev => {
-            const isLandlordReply = rev.is_reply === 1;
-            const starIcons = (rev.rating && !isLandlordReply) ? `<span style="color:#ffc107; margin-left:5px;">${'★'.repeat(rev.rating)}${'☆'.repeat(5-rev.rating)}</span>` : "";
+
+        // Filter: Separate top-level comments and landlord replies
+        const mainReviews = reviews.filter(rev => !rev.parent_id);
+        const replies = reviews.filter(rev => rev.parent_id);
+
+        mainReviews.forEach(rev => {
+            const starIcons = rev.rating ? `<span style="color:#ffc107; margin-left:5px;">${'★'.repeat(rev.rating)}${'☆'.repeat(5-rev.rating)}</span>` : "";
             
-            // --- ADDED: Only show "Reply" link to Landlords on Tenant comments ---
-            const replyLink = (currentUser.role === 'landlord' && !isLandlordReply) 
+            const replyLink = (currentUser.role === 'landlord') 
                 ? `<span onclick="prepareReply('${rev.id}', '${rev.user_name}')" style="color:#007bff; font-size:11px; cursor:pointer; margin-left:10px;"><i class="fas fa-reply"></i> Reply</span>` 
                 : "";
 
+            // Render Main Review
             list.innerHTML += `
-                <div class="comment-item" style="${isLandlordReply ? 'background:#f0f7ff; border-left: 4px solid #007bff; margin-left: 20px;' : ''}">
+                <div class="comment-item">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <strong style="font-size:13px;">
-                            ${rev.user_name} ${isLandlordReply ? '<span style="color:#007bff; font-size:10px; margin-left:5px;">[LANDLORD]</span>' : ''}
-                            ${replyLink}
+                            ${rev.user_name} ${replyLink}
                         </strong>
                         ${starIcons}
                     </div>
                     <p style="margin: 5px 0 0 0; font-size:13px; color:#333;">${rev.comment}</p>
                 </div>
             `;
+
+            // Render matching replies right after the parent
+            const matchingReplies = replies.filter(r => String(r.parent_id) === String(rev.id));
+            matchingReplies.forEach(reply => {
+                list.innerHTML += `
+                    <div class="comment-item" style="background:#f0f7ff; border-left: 4px solid #007bff; margin-left: 20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong style="font-size:13px;">
+                                ${reply.user_name} <span style="color:#007bff; font-size:10px; margin-left:5px;">[LANDLORD]</span>
+                            </strong>
+                        </div>
+                        <p style="margin: 5px 0 0 0; font-size:13px; color:#333;">${reply.comment}</p>
+                    </div>
+                `;
+            });
         });
+
     } catch (err) {
         list.innerHTML = "<p style='color:red;'>Error loading reviews.</p>";
         if (revCountBadge) revCountBadge.innerText = "0";
