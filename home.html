@@ -10,7 +10,6 @@
         @import url('https://fonts.googleapis.com/css?family=Montserrat:400,700');
         * { box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
         
-        /* Added padding-bottom for mobile nav space and safe areas */
         body { 
             background: #f4f7f6; 
             margin: 0; 
@@ -34,7 +33,7 @@
         .modal { 
             display: none; 
             position: fixed; 
-            z-index: 1500; /* Details Modal Layer */
+            z-index: 1500; 
             left: 0; 
             top: 0; 
             width: 100%; 
@@ -43,7 +42,6 @@
             backdrop-filter: blur(3px); 
         }
 
-        /* FIX: Ensure Post/Edit Modal is ALWAYS in front of Details Modal */
         #postModal {
             z-index: 2000 !important;
         }
@@ -63,7 +61,6 @@
             overflow-y: auto;
         }
 
-        /* FIX: Ensure SweetAlert2 is always on top of everything */
         .swal2-container {
             z-index: 9999 !important;
         }
@@ -79,13 +76,11 @@
             font-size: 14px;
         }
 
-        /* DETAIL MODAL SPECIAL STYLES */
         .detail-header { border-bottom: 1px solid #eee; margin-bottom: 15px; padding-bottom: 10px; }
         .landlord-info-box { background: #e3f2fd; padding: 15px; border-radius: 10px; margin-top: 20px; }
         .landlord-info-box h4 { margin: 0 0 10px 0; color: #0d47a1; font-size: 14px; }
         .landlord-info-box p { margin: 5px 0; font-size: 13px; color: #333; }
         
-        /* BUTTON STYLES FOR EDIT/DELETE */
         .btn-delete { background: #ff5252; color: white; border: none; padding: 12px; border-radius: 8px; flex: 1; font-weight: bold; cursor: pointer; transition: 0.3s; }
         .btn-delete:hover { background: #e53935; }
         
@@ -94,7 +89,6 @@
 
         #deleteBtnContainer { display: flex; gap: 10px; margin-top: 20px; }
 
-        /* --- CAROUSEL STYLES --- */
         .carousel-container { position: relative; width: 100%; height: 200px; overflow: hidden; background: #eee; border-radius: 8px; }
         .carousel-track { display: flex; transition: transform 0.4s ease-in-out; height: 100%; }
         .carousel-img { min-width: 100%; height: 200px; object-fit: cover; }
@@ -106,135 +100,39 @@
         .prev-btn { left: 10px; }
         .next-btn { right: 10px; }
 
-        /* STAR RATING STYLES */
         .star-rating i { color: #ccc; font-size: 1.5rem; cursor: pointer; transition: color 0.2s; }
         .star-rating i.active { color: #ffc107; }
         .comment-item { border-bottom: 1px solid #eee; padding: 10px 0; }
         .comment-item:last-child { border: none; }
-        .review-badge { background: #ffc107; color: #333; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-left: 10px; vertical-align: middle; }
-
-        /* MODERN FILTER STYLING */
-        .filter-container {
-            background: #fff;
-            padding: 20px 5%;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            margin-bottom: 20px;
-        }
-        .search-box-wrapper {
-            display: flex;
-            align-items: center;
-            background: #fff;
-            border: 1px solid #e0e0e0;
-            border-radius: 12px;
-            padding: 5px 15px;
-            margin-bottom: 20px;
-            transition: 0.3s;
-        }
-        .search-box-wrapper:focus-within {
-            border-color: #42a5f5;
-            box-shadow: 0 0 0 4px rgba(66, 165, 245, 0.1);
-        }
-        .search-icon { color: #9e9e9e; margin-right: 15px; }
-        .search-box-wrapper input {
-            border: none;
-            padding: 12px;
-            font-size: 16px;
-            width: 100%;
-            outline: none;
-        }
-        .search-btn {
-            background: #42a5f5;
-            color: white;
-            border: none;
-            padding: 10px 25px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .filter-layout-wrapper {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-        .advanced-filters {
-            flex: 3;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            align-items: flex-end;
-        }
-        .filter-item { flex: 1; min-width: 150px; }
-        .filter-item label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: #616161;
-            margin-bottom: 8px;
-        }
-        .filter-item select, .filter-item input {
-            background: #f8f9fa;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 10px;
-            width: 100%;
-        }
-        .apply-filters-btn {
-            background: #0d47a1;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
         
-        /* QUICK ACTIONS CARD */
-        .quick-actions {
-            flex: 1;
-            min-width: 250px;
-            background: #fff;
-            border: 1px solid #f0f0f0;
-            border-radius: 12px;
-            padding: 15px;
-        }
+        /* UPDATED STYLES FOR REPLIES */
+        .review-badge { background: #ffc107; color: #333; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-left: 10px; vertical-align: middle; }
+        .landlord-reply-badge { background: #0d47a1; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 5px; text-transform: uppercase; }
+        .reply-item { margin-left: 30px; border-left: 3px solid #42a5f5; padding-left: 10px; background: #f9f9f9; }
+
+        .filter-container { background: #fff; padding: 20px 5%; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 20px; }
+        .search-box-wrapper { display: flex; align-items: center; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 5px 15px; margin-bottom: 20px; transition: 0.3s; }
+        .search-box-wrapper:focus-within { border-color: #42a5f5; box-shadow: 0 0 0 4px rgba(66, 165, 245, 0.1); }
+        .search-icon { color: #9e9e9e; margin-right: 15px; }
+        .search-box-wrapper input { border: none; padding: 12px; font-size: 16px; width: 100%; outline: none; }
+        .search-btn { background: #42a5f5; color: white; border: none; padding: 10px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .filter-layout-wrapper { display: flex; flex-wrap: wrap; gap: 20px; }
+        .advanced-filters { flex: 3; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
+        .filter-item { flex: 1; min-width: 150px; }
+        .filter-item label { display: block; font-size: 13px; font-weight: 600; color: #616161; margin-bottom: 8px; }
+        .filter-item select, .filter-item input { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px; width: 100%; }
+        .apply-filters-btn { background: #0d47a1; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        
+        .quick-actions { flex: 1; min-width: 250px; background: #fff; border: 1px solid #f0f0f0; border-radius: 12px; padding: 15px; }
         .quick-actions h4 { margin: 0 0 10px 0; font-size: 14px; color: #444; }
-        .browse-all-btn {
-            width: 100%;
-            background: #fff;
-            border: 2px solid #42a5f5;
-            color: #42a5f5;
-            padding: 10px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
-        }
+        .browse-all-btn { width: 100%; background: #fff; border: 2px solid #42a5f5; color: #42a5f5; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
         .browse-all-btn:hover { background: #42a5f5; color: #fff; }
 
-        /* LISTINGS */
         .container { padding: 30px 5%; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; }
         .listing-card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s; position: relative; cursor: pointer; }
         .listing-card:hover { transform: translateY(-5px); }
         
-        .save-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: white;
-            border-radius: 50%;
-            width: 35px;
-            height: 35px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            cursor: pointer;
-            z-index: 10;
-            transition: 0.3s;
-        }
+        .save-btn { position: absolute; top: 15px; right: 15px; background: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); cursor: pointer; z-index: 10; transition: 0.3s; }
         .save-btn i { color: #ccc; font-size: 18px; }
         .save-btn.active i { color: #ff5252; }
         
@@ -243,31 +141,10 @@
         .location { font-size: 13px; color: #546e7a; margin: 5px 0; }
         .details { display: flex; gap: 10px; font-size: 12px; color: #78909c; margin-top: 10px; }
 
-        /* MOBILE BOTTOM NAVIGATION */
-        .mobile-nav {
-            display: none;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: #fff;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            justify-content: space-around;
-            padding: 10px 0;
-            padding-bottom: calc(10px + env(safe-area-inset-bottom));
-            z-index: 1000;
-        }
-        .mobile-nav a {
-            color: #555;
-            text-decoration: none;
-            font-size: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+        .mobile-nav { display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); justify-content: space-around; padding: 10px 0; padding-bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 1000; }
+        .mobile-nav a { color: #555; text-decoration: none; font-size: 20px; display: flex; flex-direction: column; align-items: center; }
         .mobile-nav span { font-size: 10px; margin-top: 2px; }
         
-        /* MOBILE RESPONSIVENESS FIXES */
         @media (max-width: 768px) { 
             nav { padding: 10px 5%; }
             .nav-links a:not(.btn-post) { display: none; } 
@@ -288,6 +165,7 @@
         <a href="home.html" class="logo">Stay<span>Find</span></a>
         <div class="nav-links">
             <a id="viewAllBtn" class="nav-active">Browse</a>
+            <a id="landlordDashboardBtn" style="display:none;"><i class="fas fa-chart-line"></i> My Dashboard</a>
             <a id="viewSavedBtn"><i class="fas fa-heart"></i> Saved</a>
             <a href="#" class="btn-post" id="postBtn"><i class="fas fa-plus"></i> Post</a>
             <a id="settingsBtn"><i class="fas fa-cog"></i> Settings</a>
@@ -393,7 +271,7 @@
                 <h4 style="margin-bottom: 15px; color: #333;">Reviews & Comments <span id="revCount" class="review-badge">0</span></h4>
                 
                 <div id="ratingInputArea" style="margin-bottom: 15px;">
-                    <label style="margin-bottom: 8px;">Rate this stay:</label>
+                    <label id="ratingLabel" style="margin-bottom: 8px;">Rate this stay:</label>
                     <div class="star-rating" id="starContainer">
                         <i class="fas fa-star" data-value="1"></i>
                         <i class="fas fa-star" data-value="2"></i>
@@ -404,8 +282,9 @@
                 </div>
 
                 <div class="comment-form">
-                    <textarea id="commentText" placeholder="Write a comment or reply..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; resize:none; height:70px; font-size:13px;"></textarea>
+                    <textarea id="commentText" placeholder="Write a comment..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; resize:none; height:70px; font-size:13px;"></textarea>
                     <button id="postCommentBtn" style="width:100%; margin-top:10px; padding:10px; background:#42a5f5; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Post Comment</button>
+                    <button id="cancelReplyBtn" style="display:none; width:100%; margin-top:5px; background:none; border:none; color:red; cursor:pointer; font-size:12px;">Cancel Reply Mode</button>
                 </div>
 
                 <div id="commentsDisplayList" style="margin-top: 20px; max-height: 250px; overflow-y: auto;">
