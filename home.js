@@ -17,6 +17,9 @@ window.onload = () => {
     const postBtn = document.getElementById('postBtn');
     if (postBtn && currentUser.role === 'landlord') {
         postBtn.style.display = 'inline-block';
+        // Update header text for landlords
+        const mainTitle = document.querySelector('.hero h1');
+        if(mainTitle) mainTitle.innerText = "My Property Dashboard";
     }
 
     console.log("Welcome back, " + (currentUser.full_name || currentUser.name || "User"));
@@ -28,18 +31,21 @@ window.onload = () => {
     setupStarRatingLogic(); // Initialize star click listeners
 };
 
-// --- 2. FETCH LISTINGS FROM MYSQL ---
+// --- 2. FETCH LISTINGS FROM MYSQL (Updated for Landlord Privacy) ---
 async function loadListings() {
     if (!listingsGrid) return;
     
     listingsGrid.innerHTML = "<p style='text-align:center; grid-column: 1/-1;'>Loading stays...</p>";
     
     try {
-        const response = await fetch(`${API_BASE}/view`);
+        // UPDATED: Now passing role and user_id to the backend for filtering
+        const response = await fetch(`${API_BASE}/view?role=${currentUser.role}&user_id=${currentUser.id}`);
         const data = await response.json();
 
         if (!data || data.length === 0) {
-            listingsGrid.innerHTML = "<p style='text-align:center; grid-column: 1/-1;'>No listings available yet.</p>";
+            listingsGrid.innerHTML = currentUser.role === 'landlord' 
+                ? "<p style='text-align:center; grid-column: 1/-1;'>You haven't posted any listings yet.</p>"
+                : "<p style='text-align:center; grid-column: 1/-1;'>No listings available yet.</p>";
             return;
         }
 
@@ -144,8 +150,13 @@ function showFullDetails(item) {
 
     const ratingArea = document.getElementById('ratingInputArea');
     if (ratingArea) {
+        // Tenants see the star rating, Landlords (Owners) just see the comment box to "Reply"
         ratingArea.style.display = isOwner ? 'none' : 'block';
     }
+
+    // Change button text based on role
+    const postCommentBtn = document.getElementById('postCommentBtn');
+    postCommentBtn.innerText = isOwner ? "Post Reply" : "Submit Review";
 
     selectedRating = 0;
     resetStars();
@@ -153,12 +164,10 @@ function showFullDetails(item) {
 
     loadComments(item.id);
 
-    const postCommentBtn = document.getElementById('postCommentBtn');
     postCommentBtn.onclick = () => submitComment(item.id, isOwner);
 
     const delContainer = document.getElementById('deleteBtnContainer');
     if (delContainer) {
-        // UPDATED: Added Edit Button alongside Delete Button for owners
         delContainer.innerHTML = isOwner 
             ? `<button class="btn-edit" id="editListingBtn" style="background:#007bff; color:white; padding:8px 15px; border:none; border-radius:5px; cursor:pointer; margin-right:10px;">
                     <i class="fas fa-edit"></i> Edit Listing
@@ -179,7 +188,6 @@ function openEditModal(item) {
     const postModal = document.getElementById('postModal');
     if (!postModal) return;
 
-    // Reuse the Post Modal but change content to "Edit Mode"
     postModal.style.display = 'block';
     const modalHeader = postModal.querySelector('h2') || document.querySelector('#postModal h3');
     if(modalHeader) modalHeader.innerText = "Edit Your Listing";
@@ -187,7 +195,6 @@ function openEditModal(item) {
     const submitBtn = document.getElementById('submitPostBtn');
     submitBtn.innerText = "Save Changes";
 
-    // Fill form with existing data
     document.getElementById('postTitle').value = item.title;
     document.getElementById('postPrice').value = item.price;
     document.getElementById('postLocation').value = item.location;
@@ -196,7 +203,6 @@ function openEditModal(item) {
     if(document.getElementById('postAmenities')) document.getElementById('postAmenities').value = item.amenities || "";
     if(document.getElementById('postCategory')) document.getElementById('postCategory').value = item.category || "Apartment";
 
-    // Update the click logic specifically for Editing
     submitBtn.onclick = async () => {
         submitBtn.disabled = true;
         submitBtn.innerText = "Saving...";
@@ -261,7 +267,7 @@ function resetStars() {
     stars.forEach(s => s.classList.remove('active'));
 }
 
-// --- 6. REVIEWS & COMMENTS ---
+// --- 6. REVIEWS & COMMENTS (Updated for Replies) ---
 async function loadComments(listingId) {
     const list = document.getElementById('commentsDisplayList');
     const revCountBadge = document.getElementById('revCount'); 
@@ -279,14 +285,19 @@ async function loadComments(listingId) {
         list.innerHTML = reviews.length ? "" : "<p style='color:gray; font-size:12px;'>No reviews yet.</p>";
         
         reviews.forEach(rev => {
-            const starIcons = rev.rating ? `<span style="color:#ffc107; margin-left:5px;">${'★'.repeat(rev.rating)}${'☆'.repeat(5-rev.rating)}</span>` : "";
+            // UPDATED: Highlight landlord replies
+            const isLandlordReply = rev.is_reply === 1;
+            const starIcons = (rev.rating && !isLandlordReply) ? `<span style="color:#ffc107; margin-left:5px;">${'★'.repeat(rev.rating)}${'☆'.repeat(5-rev.rating)}</span>` : "";
+            
             list.innerHTML += `
-                <div class="comment-item">
+                <div class="comment-item" style="${isLandlordReply ? 'background:#f0f7ff; border-left: 4px solid #007bff; margin-left: 20px;' : ''}">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="font-size:13px;">${rev.user_name}</strong>
+                        <strong style="font-size:13px;">
+                            ${rev.user_name} ${isLandlordReply ? '<span style="color:#007bff; font-size:10px; margin-left:5px;">[LANDLORD]</span>' : ''}
+                        </strong>
                         ${starIcons}
                     </div>
-                    <p style="margin: 5px 0 0 0; font-size:13px; color:#555;">${rev.comment}</p>
+                    <p style="margin: 5px 0 0 0; font-size:13px; color:#333;">${rev.comment}</p>
                 </div>
             `;
         });
@@ -304,8 +315,8 @@ async function submitComment(listingId, isOwner) {
         return;
     }
 
-    if (!commentText && selectedRating === 0) {
-        Swal.fire({ title: 'Empty', text: 'Please add a rating or a comment.', icon: 'warning', target: '#detailsModal' });
+    if (!commentText && (isOwner || selectedRating === 0)) {
+        Swal.fire({ title: 'Empty', text: 'Please type a message.', icon: 'warning', target: '#detailsModal' });
         return;
     }
 
@@ -314,7 +325,8 @@ async function submitComment(listingId, isOwner) {
         user_id: currentUser.id,
         user_name: currentUser.full_name || currentUser.name || "User",
         comment: commentText,
-        rating: isOwner ? null : selectedRating 
+        rating: isOwner ? 0 : selectedRating,
+        is_reply: isOwner ? 1 : 0 // If owner is posting, mark it as a reply
     };
 
     try {
@@ -528,16 +540,13 @@ function setupPostListingLogic() {
         };
     }
 
-    // UPDATED: When "Post" button is clicked, we reset everything back to "Post Mode"
     postBtn.onclick = (e) => {
         e.preventDefault();
         
-        // Reset modal headers and button text
         const modalHeader = postModal.querySelector('h2') || document.querySelector('#postModal h3');
         if(modalHeader) modalHeader.innerText = "Post a Listing";
         submitPostBtn.innerText = "Publish Listing";
         
-        // Clear all inputs so old edit data isn't there
         document.getElementById('postTitle').value = "";
         document.getElementById('postPrice').value = "";
         document.getElementById('postLocation').value = "";
@@ -547,7 +556,6 @@ function setupPostListingLogic() {
         if(previewDiv) previewDiv.innerHTML = "";
         if(imageInput) imageInput.value = "";
 
-        // Ensure the click action is restored to "Add New" and not "Save Changes"
         submitPostBtn.onclick = addNewListingAction; 
 
         postModal.style.display = 'block';
@@ -574,7 +582,6 @@ function setupPostListingLogic() {
         });
     };
 
-    // Split logic into a function to be reused/reassigned
     async function addNewListingAction() {
         const imageFiles = Array.from(imageInput.files);
         
@@ -629,18 +636,16 @@ function setupPostListingLogic() {
         }
     }
 
-    // Default assignment
     submitPostBtn.onclick = addNewListingAction;
 }
 
-// --- 13. UPDATED: PERSISTENT BOOKMARK SYSTEM ---
+// --- 13. PERSISTENT BOOKMARK SYSTEM ---
 async function toggleBookmark(event, listingId) {
     event.stopPropagation();
     let saved = JSON.parse(localStorage.getItem('bookmarks')) || [];
     const iconWrapper = event.currentTarget;
     const isAdding = !saved.includes(listingId);
 
-    // Update UI and Local Storage immediately
     if (isAdding) {
         saved.push(listingId);
         iconWrapper.classList.add('active');
@@ -650,7 +655,6 @@ async function toggleBookmark(event, listingId) {
     }
     localStorage.setItem('bookmarks', JSON.stringify(saved));
 
-    // SYNC WITH DATABASE (Crucial for persistence)
     if (currentUser && currentUser.id) {
         try {
             await fetch(`${API_BASE}/toggle-bookmark`, {
