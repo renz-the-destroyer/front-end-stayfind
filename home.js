@@ -179,9 +179,11 @@ function openEditModal(item) {
     const postModal = document.getElementById('postModal');
     if (!postModal) return;
 
-    // Reuse the Post Modal but change content
+    // Reuse the Post Modal but change content to "Edit Mode"
     postModal.style.display = 'block';
-    document.querySelector('#postModal h2').innerText = "Edit Your Listing";
+    const modalHeader = postModal.querySelector('h2') || document.querySelector('#postModal h3');
+    if(modalHeader) modalHeader.innerText = "Edit Your Listing";
+    
     const submitBtn = document.getElementById('submitPostBtn');
     submitBtn.innerText = "Save Changes";
 
@@ -194,7 +196,7 @@ function openEditModal(item) {
     if(document.getElementById('postAmenities')) document.getElementById('postAmenities').value = item.amenities || "";
     if(document.getElementById('postCategory')) document.getElementById('postCategory').value = item.category || "Apartment";
 
-    // Update the click logic for the button
+    // Update the click logic specifically for Editing
     submitBtn.onclick = async () => {
         submitBtn.disabled = true;
         submitBtn.innerText = "Saving...";
@@ -526,11 +528,28 @@ function setupPostListingLogic() {
         };
     }
 
+    // UPDATED: When "Post" button is clicked, we reset everything back to "Post Mode"
     postBtn.onclick = (e) => {
         e.preventDefault();
-        // Reset modal to "Post Mode"
-        document.querySelector('#postModal h2').innerText = "Post a Listing";
+        
+        // Reset modal headers and button text
+        const modalHeader = postModal.querySelector('h2') || document.querySelector('#postModal h3');
+        if(modalHeader) modalHeader.innerText = "Post a Listing";
         submitPostBtn.innerText = "Publish Listing";
+        
+        // Clear all inputs so old edit data isn't there
+        document.getElementById('postTitle').value = "";
+        document.getElementById('postPrice').value = "";
+        document.getElementById('postLocation').value = "";
+        document.getElementById('postRooms').value = "";
+        document.getElementById('postSize').value = "";
+        if(document.getElementById('postAmenities')) document.getElementById('postAmenities').value = "";
+        if(previewDiv) previewDiv.innerHTML = "";
+        if(imageInput) imageInput.value = "";
+
+        // Ensure the click action is restored to "Add New" and not "Save Changes"
+        submitPostBtn.onclick = addNewListingAction; 
+
         postModal.style.display = 'block';
     };
 
@@ -555,12 +574,8 @@ function setupPostListingLogic() {
         });
     };
 
-    submitPostBtn.onclick = async () => {
-        // ... (The default Logic for creating a NEW post)
-        // Note: The logic for EDITING is handled separately in openEditModal()
-        // but if this button is clicked when not in Edit Mode, it runs this:
-        if (submitPostBtn.innerText === "Save Changes") return; 
-
+    // Split logic into a function to be reused/reassigned
+    async function addNewListingAction() {
         const imageFiles = Array.from(imageInput.files);
         
         submitPostBtn.disabled = true;
@@ -612,7 +627,10 @@ function setupPostListingLogic() {
             submitPostBtn.disabled = false;
             submitPostBtn.innerText = "Publish Listing";
         }
-    };
+    }
+
+    // Default assignment
+    submitPostBtn.onclick = addNewListingAction;
 }
 
 // --- 13. UPDATED: PERSISTENT BOOKMARK SYSTEM ---
