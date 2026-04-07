@@ -109,9 +109,13 @@
         /* STAR RATING STYLES */
         .star-rating i { color: #ccc; font-size: 1.5rem; cursor: pointer; transition: color 0.2s; }
         .star-rating i.active { color: #ffc107; }
-        .comment-item { border-bottom: 1px solid #eee; padding: 10px 0; }
+        .comment-item { border-bottom: 1px solid #eee; padding: 10px 0; position: relative; }
         .comment-item:last-child { border: none; }
         .review-badge { background: #ffc107; color: #333; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-left: 10px; vertical-align: middle; }
+
+        /* REPLY LINK STYLES */
+        .reply-link { font-size: 11px; color: #42a5f5; cursor: pointer; font-weight: bold; margin-left: 10px; text-decoration: underline; }
+        .reply-link:hover { color: #0d47a1; }
 
         /* MODERN FILTER STYLING */
         .filter-container {
@@ -394,6 +398,13 @@
             <div style="margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px;">
                 <h4 style="margin-bottom: 15px; color: #333;">Reviews & Comments <span id="revCount" class="review-badge">0</span></h4>
                 
+                <div id="replyingToStatus" style="display: none; background: #e3f2fd; padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 10px; border-left: 4px solid #42a5f5;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Replying to: <strong id="replyTargetName">User</strong></span>
+                        <i class="fas fa-times" id="cancelReplyBtn" style="cursor: pointer; color: #f44336; padding: 5px;"></i>
+                    </div>
+                </div>
+
                 <div id="ratingInputArea" style="margin-bottom: 15px;">
                     <label id="ratingLabel" style="margin-bottom: 8px;">Rate this stay:</label>
                     <div class="star-rating" id="starContainer">
