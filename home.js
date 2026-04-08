@@ -68,54 +68,55 @@ function injectSmartSearchUI() {
     });
 }
 
-// --- NEW: SMART SEARCH LOGIC (NLP Parser) ---
-function processSmartSearch() {
-    const query = document.getElementById('smartInput').value.toLowerCase();
+// --- UPDATED: SMART SEARCH LOGIC (API Connected) ---
+async function processSmartSearch() {
+    const query = document.getElementById('smartInput').value.trim();
     if (!query) return;
 
-    const cards = document.querySelectorAll('.listing-card');
-    let foundCount = 0;
+    const searchBtn = document.getElementById('executeSmartSearch');
+    searchBtn.disabled = true;
+    searchBtn.innerText = "Searching...";
 
-    // Detect Keywords & Values
-    const k_rooms = query.match(/(\d+)\s*(room|kwarto|bedroom)/)?.[1];
-    const k_price = query.match(/(under|below|mura|less than|sa|na)\s*(\d+)/)?.[2] || query.match(/(\d+)\s*(budget|limit)/)?.[1];
-    const k_size = query.match(/(\d+)\s*(sqm|meter|metres|laki)/)?.[1];
+    try {
+        const response = await fetch(`${API_BASE}/smart-search`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: query })
+        });
 
-    cards.forEach(card => {
-        const title = card.querySelector('.title-text').innerText.toLowerCase();
-        const locationText = card.querySelector('.location').innerText.toLowerCase();
-        const price = parseInt(card.getAttribute('data-price'));
-        const rooms = parseInt(card.getAttribute('data-rooms'));
-        const textContent = (title + " " + locationText).toLowerCase();
+        if (!response.ok) throw new Error("Search failed");
 
-        let isMatch = true;
+        const data = await response.json();
+        const results = data.results || [];
 
-        // Price check
-        if (k_price && price > parseInt(k_price)) isMatch = false;
-        // Room check
-        if (k_rooms && rooms < parseInt(k_rooms)) isMatch = false;
-
-        // General Keyword Match (Location/Amenities)
-        // Checks if query words like 'palengke' or 'eu' exist in the card text
-        const queryWords = query.split(' ').filter(w => w.length > 2);
-        let textMatch = queryWords.some(word => textContent.includes(word));
-
-        // If user typed a query but it doesn't match the description/location
-        if (queryWords.length > 0 && !textMatch) isMatch = false;
-
-        if (isMatch) {
-            card.style.display = "block";
-            foundCount++;
+        if (results.length > 0) {
+            document.getElementById('smartSearchBox').style.display = 'none';
+            // Use existing renderListings to show only the matching results from DB
+            renderListings(results); 
+            
+            Swal.fire({ 
+                title: 'Smart Search', 
+                text: `Found ${results.length} matches!`, 
+                icon: 'success', 
+                toast: true, 
+                position: 'top-end', 
+                timer: 3000, 
+                showConfirmButton: false 
+            });
         } else {
-            card.style.display = "none";
+            Swal.fire({ 
+                title: 'No matches', 
+                text: "We couldn't find exactly that. Try searching for amenities like 'wifi' or a different budget.", 
+                icon: 'info' 
+            });
         }
-    });
-
-    if (foundCount > 0) {
-        document.getElementById('smartSearchBox').style.display = 'none';
-        Swal.fire({ title: 'Smart Search', text: `Found ${foundCount} results!`, icon: 'success', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false });
-    } else {
-        Swal.fire({ title: 'No matches', text: "Try describing it differently (e.g., 'near highway')", icon: 'info' });
+    } catch (error) {
+        console.error("Smart Search Error:", error);
+        Swal.fire('Error', 'Something went wrong with the smart search.', 'error');
+    } finally {
+        searchBtn.disabled = false;
+        searchBtn.innerText = "Find Stays";
+        document.getElementById('smartInput').value = "";
     }
 }
 
@@ -134,10 +135,8 @@ async function loadListings() {
             return;
         }
 
-        // --- UPDATED: Aggressive Filter logic to fix "other landlord post" visibility ---
         const dataToShow = (currentUser && currentUser.role === 'landlord') 
             ? data.filter(item => {
-                // We check both user_id and landlord_id, then convert both to strings for a clean match
                 const itemOwner = String(item.user_id || item.landlord_id || "");
                 const currentId = String(currentUser.id || "");
                 return itemOwner === currentId;
@@ -162,13 +161,11 @@ async function renderListings(items) {
     
     let savedListings = JSON.parse(localStorage.getItem('bookmarks')) || [];
     
-    // SYNC: Fetch bookmarks from DB to prevent loss on logout/refresh
     if (currentUser && currentUser.id) {
         try {
             const favRes = await fetch(`${API_BASE}/get-bookmarks/${currentUser.id}`);
             if (favRes.ok) {
                 const favData = await favRes.json();
-                // Map the DB results to an array of IDs
                 savedListings = favData.map(item => item.listing_id);
                 localStorage.setItem('bookmarks', JSON.stringify(savedListings));
             }
