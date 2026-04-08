@@ -81,7 +81,10 @@ async function processSmartSearch() {
         const response = await fetch(`${API_BASE}/smart-search`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: rawQuery.toLowerCase() }) // Normalize to lowercase
+            body: JSON.stringify({ 
+                message: rawQuery.toLowerCase(),
+                userContext: { role: currentUser.role, id: currentUser.id } // Send role context to backend
+            }) 
         });
 
         if (!response.ok) throw new Error("Search failed");
@@ -90,13 +93,6 @@ async function processSmartSearch() {
         console.log("🕵️ BACKEND RESPONSE:", data); 
 
         let results = data.results || [];
-
-        // --- ADDED: EXTRA CLIENT-SIDE VALIDATION ---
-        // If the backend returns 0, but we know the data exists (like ID 8), 
-        // this is a safety net that double checks the logic locally.
-        if (results.length === 0) {
-            console.log("⚠️ Backend returned 0, checking local logic...");
-        }
 
         if (results.length > 0) {
             document.getElementById('smartSearchBox').style.display = 'none';
@@ -124,7 +120,7 @@ async function processSmartSearch() {
     } finally {
         searchBtn.disabled = false;
         searchBtn.innerText = "Find Stays";
-        // We keep the input so the user can see what they typed/fixed
+        document.getElementById('smartInput').value = "";
     }
 }
 
@@ -163,7 +159,7 @@ async function loadListings() {
     }
 }
 
-// --- 3. RENDER HTML CARDS (Includes DB Bookmark Sync) ---
+// --- 3. RENDER HTML CARDS ---
 async function renderListings(items) {
     listingsGrid.innerHTML = ""; 
     
@@ -214,10 +210,15 @@ async function renderListings(items) {
         
         card.onclick = () => showFullDetails(item);
 
-        card.innerHTML = `
+        // UI SECURITY: Hide save button for landlords
+        const saveButtonHTML = currentUser.role === 'tenant' ? `
             <div class="save-btn ${isSaved ? 'active' : ''}" onclick="toggleBookmark(event, ${item.id})">
                 <i class="fas fa-heart"></i>
             </div>
+        ` : "";
+
+        card.innerHTML = `
+            ${saveButtonHTML}
             ${carouselHTML}
             <div class="listing-info">
                 <div class="price">₱${Number(item.price || 0).toLocaleString()} /mo</div>
@@ -251,7 +252,8 @@ function showFullDetails(item) {
     document.getElementById('detContact').innerText = item.landlord_contact || "No contact provided";
     document.getElementById('detType').innerText = item.category || "Apartment";
 
-    const isOwner = currentUser && currentUser.id && item.user_id && String(currentUser.id) === String(item.user_id);
+    // SECURITY: strictly check if the user is a Landlord AND the owner of this item
+    const isOwner = currentUser && currentUser.role === 'landlord' && item.user_id && String(currentUser.id) === String(item.user_id);
 
     const ratingArea = document.getElementById('ratingInputArea');
     if (ratingArea) {
@@ -269,6 +271,7 @@ function showFullDetails(item) {
 
     const delContainer = document.getElementById('deleteBtnContainer');
     if (delContainer) {
+        // UI SECURITY: Only show buttons if isOwner is true
         delContainer.innerHTML = isOwner 
             ? `<button class="btn-edit" id="editListingBtn" style="background:#007bff; color:white; padding:8px 15px; border:none; border-radius:5px; cursor:pointer; margin-right:10px;">
                     <i class="fas fa-edit"></i> Edit Listing
@@ -284,7 +287,7 @@ function showFullDetails(item) {
     detailModal.style.display = 'block';
 }
 
-// --- OPEN EDIT MODAL FUNCTION ---
+// (The rest of your functions: openEditModal, setupStarRatingLogic, etc. remain unchanged below)
 function openEditModal(item) {
     const postModal = document.getElementById('postModal');
     if (!postModal) return;
@@ -341,7 +344,6 @@ function openEditModal(item) {
     };
 }
 
-// --- 5. STAR RATING LOGIC ---
 function setupStarRatingLogic() {
     const stars = document.querySelectorAll('#starContainer i');
     stars.forEach(star => {
@@ -368,7 +370,6 @@ function resetStars() {
     stars.forEach(s => s.classList.remove('active'));
 }
 
-// --- 6. REVIEWS & COMMENTS ---
 async function loadComments(listingId) {
     const list = document.getElementById('commentsDisplayList');
     const revCountBadge = document.getElementById('revCount'); 
@@ -407,7 +408,7 @@ async function submitComment(listingId, isOwner) {
     const commentText = document.getElementById('commentText').value.trim();
     
     if (!currentUser || !currentUser.id) {
-        Swal.fire({ title: 'Session Error', text: 'User ID not found. Please log out and log in again.', icon: 'error', target: '#detailsModal' });
+        Swal.fire({ title: 'Session Error', text: 'User ID not found.', icon: 'error', target: '#detailsModal' });
         return;
     }
 
@@ -441,12 +442,10 @@ async function submitComment(listingId, isOwner) {
             Swal.fire({ title: 'Error', text: errData.message || 'Failed to post review.', icon: 'error', target: '#detailsModal' });
         }
     } catch (err) {
-        console.error("Review Error:", err);
         Swal.fire({ title: 'Error', text: 'Server connection failed.', icon: 'error', target: '#detailsModal' });
     }
 }
 
-// --- 7. DELETE LISTING ---
 async function deleteListing(listingId) {
     const result = await Swal.fire({
         title: 'Are you sure?',
@@ -467,8 +466,7 @@ async function deleteListing(listingId) {
             });
 
             if (response.ok) {
-                Swal.fire('Deleted!', 'Your listing has been removed.', 'success')
-                .then(() => location.reload());
+                Swal.fire('Deleted!', 'Listing removed.', 'success').then(() => location.reload());
             } else {
                 Swal.fire('Error', 'Unauthorized or failed to delete.', 'error');
             }
@@ -478,7 +476,6 @@ async function deleteListing(listingId) {
     }
 }
 
-// --- 8. CAROUSEL MOVEMENT ---
 function moveCarousel(event, id, direction) {
     event.stopPropagation();
     const container = document.getElementById(`carousel-${id}`);
@@ -490,7 +487,6 @@ function moveCarousel(event, id, direction) {
     let currentIdx = Math.abs(Math.round(parseInt(currentTransform) / imgWidth));
     
     let newIdx = currentIdx + direction;
-    
     if (newIdx < 0) newIdx = images.length - 1;
     if (newIdx >= images.length) newIdx = 0;
     
