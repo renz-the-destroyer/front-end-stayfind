@@ -28,6 +28,53 @@
         
         .nav-active { color: #42a5f5 !important; font-weight: bold; }
 
+        /* --- SMART SEARCH MOBILE ADAPTATION --- */
+        #smartSearchBtn {
+            position: fixed; 
+            bottom: calc(90px + env(safe-area-inset-bottom)); /* Lifted to stay above mobile nav */
+            right: 20px; 
+            z-index: 999; 
+            padding: 12px 20px; 
+            border-radius: 30px; 
+            border: none; 
+            background: #007bff; 
+            color: white; 
+            cursor: pointer; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        #smartSearchBtn:active { transform: scale(0.9); }
+
+        #smartSearchBox {
+            display: none; 
+            position: fixed; 
+            bottom: calc(150px + env(safe-area-inset-bottom)); 
+            right: 20px; 
+            z-index: 1001; 
+            width: 320px; 
+            max-width: calc(100vw - 40px); /* Responsive width */
+            background: white; 
+            border-radius: 15px; 
+            box-shadow: 0 5px 25px rgba(0,0,0,0.3); 
+            overflow: hidden; 
+            border: 1px solid #ddd;
+        }
+
+        @media (max-width: 480px) {
+            #smartSearchBox {
+                width: 100%;
+                right: 0;
+                bottom: 0;
+                border-radius: 20px 20px 0 0; /* Bottom sheet style for phones */
+                max-width: 100vw;
+            }
+            #smartSearchBtn {
+                bottom: calc(85px + env(safe-area-inset-bottom));
+                right: 15px;
+            }
+        }
+
         /* MODAL STYLES */
         .modal { 
             display: none; 
