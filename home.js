@@ -6,6 +6,8 @@ const listingsGrid = document.getElementById('listingsGrid');
 
 // Global variable to track selected stars
 let selectedRating = 0;
+// NEW: Global variable to track which comment ID we are replying to
+let activeReplyId = null; 
 
 // --- 1. SECURITY & ROLE CHECK ---
 window.onload = () => {
@@ -156,8 +158,10 @@ function showFullDetails(item) {
     postCommentBtn.innerText = isOwner ? "Post Reply" : "Submit Review";
 
     selectedRating = 0;
+    activeReplyId = null; // Reset reply selection
     resetStars();
     document.getElementById('commentText').value = "";
+    document.getElementById('commentText').placeholder = isOwner ? "Select a review to reply..." : "Write your review here...";
 
     loadComments(item.id);
 
@@ -266,10 +270,30 @@ function resetStars() {
     stars.forEach(s => s.classList.remove('active'));
 }
 
-// --- 6. REVIEWS & COMMENTS (FIXED: NESTED REPLIES) ---
+// --- 6. REVIEWS & COMMENTS (FIXED: TARGETED REPLIES) ---
+
+// New Function: Landlord clicks "Reply" on a specific review
+window.setReplyTarget = function(commentId, userName) {
+    activeReplyId = commentId;
+    
+    // UI Feedback: Highlight the selected comment area
+    document.querySelectorAll('.comment-item').forEach(el => el.style.border = "none");
+    const targetEl = document.getElementById(`comment-${commentId}`);
+    if(targetEl) targetEl.style.border = "2px solid #007bff";
+
+    // Update Textarea Placeholder
+    const textArea = document.getElementById('commentText');
+    textArea.placeholder = `Replying to ${userName}...`;
+    textArea.focus();
+
+    const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+    Toast.fire({ icon: 'info', title: `Selected: ${userName}'s review` });
+};
+
 async function loadComments(listingId) {
     const list = document.getElementById('commentsDisplayList');
     const revCountBadge = document.getElementById('revCount'); 
+    activeReplyId = null; // Reset selection on load
     
     list.innerHTML = "<p style='font-size:12px; color:gray;'>Loading reviews...</p>";
 
@@ -277,66 +301,52 @@ async function loadComments(listingId) {
         const res = await fetch(`${API_BASE}/get-reviews/${listingId}`);
         const allReviews = await res.json();
         
-        if (revCountBadge) {
-            revCountBadge.innerText = allReviews.length;
-        }
-        
+        if (revCountBadge) revCountBadge.innerText = allReviews.length;
         list.innerHTML = allReviews.length ? "" : "<p style='color:gray; font-size:12px;'>No reviews yet.</p>";
         
-        // Split data: Parents (Tenants) vs Replies (Landlord)
         const parents = allReviews.filter(r => r.is_reply === 0);
         const replies = allReviews.filter(r => r.is_reply === 1);
 
-        // Render each parent review first
         parents.forEach(rev => {
             const starIcons = `<span style="color:#ffc107; margin-left:5px;">${'★'.repeat(rev.rating)}${'☆'.repeat(5-rev.rating)}</span>`;
             
-            // Create a wrapper for the group
+            // NEW: Reply link ONLY for landlords
+            const isLandlord = currentUser && currentUser.role === 'landlord';
+            const replyBtn = isLandlord ? `<button onclick="setReplyTarget(${rev.id}, '${rev.user_name}')" style="background:none; border:none; color:#007bff; font-size:11px; cursor:pointer; padding:0; margin-top:5px;"><i class="fas fa-reply"></i> Reply to this</button>` : "";
+
             const groupDiv = document.createElement('div');
             groupDiv.style.marginBottom = "15px";
-
-            // The main review HTML
             groupDiv.innerHTML = `
-                <div class="comment-item" style="padding: 10px; border-radius: 5px; background:#f9f9f9;">
+                <div class="comment-item" id="comment-${rev.id}" style="padding: 10px; border-radius: 5px; background:#f9f9f9; transition: 0.3s;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <strong style="font-size:13px;">${rev.user_name}</strong>
                         ${starIcons}
                     </div>
                     <p style="margin: 5px 0 0 0; font-size:13px; color:#333;">${rev.comment}</p>
+                    ${replyBtn}
                 </div>
                 <div class="reply-container" id="reply-to-${rev.id}" style="margin-left: 20px;"></div>
             `;
             list.appendChild(groupDiv);
         });
 
-        // Now inject replies into the container of the most recent review
-        // (If your DB doesn't have parent_id, this groups replies at the bottom of the LAST review)
+        // Nest replies under specific parent IDs
         replies.forEach(rep => {
+            // It tries to find the parent_id container, or falls back to last parent if null
+            const containerId = rep.parent_id ? `reply-to-${rep.parent_id}` : `reply-to-${parents[parents.length-1]?.id}`;
+            const container = document.getElementById(containerId);
+            
             const replyHtml = `
                 <div class="comment-item" style="padding: 10px; border-radius: 5px; margin-top: 5px; background:#f0f7ff; border-left: 4px solid #007bff;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="font-size:13px;">
-                            ${rep.user_name} <span style="color:#007bff; font-size:10px; margin-left:5px;">[LANDLORD]</span>
-                        </strong>
-                    </div>
+                    <strong style="font-size:13px;">${rep.user_name} <span style="color:#007bff; font-size:10px;">[LANDLORD]</span></strong>
                     <p style="margin: 5px 0 0 0; font-size:13px; color:#333;">${rep.comment}</p>
                 </div>
             `;
-            
-            // If we have parents, append to the last parent's container
-            if (parents.length > 0) {
-                const lastParentId = parents[parents.length - 1].id;
-                const container = document.getElementById(`reply-to-${lastParentId}`);
-                if (container) container.innerHTML += replyHtml;
-            } else {
-                // If there are no tenant reviews yet, just add to main list
-                list.innerHTML += replyHtml;
-            }
+            if (container) container.innerHTML += replyHtml;
         });
 
     } catch (err) {
         list.innerHTML = "<p style='color:red;'>Error loading reviews.</p>";
-        if (revCountBadge) revCountBadge.innerText = "0";
     }
 }
 
@@ -353,6 +363,12 @@ async function submitComment(listingId, isOwner) {
         return;
     }
 
+    // NEW: Check if Landlord selected a review to reply to
+    if (isOwner && !activeReplyId) {
+        Swal.fire({ title: 'Select Review', text: 'Please click the "Reply to this" button on a specific review first.', icon: 'info', target: '#detailsModal' });
+        return;
+    }
+
     if (!isOwner && selectedRating === 0) {
         Swal.fire({ title: 'Missing Rating', text: 'Please select a star rating.', icon: 'warning', target: '#detailsModal' });
         return;
@@ -364,7 +380,8 @@ async function submitComment(listingId, isOwner) {
         user_name: currentUser.full_name || currentUser.name || "User",
         comment: commentText,
         rating: isOwner ? 0 : selectedRating,
-        is_reply: isOwner ? 1 : 0 
+        is_reply: isOwner ? 1 : 0,
+        parent_id: isOwner ? activeReplyId : null // UPDATED: Send the ID of the comment being replied to
     };
 
     try {
@@ -376,6 +393,8 @@ async function submitComment(listingId, isOwner) {
 
         if (response.ok) {
             document.getElementById('commentText').value = "";
+            document.getElementById('commentText').placeholder = "Review submitted!";
+            activeReplyId = null; // Clear selection
             selectedRating = 0;
             resetStars();
             loadComments(listingId);
@@ -384,7 +403,6 @@ async function submitComment(listingId, isOwner) {
             Swal.fire({ title: 'Error', text: errData.message || 'Failed to post review.', icon: 'error', target: '#detailsModal' });
         }
     } catch (err) {
-        console.error("Review Error:", err);
         Swal.fire({ title: 'Error', text: 'Server connection failed.', icon: 'error', target: '#detailsModal' });
     }
 }
