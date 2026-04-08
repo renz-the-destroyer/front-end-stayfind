@@ -87,6 +87,10 @@ async function processSmartSearch() {
         if (!response.ok) throw new Error("Search failed");
 
         const data = await response.json();
+        
+        // --- THE UPDATE: DEBUGGING LOG ---
+        console.log("🕵️ BACKEND RESPONSE:", data); 
+
         const results = data.results || [];
 
         if (results.length > 0) {
@@ -119,7 +123,6 @@ async function processSmartSearch() {
         document.getElementById('smartInput').value = "";
     }
 }
-
 // --- 2. FETCH LISTINGS FROM MYSQL ---
 async function loadListings() {
     if (!listingsGrid) return;
