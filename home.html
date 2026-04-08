@@ -26,7 +26,6 @@
         .nav-links a:hover { color: #42a5f5; }
         .btn-post { background: #42a5f5; color: white !important; padding: 8px 15px; border-radius: 5px; font-weight: bold; display: none; }
         
-        /* NEW NAV STATES */
         .nav-active { color: #42a5f5 !important; font-weight: bold; }
 
         /* MODAL STYLES */
@@ -42,9 +41,7 @@
             backdrop-filter: blur(3px); 
         }
 
-        #postModal {
-            z-index: 2000 !important;
-        }
+        #postModal { z-index: 2000 !important; }
 
         .modal-content { 
             background: white; 
@@ -61,9 +58,7 @@
             overflow-y: auto;
         }
 
-        .swal2-container {
-            z-index: 9999 !important;
-        }
+        .swal2-container { z-index: 9999 !important; }
 
         .modal-content h3 { color: #0d47a1; margin-top: 0; text-align: center; margin-bottom: 20px; }
         .modal-content label { display: block; font-size: 12px; font-weight: bold; color: #555; margin-bottom: 5px; }
@@ -109,7 +104,6 @@
         
         .review-badge { background: #ffc107; color: #333; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-left: 10px; vertical-align: middle; }
         
-        /* Keeping styles for compatibility, though hidden in UI */
         .landlord-reply-badge { background: #0d47a1; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 5px; text-transform: uppercase; }
         .reply-item { margin-left: 30px; border-left: 3px solid #42a5f5; padding-left: 10px; background: #f9f9f9; }
 
@@ -254,9 +248,10 @@
 
     <div id="detailsModal" class="modal">
         <div class="modal-content" style="max-width: 500px;">
-            <div id="carouselWrapper"></div> <div class="detail-header">
+            <div id="carouselWrapper"></div> 
+            <div class="detail-header">
                 <h2 id="detTitle" style="margin:0; color:#0d47a1;">Listing Details</h2>
-                <p id="detLocation" style="color:gray; font-size:14px;"></p>
+                <p style="color:gray; font-size:14px;"><i class="fas fa-map-marker-alt"></i> <span id="detLocation"></span></p>
             </div>
             
             <p><strong>Price:</strong> ₱<span id="detPrice"></span>/mo</p>
