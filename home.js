@@ -43,7 +43,18 @@ async function loadListings() {
             return;
         }
 
-        renderListings(data);
+        // --- UPDATE: Filter logic added here ---
+        // If landlord, only keep items belonging to them
+        const dataToShow = (currentUser && currentUser.role === 'landlord') 
+            ? data.filter(item => String(item.user_id) === String(currentUser.id))
+            : data;
+
+        if (dataToShow.length === 0 && currentUser.role === 'landlord') {
+            listingsGrid.innerHTML = "<p style='text-align:center; grid-column: 1/-1;'>You haven't posted any listings yet.</p>";
+            return;
+        }
+
+        renderListings(dataToShow);
     } catch (error) {
         console.error("Error fetching listings:", error);
         listingsGrid.innerHTML = "<p style='text-align:center; color:red; grid-column: 1/-1;'>Failed to load listings. Check if backend is Live.</p>";
@@ -698,7 +709,11 @@ function setupBookmarkToggles() {
         });
         
         if (found === 0) {
-            listingsGrid.innerHTML = "<p id='no-saved-msg' style='text-align:center; grid-column: 1/-1;'>You haven't saved any listings yet.</p>";
+            // Updated to be more specific to landlords
+            const msgText = (currentUser.role === 'landlord') 
+                ? "You haven't saved any of your own listings yet." 
+                : "You haven't saved any listings yet.";
+            listingsGrid.innerHTML = `<p id='no-saved-msg' style='text-align:center; grid-column: 1/-1;'>${msgText}</p>`;
         }
     };
 
