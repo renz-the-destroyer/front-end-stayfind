@@ -43,10 +43,14 @@ async function loadListings() {
             return;
         }
 
-        // --- UPDATE: Filter logic added here ---
-        // If landlord, only keep items belonging to them
+        // --- UPDATED: Aggressive Filter logic to fix "other landlord post" visibility ---
         const dataToShow = (currentUser && currentUser.role === 'landlord') 
-            ? data.filter(item => String(item.user_id) === String(currentUser.id))
+            ? data.filter(item => {
+                // We check both user_id and landlord_id, then convert both to strings for a clean match
+                const itemOwner = String(item.user_id || item.landlord_id || "");
+                const currentId = String(currentUser.id || "");
+                return itemOwner === currentId;
+            })
             : data;
 
         if (dataToShow.length === 0 && currentUser.role === 'landlord') {
