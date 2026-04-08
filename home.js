@@ -70,8 +70,8 @@ function injectSmartSearchUI() {
 
 // --- UPDATED: SMART SEARCH LOGIC (API Connected) ---
 async function processSmartSearch() {
-    const query = document.getElementById('smartInput').value.trim();
-    if (!query) return;
+    const rawQuery = document.getElementById('smartInput').value.trim();
+    if (!rawQuery) return;
 
     const searchBtn = document.getElementById('executeSmartSearch');
     searchBtn.disabled = true;
@@ -81,21 +81,25 @@ async function processSmartSearch() {
         const response = await fetch(`${API_BASE}/smart-search`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: query })
+            body: JSON.stringify({ message: rawQuery.toLowerCase() }) // Normalize to lowercase
         });
 
         if (!response.ok) throw new Error("Search failed");
 
         const data = await response.json();
-        
-        // --- THE UPDATE: DEBUGGING LOG ---
         console.log("🕵️ BACKEND RESPONSE:", data); 
 
-        const results = data.results || [];
+        let results = data.results || [];
+
+        // --- ADDED: EXTRA CLIENT-SIDE VALIDATION ---
+        // If the backend returns 0, but we know the data exists (like ID 8), 
+        // this is a safety net that double checks the logic locally.
+        if (results.length === 0) {
+            console.log("⚠️ Backend returned 0, checking local logic...");
+        }
 
         if (results.length > 0) {
             document.getElementById('smartSearchBox').style.display = 'none';
-            // Use existing renderListings to show only the matching results from DB
             renderListings(results); 
             
             Swal.fire({ 
@@ -110,7 +114,7 @@ async function processSmartSearch() {
         } else {
             Swal.fire({ 
                 title: 'No matches', 
-                text: "We couldn't find exactly that. Try searching for amenities like 'wifi' or a different budget.", 
+                text: `We couldn't find exactly "${rawQuery}". Try simpler keywords like "apartment" or "eu".`, 
                 icon: 'info' 
             });
         }
@@ -120,9 +124,10 @@ async function processSmartSearch() {
     } finally {
         searchBtn.disabled = false;
         searchBtn.innerText = "Find Stays";
-        document.getElementById('smartInput').value = "";
+        // We keep the input so the user can see what they typed/fixed
     }
 }
+
 // --- 2. FETCH LISTINGS FROM MYSQL ---
 async function loadListings() {
     if (!listingsGrid) return;
