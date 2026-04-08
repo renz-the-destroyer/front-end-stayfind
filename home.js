@@ -19,6 +19,11 @@ window.onload = () => {
         postBtn.style.display = 'inline-block';
     }
 
+    // NEW: Inject Smart Search Button if it doesn't exist in HTML
+    if (!document.getElementById('smartSearchBtn') && currentUser.role === 'tenant') {
+        injectSmartSearchUI();
+    }
+
     console.log("Welcome back, " + (currentUser.full_name || currentUser.name || "User"));
 
     loadListings();
@@ -27,6 +32,92 @@ window.onload = () => {
     setupBookmarkToggles(); 
     setupStarRatingLogic(); // Initialize star click listeners
 };
+
+// --- NEW: SMART SEARCH UI INJECTION ---
+function injectSmartSearchUI() {
+    const btn = document.createElement('button');
+    btn.id = "smartSearchBtn";
+    btn.innerHTML = '<i class="fas fa-robot"></i> Smart Search';
+    btn.style = "position:fixed; bottom:20px; right:20px; z-index:999; padding:12px 20px; border-radius:30px; border:none; background:#007bff; color:white; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.2); font-weight:bold;";
+    document.body.appendChild(btn);
+
+    const chatbox = document.createElement('div');
+    chatbox.id = "smartSearchBox";
+    chatbox.style = "display:none; position:fixed; bottom:80px; right:20px; z-index:999; width:300px; background:white; border-radius:15px; box-shadow:0 5px 25px rgba(0,0,0,0.3); overflow:hidden; border:1px solid #ddd; font-family:sans-serif;";
+    chatbox.innerHTML = `
+        <div style="background:#007bff; color:white; padding:15px; font-weight:bold; display:flex; justify-content:space-between;">
+            <span>Smart Finder</span>
+            <i class="fas fa-times" style="cursor:pointer;" onclick="document.getElementById('smartSearchBox').style.display='none'"></i>
+        </div>
+        <div style="padding:15px;">
+            <p style="font-size:12px; color:#666; margin-bottom:10px;">Type what you are looking for (e.g., "Bahay malapit sa palengke" or "Room under 5000")</p>
+            <input type="text" id="smartInput" placeholder="Ask me anything..." style="width:100%; padding:10px; border:1px solid #ccc; border-radius:5px; outline:none;">
+            <button id="executeSmartSearch" style="width:100%; margin-top:10px; padding:10px; background:#28a745; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Find Stays</button>
+        </div>
+    `;
+    document.body.appendChild(chatbox);
+
+    btn.onclick = () => {
+        chatbox.style.display = chatbox.style.display === 'none' ? 'block' : 'none';
+        document.getElementById('smartInput').focus();
+    };
+
+    document.getElementById('executeSmartSearch').onclick = processSmartSearch;
+    document.getElementById('smartInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') processSmartSearch();
+    });
+}
+
+// --- NEW: SMART SEARCH LOGIC (NLP Parser) ---
+function processSmartSearch() {
+    const query = document.getElementById('smartInput').value.toLowerCase();
+    if (!query) return;
+
+    const cards = document.querySelectorAll('.listing-card');
+    let foundCount = 0;
+
+    // Detect Keywords & Values
+    const k_rooms = query.match(/(\d+)\s*(room|kwarto|bedroom)/)?.[1];
+    const k_price = query.match(/(under|below|mura|less than|sa|na)\s*(\d+)/)?.[2] || query.match(/(\d+)\s*(budget|limit)/)?.[1];
+    const k_size = query.match(/(\d+)\s*(sqm|meter|metres|laki)/)?.[1];
+
+    cards.forEach(card => {
+        const title = card.querySelector('.title-text').innerText.toLowerCase();
+        const locationText = card.querySelector('.location').innerText.toLowerCase();
+        const price = parseInt(card.getAttribute('data-price'));
+        const rooms = parseInt(card.getAttribute('data-rooms'));
+        const textContent = (title + " " + locationText).toLowerCase();
+
+        let isMatch = true;
+
+        // Price check
+        if (k_price && price > parseInt(k_price)) isMatch = false;
+        // Room check
+        if (k_rooms && rooms < parseInt(k_rooms)) isMatch = false;
+
+        // General Keyword Match (Location/Amenities)
+        // Checks if query words like 'palengke' or 'eu' exist in the card text
+        const queryWords = query.split(' ').filter(w => w.length > 2);
+        let textMatch = queryWords.some(word => textContent.includes(word));
+
+        // If user typed a query but it doesn't match the description/location
+        if (queryWords.length > 0 && !textMatch) isMatch = false;
+
+        if (isMatch) {
+            card.style.display = "block";
+            foundCount++;
+        } else {
+            card.style.display = "none";
+        }
+    });
+
+    if (foundCount > 0) {
+        document.getElementById('smartSearchBox').style.display = 'none';
+        Swal.fire({ title: 'Smart Search', text: `Found ${foundCount} results!`, icon: 'success', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false });
+    } else {
+        Swal.fire({ title: 'No matches', text: "Try describing it differently (e.g., 'near highway')", icon: 'info' });
+    }
+}
 
 // --- 2. FETCH LISTINGS FROM MYSQL ---
 async function loadListings() {
@@ -173,7 +264,6 @@ function showFullDetails(item) {
 
     const delContainer = document.getElementById('deleteBtnContainer');
     if (delContainer) {
-        // UPDATED: Added Edit Button alongside Delete Button for owners
         delContainer.innerHTML = isOwner 
             ? `<button class="btn-edit" id="editListingBtn" style="background:#007bff; color:white; padding:8px 15px; border:none; border-radius:5px; cursor:pointer; margin-right:10px;">
                     <i class="fas fa-edit"></i> Edit Listing
@@ -189,12 +279,11 @@ function showFullDetails(item) {
     detailModal.style.display = 'block';
 }
 
-// --- NEW: OPEN EDIT MODAL FUNCTION ---
+// --- OPEN EDIT MODAL FUNCTION ---
 function openEditModal(item) {
     const postModal = document.getElementById('postModal');
     if (!postModal) return;
 
-    // Reuse the Post Modal but change content to "Edit Mode"
     postModal.style.display = 'block';
     const modalHeader = postModal.querySelector('h2') || document.querySelector('#postModal h3');
     if(modalHeader) modalHeader.innerText = "Edit Your Listing";
@@ -202,7 +291,6 @@ function openEditModal(item) {
     const submitBtn = document.getElementById('submitPostBtn');
     submitBtn.innerText = "Save Changes";
 
-    // Fill form with existing data
     document.getElementById('postTitle').value = item.title;
     document.getElementById('postPrice').value = item.price;
     document.getElementById('postLocation').value = item.location;
@@ -211,7 +299,6 @@ function openEditModal(item) {
     if(document.getElementById('postAmenities')) document.getElementById('postAmenities').value = item.amenities || "";
     if(document.getElementById('postCategory')) document.getElementById('postCategory').value = item.category || "Apartment";
 
-    // Update the click logic specifically for Editing
     submitBtn.onclick = async () => {
         submitBtn.disabled = true;
         submitBtn.innerText = "Saving...";
@@ -543,16 +630,12 @@ function setupPostListingLogic() {
         };
     }
 
-    // UPDATED: When "Post" button is clicked, we reset everything back to "Post Mode"
     postBtn.onclick = (e) => {
         e.preventDefault();
-        
-        // Reset modal headers and button text
         const modalHeader = postModal.querySelector('h2') || document.querySelector('#postModal h3');
         if(modalHeader) modalHeader.innerText = "Post a Listing";
         submitPostBtn.innerText = "Publish Listing";
         
-        // Clear all inputs so old edit data isn't there
         document.getElementById('postTitle').value = "";
         document.getElementById('postPrice').value = "";
         document.getElementById('postLocation').value = "";
@@ -562,9 +645,7 @@ function setupPostListingLogic() {
         if(previewDiv) previewDiv.innerHTML = "";
         if(imageInput) imageInput.value = "";
 
-        // Ensure the click action is restored to "Add New" and not "Save Changes"
         submitPostBtn.onclick = addNewListingAction; 
-
         postModal.style.display = 'block';
     };
 
@@ -589,10 +670,8 @@ function setupPostListingLogic() {
         });
     };
 
-    // Split logic into a function to be reused/reassigned
     async function addNewListingAction() {
         const imageFiles = Array.from(imageInput.files);
-        
         submitPostBtn.disabled = true;
         submitPostBtn.innerText = "Processing...";
 
@@ -644,7 +723,6 @@ function setupPostListingLogic() {
         }
     }
 
-    // Default assignment
     submitPostBtn.onclick = addNewListingAction;
 }
 
@@ -655,7 +733,6 @@ async function toggleBookmark(event, listingId) {
     const iconWrapper = event.currentTarget;
     const isAdding = !saved.includes(listingId);
 
-    // Update UI and Local Storage immediately
     if (isAdding) {
         saved.push(listingId);
         iconWrapper.classList.add('active');
@@ -665,7 +742,6 @@ async function toggleBookmark(event, listingId) {
     }
     localStorage.setItem('bookmarks', JSON.stringify(saved));
 
-    // SYNC WITH DATABASE (Crucial for persistence)
     if (currentUser && currentUser.id) {
         try {
             await fetch(`${API_BASE}/toggle-bookmark`, {
@@ -713,7 +789,6 @@ function setupBookmarkToggles() {
         });
         
         if (found === 0) {
-            // Updated to be more specific to landlords
             const msgText = (currentUser.role === 'landlord') 
                 ? "You haven't saved any of your own listings yet." 
                 : "You haven't saved any listings yet.";
