@@ -31,14 +31,13 @@ window.onload = () => {
     setupStarRatingLogic(); // Initialize star click listeners
 };
 
-// --- 2. FETCH LISTINGS FROM MYSQL (Updated for Landlord Privacy) ---
+// --- 2. FETCH LISTINGS FROM MYSQL ---
 async function loadListings() {
     if (!listingsGrid) return;
     
     listingsGrid.innerHTML = "<p style='text-align:center; grid-column: 1/-1;'>Loading stays...</p>";
     
     try {
-        // UPDATED: Now passing role and user_id to the backend for filtering
         const response = await fetch(`${API_BASE}/view?role=${currentUser.role}&user_id=${currentUser.id}`);
         const data = await response.json();
 
@@ -56,19 +55,17 @@ async function loadListings() {
     }
 }
 
-// --- 3. RENDER HTML CARDS (Includes DB Bookmark Sync) ---
+// --- 3. RENDER HTML CARDS ---
 async function renderListings(items) {
     listingsGrid.innerHTML = ""; 
     
     let savedListings = JSON.parse(localStorage.getItem('bookmarks')) || [];
     
-    // SYNC: Fetch bookmarks from DB to prevent loss on logout/refresh
     if (currentUser && currentUser.id) {
         try {
             const favRes = await fetch(`${API_BASE}/get-bookmarks/${currentUser.id}`);
             if (favRes.ok) {
                 const favData = await favRes.json();
-                // Map the DB results to an array of IDs
                 savedListings = favData.map(item => item.listing_id);
                 localStorage.setItem('bookmarks', JSON.stringify(savedListings));
             }
@@ -131,7 +128,7 @@ async function renderListings(items) {
     });
 }
 
-// --- 4. SHOW FULL DETAILS POPUP (Updated with Strict Ownership) ---
+// --- 4. SHOW FULL DETAILS POPUP ---
 function showFullDetails(item) {
     const detailModal = document.getElementById('detailsModal');
     if (!detailModal) return;
@@ -146,18 +143,15 @@ function showFullDetails(item) {
     document.getElementById('detContact').innerText = item.landlord_contact || "No contact provided";
     document.getElementById('detType').innerText = item.category || "Apartment";
 
-    // FIXED: Strict Ownership Check
     const isOwner = currentUser && 
                     currentUser.role === 'landlord' && 
                     String(currentUser.id) === String(item.user_id);
 
     const ratingArea = document.getElementById('ratingInputArea');
     if (ratingArea) {
-        // Tenants see the star rating, Landlords (Owners) hide it to "Reply"
         ratingArea.style.display = isOwner ? 'none' : 'block';
     }
 
-    // Change button text based on role
     const postCommentBtn = document.getElementById('postCommentBtn');
     postCommentBtn.innerText = isOwner ? "Post Reply" : "Submit Review";
 
@@ -189,7 +183,6 @@ function showFullDetails(item) {
     detailModal.style.display = 'block';
 }
 
-// --- NEW: OPEN EDIT MODAL FUNCTION ---
 function openEditModal(item) {
     const postModal = document.getElementById('postModal');
     if (!postModal) return;
@@ -273,7 +266,7 @@ function resetStars() {
     stars.forEach(s => s.classList.remove('active'));
 }
 
-// --- 6. REVIEWS & COMMENTS (Updated for Replies) ---
+// --- 6. REVIEWS & COMMENTS (FIXED: NESTED REPLIES) ---
 async function loadComments(listingId) {
     const list = document.getElementById('commentsDisplayList');
     const revCountBadge = document.getElementById('revCount'); 
@@ -282,30 +275,65 @@ async function loadComments(listingId) {
 
     try {
         const res = await fetch(`${API_BASE}/get-reviews/${listingId}`);
-        const reviews = await res.json();
+        const allReviews = await res.json();
         
         if (revCountBadge) {
-            revCountBadge.innerText = reviews.length;
+            revCountBadge.innerText = allReviews.length;
         }
         
-        list.innerHTML = reviews.length ? "" : "<p style='color:gray; font-size:12px;'>No reviews yet.</p>";
+        list.innerHTML = allReviews.length ? "" : "<p style='color:gray; font-size:12px;'>No reviews yet.</p>";
         
-        reviews.forEach(rev => {
-            const isLandlordReply = rev.is_reply === 1;
-            const starIcons = (rev.rating && !isLandlordReply) ? `<span style="color:#ffc107; margin-left:5px;">${'★'.repeat(rev.rating)}${'☆'.repeat(5-rev.rating)}</span>` : "";
+        // Split data: Parents (Tenants) vs Replies (Landlord)
+        const parents = allReviews.filter(r => r.is_reply === 0);
+        const replies = allReviews.filter(r => r.is_reply === 1);
+
+        // Render each parent review first
+        parents.forEach(rev => {
+            const starIcons = `<span style="color:#ffc107; margin-left:5px;">${'★'.repeat(rev.rating)}${'☆'.repeat(5-rev.rating)}</span>`;
             
-            list.innerHTML += `
-                <div class="comment-item" style="padding: 10px; border-radius: 5px; margin-bottom: 8px; ${isLandlordReply ? 'background:#f0f7ff; border-left: 4px solid #007bff; margin-left: 20px;' : 'background:#f9f9f9;'}">
+            // Create a wrapper for the group
+            const groupDiv = document.createElement('div');
+            groupDiv.style.marginBottom = "15px";
+
+            // The main review HTML
+            groupDiv.innerHTML = `
+                <div class="comment-item" style="padding: 10px; border-radius: 5px; background:#f9f9f9;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="font-size:13px;">
-                            ${rev.user_name} ${isLandlordReply ? '<span style="color:#007bff; font-size:10px; margin-left:5px;">[LANDLORD]</span>' : ''}
-                        </strong>
+                        <strong style="font-size:13px;">${rev.user_name}</strong>
                         ${starIcons}
                     </div>
                     <p style="margin: 5px 0 0 0; font-size:13px; color:#333;">${rev.comment}</p>
                 </div>
+                <div class="reply-container" id="reply-to-${rev.id}" style="margin-left: 20px;"></div>
             `;
+            list.appendChild(groupDiv);
         });
+
+        // Now inject replies into the container of the most recent review
+        // (If your DB doesn't have parent_id, this groups replies at the bottom of the LAST review)
+        replies.forEach(rep => {
+            const replyHtml = `
+                <div class="comment-item" style="padding: 10px; border-radius: 5px; margin-top: 5px; background:#f0f7ff; border-left: 4px solid #007bff;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="font-size:13px;">
+                            ${rep.user_name} <span style="color:#007bff; font-size:10px; margin-left:5px;">[LANDLORD]</span>
+                        </strong>
+                    </div>
+                    <p style="margin: 5px 0 0 0; font-size:13px; color:#333;">${rep.comment}</p>
+                </div>
+            `;
+            
+            // If we have parents, append to the last parent's container
+            if (parents.length > 0) {
+                const lastParentId = parents[parents.length - 1].id;
+                const container = document.getElementById(`reply-to-${lastParentId}`);
+                if (container) container.innerHTML += replyHtml;
+            } else {
+                // If there are no tenant reviews yet, just add to main list
+                list.innerHTML += replyHtml;
+            }
+        });
+
     } catch (err) {
         list.innerHTML = "<p style='color:red;'>Error loading reviews.</p>";
         if (revCountBadge) revCountBadge.innerText = "0";
@@ -711,7 +739,6 @@ function setupBookmarkToggles() {
             }
         });
         
-        // Remove existing msg if any
         const existingMsg = document.getElementById('no-saved-msg');
         if (existingMsg) existingMsg.remove();
 
@@ -740,6 +767,7 @@ window.onclick = (event) => {
     }
 };
 
+// Fixed closeDetails to properly point to the window object
 window.closeDetails = function() {
     const modal = document.getElementById('detailsModal');
     if (modal) modal.style.display = 'none';
