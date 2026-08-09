@@ -131,6 +131,64 @@ function warnIfImagesTooLarge(base64Images) {
     return totalMB;
 }
 
+// NEW: Checks whether the admin approved or rejected a pending landlord
+// request since the last time this browser knew about it, and shows a
+// one-time SweetAlert notification. Runs on every home.html load, since
+// there's no push/email system wired up for this - checking on page visit
+// is the simplest reliable way to surface the outcome. After showing the
+// notification (or finding nothing changed), it syncs localStorage with the
+// server's current truth so the same notification never repeats, and
+// refreshes the Post button immediately if the role changed.
+async function checkLandlordStatusUpdate() {
+    if (!currentUser || !currentUser.id) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/view/${currentUser.id}`);
+        if (!res.ok) return;
+        const freshUser = await res.json();
+        if (!freshUser || freshUser.message === 'User not found') return;
+
+        const oldStatus = currentUser.landlord_status || 'none';
+        const newStatus = freshUser.landlord_status || 'none';
+
+        if (oldStatus === 'pending' && newStatus === 'approved') {
+            Swal.fire({
+                title: 'Landlord Access Approved! 🎉',
+                text: 'Congratulations! Your landlord request has been approved. The Post button is now unlocked so you can start listing your properties.',
+                icon: 'success',
+                confirmButtonText: 'Great!'
+            });
+        } else if (oldStatus === 'pending' && newStatus === 'rejected') {
+            Swal.fire({
+                title: 'Landlord Request Rejected',
+                html: `<p style="text-align:left; font-size:14px; color:#555; margin:0;">${freshUser.landlord_rejection_reason || 'Your submitted documents did not meet our requirements.'}</p>
+                       <p style="text-align:left; font-size:12px; color:#90a4ae; margin-top:12px;">You can update your documents and try again anytime from <strong>Settings</strong>.</p>`,
+                icon: 'info',
+                confirmButtonText: 'Got it'
+            });
+        }
+
+        // NEW: sync localStorage + in-memory currentUser with the latest
+        // server truth so this notification only ever fires once per change,
+        // and so role-dependent UI (like the Post button) reflects reality
+        // immediately without requiring a manual logout/login.
+        if (oldStatus !== newStatus || currentUser.role !== freshUser.role) {
+            currentUser.role = freshUser.role;
+            currentUser.landlord_status = freshUser.landlord_status;
+            currentUser.landlord_rejection_reason = freshUser.landlord_rejection_reason;
+            localStorage.setItem('user', JSON.stringify(currentUser));
+
+            const postBtn = document.getElementById('postBtn');
+            if (postBtn) {
+                postBtn.style.display = (currentUser.role === 'landlord') ? 'inline-block' : 'none';
+            }
+        }
+    } catch (err) {
+        // Silent fail - this is a background check, shouldn't interrupt the page
+        console.log("Landlord status check failed silently:", err);
+    }
+}
+
 // --- 1. SECURITY & ROLE CHECK ---
 window.onload = () => {
     if (!currentUser) {
@@ -155,6 +213,9 @@ window.onload = () => {
     setupPostListingLogic(); 
     setupBookmarkToggles(); 
     setupStarRatingLogic(); // Initialize star click listeners
+
+    // NEW: check for a landlord approval/rejection outcome to notify the user about
+    checkLandlordStatusUpdate();
 };
 
 // --- NEW: SMART SEARCH UI INJECTION ---
