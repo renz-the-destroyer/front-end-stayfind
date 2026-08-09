@@ -65,7 +65,7 @@
     .pill.rejected { background: #ffebee; color: #c62828; }
     .pill.none { background: #eceff1; color: #78909c; }
 
-    .btn { border: none; padding: 7px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; margin-right: 5px; }
+    .btn { border: none; padding: 7px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; margin-right: 5px; margin-bottom: 5px; }
     .btn-approve { background: var(--success); color: white; }
     .btn-reject { background: var(--danger); color: white; }
     .btn-edit { background: var(--secondary); color: white; }
@@ -83,6 +83,10 @@
     .modal-actions button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
     .btn-save { background: var(--primary); color: white; }
     .btn-cancel { background: #eceff1; color: #455a64; }
+
+    /* NEW: document viewer modal */
+    .doc-preview { width: 100%; border-radius: 8px; border: 1px solid #e0e0e0; cursor: zoom-in; display: block; }
+    .doc-preview-label { font-size: 12px; font-weight: 700; color: #607d8b; margin-bottom: 6px; display: block; }
 
     @media (max-width: 768px) {
         .sidebar { width: 70px; }
@@ -133,7 +137,7 @@
             <!-- LANDLORD REQUESTS -->
             <div class="panel" id="panel-requests">
                 <h1>Landlord Requests</h1>
-                <div class="subtitle">Users are only able to post listings after you approve them here</div>
+                <div class="subtitle">Review submitted documents, then approve or reject each request</div>
                 <div class="table-wrap">
                     <table>
                         <thead><tr><th>Name</th><th>Email</th><th>Contact</th><th>Address</th><th>Action</th></tr></thead>
@@ -244,6 +248,17 @@
             <div class="modal-actions">
                 <button class="btn-cancel" onclick="closeModal('editListingModal')">Cancel</button>
                 <button class="btn-save" id="saveListingBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: VIEW LANDLORD DOCUMENTS MODAL -->
+    <div class="modal" id="viewDocsModal">
+        <div class="modal-box" style="max-width: 600px;">
+            <h3>Landlord Verification Documents</h3>
+            <div id="docsModalBody" style="display:flex; flex-direction:column; gap:20px;"></div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('viewDocsModal')" style="flex:1;">Close</button>
             </div>
         </div>
     </div>
