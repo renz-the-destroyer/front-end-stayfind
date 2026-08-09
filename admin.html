@@ -33,6 +33,10 @@
     .sidebar nav a.active { background: rgba(255,255,255,0.1); color: white; border-left-color: var(--secondary); }
     .sidebar nav a .badge { margin-left: auto; background: var(--danger); color: white; font-size: 10px; padding: 2px 7px; border-radius: 10px; }
     .sidebar .logout { position: absolute; bottom: 20px; width: 100%; }
+    /* NEW: same visual treatment as .sidebar nav a, applied to the bottom
+       action links (Back to Site + Logout) so they line up consistently */
+    .sidebar .logout a { display: flex; align-items: center; gap: 12px; padding: 14px 25px; color: #cfd8dc; text-decoration: none; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .sidebar .logout a:hover { background: rgba(255,255,255,0.06); color: white; }
 
     .main { margin-left: 230px; padding: 30px 35px; }
     .main h1 { margin: 0 0 5px 0; color: var(--primary); }
@@ -93,6 +97,7 @@
         .sidebar .brand, .sidebar nav a span, .sidebar .logout span { display: none; }
         .sidebar nav a { justify-content: center; padding: 14px 0; }
         .sidebar nav a .badge { position: absolute; margin-left: 0; top: 6px; right: 10px; }
+        .sidebar .logout a { justify-content: center; padding: 14px 0; }
         .main { margin-left: 70px; padding: 20px; }
     }
 </style>
@@ -122,6 +127,8 @@
                 <a data-panel="reviews"><i class="fas fa-comments"></i> <span>Reviews</span></a>
             </nav>
             <div class="logout">
+                <!-- NEW: plain link back to the main site, no JS needed -->
+                <a href="home.html" id="backToHomeBtn"><i class="fas fa-arrow-left"></i> <span>Back to Site</span></a>
                 <a id="adminLogoutBtn"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></a>
             </div>
         </div>
@@ -252,7 +259,7 @@
         </div>
     </div>
 
-    <!-- NEW: VIEW LANDLORD DOCUMENTS MODAL -->
+    <!-- VIEW LANDLORD DOCUMENTS MODAL -->
     <div class="modal" id="viewDocsModal">
         <div class="modal-box" style="max-width: 600px;">
             <h3>Landlord Verification Documents</h3>
