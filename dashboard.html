@@ -29,6 +29,12 @@
         .save-btn { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 30px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-top: 25px; cursor: pointer; box-shadow: 0 4px 12px rgba(13, 71, 161, 0.2); }
         .save-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(13, 71, 161, 0.3); }
         .logout-link { display: block; margin-top: 20px; font-size: 12px; color: #90a4ae; text-decoration: none; cursor: pointer; }
+
+        /* NEW: Landlord document upload section */
+        #landlordDocsSection { text-align: left; background: #f8fbff; border: 1px solid #e3f2fd; border-radius: 10px; padding: 15px; margin-top: 10px; margin-bottom: 10px; }
+        #landlordDocsSection .doc-label { font-size: 11px; font-weight: 700; color: #37474f; text-transform: none; margin: 10px 0 5px; display: block; }
+        #landlordDocsSection input[type="file"] { padding: 8px 10px; font-size: 12px; margin-bottom: 5px; }
+        #landlordDocsSection .doc-hint { font-size: 10px; color: #90a4ae; margin: 0 0 10px 0; }
     </style>
 </head>
 <body>
@@ -74,6 +80,22 @@
                         <i class="fas fa-house-user"></i> Landlord
                     </div>
                 </div>
+            </div>
+
+            <!-- NEW: Shown only when "Landlord" is selected. Required before
+                 the landlord request can be submitted for admin review. -->
+            <div class="form-group" id="landlordDocsSection" style="display:none;">
+                <label style="text-transform:none; font-size:12px; color:#0d47a1;"><i class="fas fa-file-shield"></i> Landlord Verification Documents (required)</label>
+                <p class="doc-hint">Upload clear photos. An admin will review these before your landlord account is approved.</p>
+
+                <label class="doc-label">Proof of Property Ownership (TCT or Tax Declaration)</label>
+                <input type="file" id="docOwnership" accept="image/*">
+
+                <label class="doc-label">Local Permits (Barangay Clearance + Mayor's/Business Permit)</label>
+                <input type="file" id="docPermits" accept="image/*">
+
+                <label class="doc-label">BIR Registration (Form 1901/1903)</label>
+                <input type="file" id="docBir" accept="image/*">
             </div>
 
             <button type="submit" class="save-btn" id="saveBtn">Complete Setup</button>
