@@ -152,21 +152,52 @@ async function loadLandlordRequests() {
             return;
         }
 
-        tbody.innerHTML = rows.map(u => `
+        // NEW: "View Documents" button added before Approve/Reject. Docs are
+        // passed via a global lookup map instead of inline JSON (base64 image
+        // strings are too large/unsafe to embed directly in an onclick attribute).
+        window.__landlordRequestDocs = window.__landlordRequestDocs || {};
+
+        tbody.innerHTML = rows.map(u => {
+            window.__landlordRequestDocs[u.id] = u.landlord_documents || "";
+            return `
             <tr>
                 <td>${u.full_name}</td>
                 <td>${u.email}</td>
                 <td>${u.contact || '—'}</td>
                 <td>${u.address || '—'}</td>
                 <td>
+                    <button class="btn btn-edit" onclick="viewLandlordDocs(${u.id})"><i class="fas fa-file-image"></i> View Docs</button>
                     <button class="btn btn-approve" onclick="approveLandlord(${u.id})"><i class="fas fa-check"></i> Approve</button>
                     <button class="btn btn-reject" onclick="rejectLandlord(${u.id})"><i class="fas fa-times"></i> Reject</button>
                 </td>
             </tr>
-        `).join('');
+        `;
+        }).join('');
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">Failed to load requests.</div></td></tr>`;
     }
+}
+
+// NEW: opens a modal showing the 3 uploaded verification document images so
+// the admin can inspect them before approving/rejecting a landlord request.
+function viewLandlordDocs(userId) {
+    const docsString = (window.__landlordRequestDocs && window.__landlordRequestDocs[userId]) || "";
+    const docs = docsString ? docsString.split('|||').map(d => d.trim()).filter(d => d !== "") : [];
+    const labels = ["Proof of Property Ownership (TCT / Tax Declaration)", "Local Permits (Barangay Clearance + Mayor's/Business Permit)", "BIR Registration (Form 1901/1903)"];
+
+    const body = document.getElementById('docsModalBody');
+    if (docs.length === 0) {
+        body.innerHTML = `<div class="empty-state">No documents were uploaded for this request.</div>`;
+    } else {
+        body.innerHTML = docs.map((imgSrc, i) => `
+            <div>
+                <span class="doc-preview-label">${labels[i] || `Document ${i + 1}`}</span>
+                <img src="${imgSrc}" class="doc-preview" onclick="window.open(this.src, '_blank')" onerror="this.src='https://via.placeholder.com/500x300?text=Failed+to+load'">
+            </div>
+        `).join('');
+    }
+
+    document.getElementById('viewDocsModal').style.display = 'flex';
 }
 
 async function approveLandlord(id) {
