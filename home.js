@@ -180,7 +180,11 @@ async function checkLandlordStatusUpdate() {
 
             const postBtn = document.getElementById('postBtn');
             if (postBtn) {
-                postBtn.style.display = (currentUser.role === 'landlord') ? 'inline-block' : 'none';
+                postBtn.style.display = (currentUser.role === 'landlord') ? 'flex' : 'none';
+            }
+            const postFab = document.getElementById('postFab');
+            if (postFab) {
+                postFab.style.display = (currentUser.role === 'landlord') ? '' : 'none';
             }
         }
     } catch (err) {
@@ -198,7 +202,11 @@ window.onload = () => {
 
     const postBtn = document.getElementById('postBtn');
     if (postBtn && currentUser.role === 'landlord') {
-        postBtn.style.display = 'inline-block';
+        postBtn.style.display = 'flex';
+    }
+    const postFab = document.getElementById('postFab');
+    if (postFab && currentUser.role === 'landlord') {
+        postFab.style.display = 'flex';
     }
 
     // NEW: Inject Smart Search Button if it doesn't exist in HTML
@@ -213,10 +221,89 @@ window.onload = () => {
     setupPostListingLogic(); 
     setupBookmarkToggles(); 
     setupStarRatingLogic(); // Initialize star click listeners
+    setupSideDrawer(); // NEW: hamburger-triggered side navigation
+    setupFiltersToggle(); // NEW: collapsible filter panel on mobile
 
     // NEW: check for a landlord approval/rejection outcome to notify the user about
     checkLandlordStatusUpdate();
 };
+
+// --- NEW: SIDE DRAWER NAVIGATION ---
+// Consolidates what used to be separate top-nav links + a bottom mobile nav
+// bar into a single hamburger-triggered slide-in panel that works the same
+// way on phone and desktop. All the individual nav items (Browse, Saved,
+// Post, Settings, Admin, Logout) keep their original element IDs, so every
+// existing click handler elsewhere in this file (setupBookmarkToggles,
+// setupSettingsLogic, the logout handler, etc.) keeps working untouched -
+// this only adds the open/close behavior around them.
+function setupSideDrawer() {
+    const menuToggleBtn = document.getElementById('menuToggleBtn');
+    const closeDrawerBtn = document.getElementById('closeDrawerBtn');
+    const drawer = document.getElementById('sideDrawer');
+    const overlay = document.getElementById('sideDrawerOverlay');
+    if (!menuToggleBtn || !drawer || !overlay) return;
+
+    function openDrawer() {
+        drawer.classList.add('open');
+        overlay.classList.add('open');
+        drawer.setAttribute('aria-hidden', 'false');
+        menuToggleBtn.setAttribute('aria-expanded', 'true');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeDrawer() {
+        drawer.classList.remove('open');
+        overlay.classList.remove('open');
+        drawer.setAttribute('aria-hidden', 'true');
+        menuToggleBtn.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+    }
+
+    menuToggleBtn.onclick = openDrawer;
+    closeDrawerBtn.onclick = closeDrawer;
+    overlay.onclick = closeDrawer;
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeDrawer();
+    });
+
+    // Close the drawer automatically once any link inside it is used, so the
+    // user doesn't have to close it manually after navigating.
+    drawer.querySelectorAll('a').forEach(link => link.addEventListener('click', closeDrawer));
+
+    // Fill in the little identity card at the top of the drawer.
+    const drawerUserInfo = document.getElementById('drawerUserInfo');
+    if (drawerUserInfo && currentUser) {
+        const name = currentUser.full_name || currentUser.name || "User";
+        const initial = name.trim().charAt(0).toUpperCase() || "U";
+        drawerUserInfo.innerHTML = `
+            <div class="drawer-avatar">${initial}</div>
+            <div>
+                <div class="drawer-user-name">${name}</div>
+                <div class="drawer-user-role">${currentUser.role === 'landlord' ? 'Landlord' : 'Tenant'}</div>
+            </div>
+        `;
+    }
+}
+
+// --- NEW: COLLAPSIBLE FILTER PANEL (mobile only) ---
+// On phones, the price/rooms/location filters used to always take up
+// vertical space below the search bar even when nobody needed them right
+// now. This tucks them behind a "Filters" toggle so the page opens clean;
+// on desktop the CSS media query keeps them visible as before.
+function setupFiltersToggle() {
+    const toggleBtn = document.getElementById('filtersToggleBtn');
+    const label = document.getElementById('filtersToggleLabel');
+    const body = document.getElementById('advancedFiltersBody');
+    if (!toggleBtn || !body) return;
+
+    toggleBtn.onclick = () => {
+        const isOpen = body.classList.toggle('open');
+        toggleBtn.setAttribute('aria-expanded', String(isOpen));
+        const icon = toggleBtn.querySelector('i');
+        if (icon) icon.className = isOpen ? 'fas fa-chevron-up' : 'fas fa-filter';
+        if (label) label.innerText = isOpen ? 'Hide Filters' : 'Filters';
+    };
+}
 
 // --- NEW: SMART SEARCH UI INJECTION ---
 function injectSmartSearchUI() {
@@ -919,6 +1006,7 @@ function setupSettingsLogic() {
 function setupPostListingLogic() {
     const postModal = document.getElementById('postModal');
     const postBtn = document.getElementById('postBtn');
+    const postFab = document.getElementById('postFab'); // NEW: floating mobile shortcut, mirrors postBtn
     const submitPostBtn = document.getElementById('submitPostBtn');
     const imageInput = document.getElementById('postImages');
     const previewDiv = document.getElementById('imagePreview');
@@ -945,8 +1033,8 @@ function setupPostListingLogic() {
         };
     }
 
-    postBtn.onclick = (e) => {
-        e.preventDefault();
+    function openPostModalForNewListing(e) {
+        if (e) e.preventDefault();
         const modalHeader = postModal.querySelector('h2') || document.querySelector('#postModal h3');
         if(modalHeader) modalHeader.innerText = "Post a Listing";
         submitPostBtn.innerText = "Publish Listing";
@@ -966,7 +1054,11 @@ function setupPostListingLogic() {
 
         submitPostBtn.onclick = addNewListingAction; 
         postModal.style.display = 'block';
-    };
+    }
+
+    postBtn.onclick = openPostModalForNewListing;
+    // NEW: the mobile floating "+" button opens the exact same flow
+    if (postFab) postFab.onclick = openPostModalForNewListing;
 
     // UPDATED: now calls the shared compressImageFile() helper defined near
     // the top of this file (instead of a local copy that only existed inside
