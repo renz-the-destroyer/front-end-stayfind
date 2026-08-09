@@ -212,6 +212,11 @@
             <a id="landlordDashboardBtn" style="display:none;"><i class="fas fa-chart-line"></i> My Dashboard</a>
             <a id="viewSavedBtn"><i class="fas fa-heart"></i> Saved</a>
             <a href="#" class="btn-post" id="postBtn"><i class="fas fa-plus"></i> Post</a>
+            <!-- NEW: Admin Panel link. Plain <a href>, no JS needed - it just
+                 navigates to admin.html, which has its own separate
+                 login/session system (ADMIN_KEY), completely independent
+                 from the regular tenant/landlord user session. -->
+            <a href="admin.html" id="adminPanelLink" title="Admin Panel"><i class="fas fa-user-shield"></i> Admin</a>
             <a id="settingsBtn"><i class="fas fa-cog"></i> Settings</a>
             <a id="logoutLink"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
@@ -220,6 +225,8 @@
     <div class="mobile-nav">
         <a href="home.html"><i class="fas fa-search"></i><span>Explore</span></a>
         <a onclick="document.getElementById('viewSavedBtn').click()"><i class="fas fa-heart"></i><span>Saved</span></a>
+        <!-- NEW: Admin Panel link for mobile bottom nav, same target as desktop -->
+        <a href="admin.html"><i class="fas fa-user-shield"></i><span>Admin</span></a>
         <a onclick="document.getElementById('settingsBtn').click()"><i class="fas fa-user"></i><span>Profile</span></a>
         <a onclick="document.getElementById('logoutLink').click()"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
     </div>
