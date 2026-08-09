@@ -152,7 +152,7 @@ async function loadLandlordRequests() {
             return;
         }
 
-        // NEW: "View Documents" button added before Approve/Reject. Docs are
+        // "View Documents" button added before Approve/Reject. Docs are
         // passed via a global lookup map instead of inline JSON (base64 image
         // strings are too large/unsafe to embed directly in an onclick attribute).
         window.__landlordRequestDocs = window.__landlordRequestDocs || {};
@@ -178,7 +178,7 @@ async function loadLandlordRequests() {
     }
 }
 
-// NEW: opens a modal showing the 3 uploaded verification document images so
+// Opens a modal showing the 3 uploaded verification document images so
 // the admin can inspect them before approving/rejecting a landlord request.
 function viewLandlordDocs(userId) {
     const docsString = (window.__landlordRequestDocs && window.__landlordRequestDocs[userId]) || "";
@@ -208,7 +208,7 @@ async function approveLandlord(id) {
         const res = await fetch(`${API_BASE}/landlord-requests/${id}/approve`, { method: 'POST', headers: adminHeaders() });
         if (handleAuthError(res)) return;
         if (res.ok) {
-            Swal.fire('Approved!', 'The user can now post listings.', 'success');
+            Swal.fire('Approved!', 'The user can now post listings. They will be notified next time they visit the site.', 'success');
             loadLandlordRequests();
             loadUsers();
             loadStats();
@@ -220,15 +220,36 @@ async function approveLandlord(id) {
     }
 }
 
+// UPDATED: now prompts the admin for a rejection reason before submitting.
+// That reason is sent to the backend and stored on the user's account, so
+// home.js can show it to them in a notification along with a note that they
+// can fix the issue and re-apply anytime from Settings.
 async function rejectLandlord(id) {
-    const confirm = await Swal.fire({ title: 'Reject this request?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Yes, reject' });
-    if (!confirm.isConfirmed) return;
+    const { value: reason, isConfirmed } = await Swal.fire({
+        title: 'Reject this request?',
+        html: `<p style="font-size:13px;color:#78909c;margin-bottom:10px; text-align:left;">Let the applicant know why, so they can fix it and try again.</p>`,
+        input: 'textarea',
+        inputPlaceholder: "e.g. The Proof of Ownership document was blurry, or wasn't under your name.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Reject & Notify',
+        confirmButtonColor: '#ff5252',
+        inputValidator: (value) => {
+            if (!value || value.trim() === "") return 'Please provide a reason so the applicant knows what to fix.';
+        }
+    });
+
+    if (!isConfirmed) return;
 
     try {
-        const res = await fetch(`${API_BASE}/landlord-requests/${id}/reject`, { method: 'POST', headers: adminHeaders() });
+        const res = await fetch(`${API_BASE}/landlord-requests/${id}/reject`, {
+            method: 'POST',
+            headers: adminHeaders(),
+            body: JSON.stringify({ reason })
+        });
         if (handleAuthError(res)) return;
         if (res.ok) {
-            Swal.fire('Rejected', 'The request has been rejected.', 'info');
+            Swal.fire('Rejected', 'The request has been rejected. The applicant will see your reason next time they visit the site.', 'info');
             loadLandlordRequests();
             loadUsers();
             loadStats();
