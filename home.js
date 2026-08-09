@@ -7,6 +7,63 @@ const listingsGrid = document.getElementById('listingsGrid');
 // Global variable to track selected stars
 let selectedRating = 0;
 
+// --- IMAGE HELPERS (NEW: shared by grid cards, the details modal, New Listing, and Edit Listing) ---
+
+// UPDATED: This carousel builder used to live only inline inside renderListings().
+// It's now a shared function so the exact same carousel markup can also be
+// injected into the listing-details modal (#carouselWrapper), which previously
+// never received any images at all - that was the main reason photos didn't
+// show up when a user opened a listing.
+function buildCarouselHTML(imagesField, carouselKey) {
+    let imgArray = [];
+    // FIX: split using '|||' instead of ',' because base64 data URLs
+    // (e.g. "data:image/jpeg;base64,...") already contain commas internally.
+    // Using ',' as a delimiter was corrupting every image, even a single upload.
+    if (imagesField && imagesField.trim() !== "") {
+        imgArray = imagesField.split('|||').map(img => img.trim()).filter(img => img !== "");
+    }
+    if (imgArray.length === 0) {
+        imgArray = ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500'];
+    }
+
+    return `
+        <div class="carousel-container" id="carousel-${carouselKey}">
+            <div class="carousel-track" style="transform: translateX(0px);">
+                ${imgArray.map(img => `<img src="${img}" class="carousel-img" onerror="this.src='https://via.placeholder.com/400x200?text=No+Image'">`).join('')}
+            </div>
+            ${imgArray.length > 1 ? `
+                <button class="carousel-btn prev-btn" onclick="moveCarousel(event, '${carouselKey}', -1)"><i class="fas fa-chevron-left"></i></button>
+                <button class="carousel-btn next-btn" onclick="moveCarousel(event, '${carouselKey}', 1)"><i class="fas fa-chevron-right"></i></button>
+            ` : ''}
+        </div>
+    `;
+}
+
+// NEW: shared image-compression helper. This used to be defined ONLY inside
+// setupPostListingLogic() (New Listing), so Edit Listing had no way to
+// compress and attach new photos. Moving it here lets both flows reuse the
+// exact same compression code.
+function compressImageFile(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800;
+                const scaleSize = MAX_WIDTH / img.width;
+                canvas.width = MAX_WIDTH;
+                canvas.height = img.height * scaleSize;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', 0.7));
+            };
+        };
+    });
+}
+
 // --- 1. SECURITY & ROLE CHECK ---
 window.onload = () => {
     if (!currentUser) {
@@ -182,29 +239,10 @@ async function renderListings(items) {
         if (!item.title && !item.price) return;
 
         const isSaved = savedListings.includes(item.id);
-        
-        let imgArray = [];
-        // FIX: split using '|||' instead of ',' because base64 data URLs
-        // (e.g. "data:image/jpeg;base64,...") already contain commas internally.
-        // Using ',' as a delimiter was corrupting every image, even a single upload.
-        if (item.images && item.images.trim() !== "") {
-            imgArray = item.images.split('|||').map(img => img.trim()).filter(img => img !== "");
-        }
-        if (imgArray.length === 0) {
-            imgArray = ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500'];
-        }
-        
-        let carouselHTML = `
-            <div class="carousel-container" id="carousel-${item.id}">
-                <div class="carousel-track" style="transform: translateX(0px);">
-                    ${imgArray.map(img => `<img src="${img}" class="carousel-img" onerror="this.src='https://via.placeholder.com/400x200?text=No+Image'">`).join('')}
-                </div>
-                ${imgArray.length > 1 ? `
-                    <button class="carousel-btn prev-btn" onclick="moveCarousel(event, ${item.id}, -1)"><i class="fas fa-chevron-left"></i></button>
-                    <button class="carousel-btn next-btn" onclick="moveCarousel(event, ${item.id}, 1)"><i class="fas fa-chevron-right"></i></button>
-                ` : ''}
-            </div>
-        `;
+
+        // UPDATED: now uses the shared buildCarouselHTML() helper defined near the
+        // top of this file (also used by the details modal below).
+        let carouselHTML = buildCarouselHTML(item.images, item.id);
         
         const card = document.createElement('div');
         card.className = 'listing-card';
@@ -255,6 +293,16 @@ function showFullDetails(item) {
     document.getElementById('detLandlord').innerText = item.landlord_name || "N/A";
     document.getElementById('detContact').innerText = item.landlord_contact || "No contact provided";
     document.getElementById('detType').innerText = item.category || "Apartment";
+
+    // NEW / FIX: render the photo carousel inside the details modal.
+    // #carouselWrapper already existed in home.html but nothing was ever
+    // writing into it, so no photos ever showed up here before. We use a
+    // distinct 'modal-<id>' key so this carousel never shares a DOM id with
+    // the same listing's carousel on the grid card behind it.
+    const carouselWrapperEl = document.getElementById('carouselWrapper');
+    if (carouselWrapperEl) {
+        carouselWrapperEl.innerHTML = buildCarouselHTML(item.images, `modal-${item.id}`);
+    }
 
     // SECURITY: strictly check if the user is a Landlord AND the owner of this item
     const isOwner = currentUser && currentUser.role === 'landlord' && item.user_id && String(currentUser.id) === String(item.user_id);
@@ -311,9 +359,44 @@ function openEditModal(item) {
     if(document.getElementById('postAmenities')) document.getElementById('postAmenities').value = item.amenities || "";
     if(document.getElementById('postCategory')) document.getElementById('postCategory').value = item.category || "Apartment";
 
+    // NEW: reset the file input and preview the listing's existing photos so
+    // the landlord can see what's currently posted, and so any leftover file
+    // selection/preview from a previous "Post a Listing" session doesn't leak
+    // into Edit mode.
+    const imageInputEl = document.getElementById('postImages');
+    const previewDivEl = document.getElementById('imagePreview');
+    if (imageInputEl) imageInputEl.value = "";
+    if (previewDivEl) {
+        previewDivEl.innerHTML = "";
+        let existingImgs = [];
+        if (item.images && item.images.trim() !== "") {
+            existingImgs = item.images.split('|||').map(img => img.trim()).filter(img => img !== "");
+        }
+        if (existingImgs.length > 0) {
+            previewDivEl.innerHTML =
+                `<p style="width:100%; font-size:11px; color:#777; margin:0 0 5px 0;">Current photos (choose new photos below to replace all of them):</p>` +
+                existingImgs.map(img =>
+                    `<img src="${img}" style="width:60px; height:60px; object-fit:cover; border-radius:5px; border:1px solid #ddd;" onerror="this.src='https://via.placeholder.com/60?text=No+Img'">`
+                ).join('');
+        }
+    }
+
     submitBtn.onclick = async () => {
         submitBtn.disabled = true;
         submitBtn.innerText = "Saving...";
+
+        // FIX: this used to never read the image input at all, so uploading a
+        // new photo while editing had zero effect - nothing was ever sent to
+        // the server. Now we compress any newly selected files and include
+        // them in the update, exactly like New Listing does.
+        let newImages = [];
+        if (imageInputEl && imageInputEl.files && imageInputEl.files.length > 0) {
+            try {
+                newImages = await Promise.all(Array.from(imageInputEl.files).map(file => compressImageFile(file)));
+            } catch (e) {
+                console.error("Image conversion error (edit):", e);
+            }
+        }
 
         const updatedData = {
             listingId: item.id,
@@ -324,7 +407,12 @@ function openEditModal(item) {
             location: document.getElementById('postLocation').value.trim(),
             rooms: parseInt(document.getElementById('postRooms').value) || 0,
             size: parseFloat(document.getElementById('postSize').value) || 0,
-            amenities: document.getElementById('postAmenities')?.value || ""
+            amenities: document.getElementById('postAmenities')?.value || "",
+            // FIX: only overwrite photos when the landlord actually picked new
+            // ones - otherwise send null so the backend's COALESCE(...) in
+            // server.js keeps the existing photos untouched.
+            images: newImages.length > 0 ? newImages.join('|||') : null,
+            thumbnail: newImages.length > 0 ? newImages[0] : null
         };
 
         try {
@@ -623,15 +711,30 @@ function setupPostListingLogic() {
     if (!postBtn || !postModal) return;
 
     if (imageInput) {
-        imageInput.onchange = () => {
+        // UPDATED: rewritten with Promise.all so every selected photo finishes
+        // reading before the preview renders. This keeps multi-photo previews
+        // in the correct order and avoids any chance of a partial/flickery
+        // preview when picking several photos at once.
+        imageInput.onchange = async () => {
             previewDiv.innerHTML = "";
-            Array.from(imageInput.files).forEach(file => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    previewDiv.innerHTML += `<img src="${e.target.result}" style="width:60px; height:60px; object-fit:cover; border-radius:5px; border:1px solid #ddd;">`;
-                };
-                reader.readAsDataURL(file);
-            });
+            const files = Array.from(imageInput.files);
+            if (files.length === 0) return;
+
+            try {
+                const previews = await Promise.all(files.map(file => {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => resolve(e.target.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                }));
+                previewDiv.innerHTML = previews.map(src =>
+                    `<img src="${src}" style="width:60px; height:60px; object-fit:cover; border-radius:5px; border:1px solid #ddd;">`
+                ).join('');
+            } catch (err) {
+                console.error("Preview generation error:", err);
+            }
         };
     }
 
@@ -654,27 +757,10 @@ function setupPostListingLogic() {
         postModal.style.display = 'block';
     };
 
-    const compressImage = (file) => {
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = (event) => {
-                const img = new Image();
-                img.src = event.target.result;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800; 
-                    const scaleSize = MAX_WIDTH / img.width;
-                    canvas.width = MAX_WIDTH;
-                    canvas.height = img.height * scaleSize;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    resolve(canvas.toDataURL('image/jpeg', 0.7)); 
-                };
-            };
-        });
-    };
-
+    // UPDATED: now calls the shared compressImageFile() helper defined near
+    // the top of this file (instead of a local copy that only existed inside
+    // this function), so New Listing and Edit Listing both compress photos
+    // exactly the same way.
     async function addNewListingAction() {
         const imageFiles = Array.from(imageInput.files);
         submitPostBtn.disabled = true;
@@ -682,7 +768,7 @@ function setupPostListingLogic() {
 
         let base64Images = [];
         try {
-            base64Images = await Promise.all(imageFiles.map(file => compressImage(file)));
+            base64Images = await Promise.all(imageFiles.map(file => compressImageFile(file)));
         } catch (e) {
             console.error("Image conversion error", e);
         }
@@ -761,9 +847,12 @@ async function toggleBookmark(event, listingId) {
                 })
             });
             
+            const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
             if (isAdding) {
-                const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
                 Toast.fire({ icon: 'success', title: 'Saved to bookmarks' });
+            } else {
+                // NEW: "unsave" notification
+                Toast.fire({ icon: 'info', title: 'Removed from bookmarks' });
             }
         } catch (err) { 
             console.error("Bookmark sync error:", err); 
