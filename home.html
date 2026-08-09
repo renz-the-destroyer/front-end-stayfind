@@ -212,7 +212,7 @@
             <a id="landlordDashboardBtn" style="display:none;"><i class="fas fa-chart-line"></i> My Dashboard</a>
             <a id="viewSavedBtn"><i class="fas fa-heart"></i> Saved</a>
             <a href="#" class="btn-post" id="postBtn"><i class="fas fa-plus"></i> Post</a>
-            <!-- NEW: Admin Panel link. Plain <a href>, no JS needed - it just
+            <!-- Admin Panel link. Plain <a href>, no JS needed - it just
                  navigates to admin.html, which has its own separate
                  login/session system (ADMIN_KEY), completely independent
                  from the regular tenant/landlord user session. -->
@@ -225,7 +225,7 @@
     <div class="mobile-nav">
         <a href="home.html"><i class="fas fa-search"></i><span>Explore</span></a>
         <a onclick="document.getElementById('viewSavedBtn').click()"><i class="fas fa-heart"></i><span>Saved</span></a>
-        <!-- NEW: Admin Panel link for mobile bottom nav, same target as desktop -->
+        <!-- Admin Panel link for mobile bottom nav, same target as desktop -->
         <a href="admin.html"><i class="fas fa-user-shield"></i><span>Admin</span></a>
         <a onclick="document.getElementById('settingsBtn').click()"><i class="fas fa-user"></i><span>Profile</span></a>
         <a onclick="document.getElementById('logoutLink').click()"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
@@ -250,6 +250,23 @@
             </select>
 
             <p style="font-size: 11px; color: #43a047; margin-top: -15px; margin-bottom: 15px;">* Account role can be changed anytime.</p>
+
+            <!-- NEW: Shown only when "Landlord" is selected AND the user is
+                 not already an approved landlord. Required to submit a
+                 landlord request. -->
+            <div id="settingsLandlordDocsSection" style="display:none; background:#f8fbff; border:1px solid #e3f2fd; border-radius:10px; padding:12px; margin-bottom:20px;">
+                <p style="font-size:11px; color:#0d47a1; font-weight:bold; margin:0 0 8px 0;"><i class="fas fa-file-shield"></i> Landlord Verification Documents (required)</p>
+                <p style="font-size:10px; color:#90a4ae; margin:0 0 10px 0;">Upload clear photos. An admin will review these before your landlord account is approved.</p>
+
+                <label style="font-size:11px; text-transform:none;">Proof of Property Ownership (TCT or Tax Declaration)</label>
+                <input type="file" id="settingsDocOwnership" accept="image/*" style="margin-bottom:12px; padding:8px; font-size:12px;">
+
+                <label style="font-size:11px; text-transform:none;">Local Permits (Barangay Clearance + Mayor's/Business Permit)</label>
+                <input type="file" id="settingsDocPermits" accept="image/*" style="margin-bottom:12px; padding:8px; font-size:12px;">
+
+                <label style="font-size:11px; text-transform:none;">BIR Registration (Form 1901/1903)</label>
+                <input type="file" id="settingsDocBir" accept="image/*" style="margin-bottom:5px; padding:8px; font-size:12px;">
+            </div>
 
             <button id="saveSettingsBtn" style="width:100%; padding:14px; background:#0d47a1; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size: 15px;">Save Changes</button>
             <button onclick="document.getElementById('settingsModal').style.display='none'" style="width:100%; margin-top:15px; background:none; border:none; color:gray; cursor:pointer; font-size: 13px;">Cancel</button>
