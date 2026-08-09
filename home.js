@@ -184,9 +184,13 @@ async function renderListings(items) {
         const isSaved = savedListings.includes(item.id);
         
         let imgArray = [];
+        // FIX: split using '|||' instead of ',' because base64 data URLs
+        // (e.g. "data:image/jpeg;base64,...") already contain commas internally.
+        // Using ',' as a delimiter was corrupting every image, even a single upload.
         if (item.images && item.images.trim() !== "") {
-            imgArray = item.images.split(',').map(img => img.trim());
-        } else {
+            imgArray = item.images.split('|||').map(img => img.trim()).filter(img => img !== "");
+        }
+        if (imgArray.length === 0) {
             imgArray = ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500'];
         }
         
@@ -692,7 +696,9 @@ function setupPostListingLogic() {
             rooms: parseInt(document.getElementById('postRooms').value) || 0,
             size: parseFloat(document.getElementById('postSize').value) || 0,
             amenities: document.getElementById('postAmenities')?.value || "",
-            images: base64Images.join(','), 
+            // FIX: join with '|||' instead of ',' so multi-image uploads don't get
+            // corrupted when split back apart in renderListings().
+            images: base64Images.join('|||'), 
             thumbnail: base64Images.length > 0 ? base64Images[0] : "" 
         };
 
