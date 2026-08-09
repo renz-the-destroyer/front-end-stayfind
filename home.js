@@ -82,7 +82,8 @@ function buildCarouselHTML(imagesField, carouselKey) {
 // NEW: shared image-compression helper. This used to be defined ONLY inside
 // setupPostListingLogic() (New Listing), so Edit Listing had no way to
 // compress and attach new photos. Moving it here lets both flows reuse the
-// exact same compression code.
+// exact same compression code. Also reused by setupSettingsLogic() for
+// compressing landlord verification documents.
 function compressImageFile(file) {
     return new Promise((resolve) => {
         const reader = new FileReader();
@@ -730,27 +731,94 @@ function setupSettingsLogic() {
     const settingsBtn = document.getElementById('settingsBtn');
     const modal = document.getElementById('settingsModal');
     const saveBtn = document.getElementById('saveSettingsBtn');
+    // NEW: refs for the landlord document upload section
+    const editRoleSelect = document.getElementById('editRole');
+    const docsSection = document.getElementById('settingsLandlordDocsSection');
 
     if (!settingsBtn || !modal) return;
+
+    // NEW: toggle the document section based on the currently selected role
+    // in the dropdown. Skips showing it if the user is already an approved
+    // landlord (no need to re-upload documents every time).
+    function toggleDocsSection() {
+        if (!docsSection || !editRoleSelect) return;
+        const alreadyApproved = currentUser.landlord_status === 'approved';
+        if (editRoleSelect.value === 'landlord' && !alreadyApproved) {
+            docsSection.style.display = 'block';
+        } else {
+            docsSection.style.display = 'none';
+        }
+    }
+
+    if (editRoleSelect) {
+        editRoleSelect.addEventListener('change', toggleDocsSection);
+    }
 
     settingsBtn.onclick = () => {
         document.getElementById('editName').value = currentUser.full_name || currentUser.name || "";
         document.getElementById('editAddress').value = currentUser.address || "";
         document.getElementById('editContact').value = currentUser.contact || "";
         document.getElementById('editRole').value = currentUser.role || "tenant";
+        // NEW: reset file inputs and re-evaluate whether the doc section
+        // should show, every time the modal is opened
+        if (document.getElementById('settingsDocOwnership')) document.getElementById('settingsDocOwnership').value = "";
+        if (document.getElementById('settingsDocPermits')) document.getElementById('settingsDocPermits').value = "";
+        if (document.getElementById('settingsDocBir')) document.getElementById('settingsDocBir').value = "";
+        toggleDocsSection();
         modal.style.display = 'block';
     };
 
     saveBtn.onclick = async () => {
+        const chosenRole = document.getElementById('editRole').value;
+        const alreadyApproved = currentUser.landlord_status === 'approved';
+        const isNewLandlordRequest = (chosenRole === 'landlord' && !alreadyApproved);
+
+        // NEW: require all 3 documents when submitting a fresh landlord request
+        let docOwnershipFile = null, docPermitsFile = null, docBirFile = null;
+        if (isNewLandlordRequest) {
+            docOwnershipFile = document.getElementById('settingsDocOwnership').files[0];
+            docPermitsFile = document.getElementById('settingsDocPermits').files[0];
+            docBirFile = document.getElementById('settingsDocBir').files[0];
+
+            if (!docOwnershipFile || !docPermitsFile || !docBirFile) {
+                return Swal.fire({ title: 'Missing Documents', text: 'Please upload all 3 required documents: Proof of Ownership, Local Permits, and BIR Registration.', icon: 'warning', target: '#settingsModal' });
+            }
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.innerText = "Updating...";
+
+        // NEW: compress and attach the 3 landlord documents (if applicable),
+        // reusing the shared compressImageFile() helper defined near the top
+        // of this file.
+        let landlordDocuments = null;
+        if (isNewLandlordRequest) {
+            try {
+                saveBtn.innerText = "Uploading documents...";
+                const compressed = await Promise.all([
+                    compressImageFile(docOwnershipFile),
+                    compressImageFile(docPermitsFile),
+                    compressImageFile(docBirFile)
+                ]);
+                landlordDocuments = compressed.join('|||');
+            } catch (e) {
+                console.error("Document conversion error:", e);
+                saveBtn.disabled = false;
+                saveBtn.innerText = "Save Changes";
+                return Swal.fire({ title: 'Error', text: 'Failed to process your documents. Please try again.', icon: 'error', target: '#settingsModal' });
+            }
+        }
+
         const updatedData = {
             full_name: document.getElementById('editName').value.trim(),
             address: document.getElementById('editAddress').value.trim(),
             contact: document.getElementById('editContact').value.trim(),
-            role: document.getElementById('editRole').value,
-            email: currentUser.email
+            role: chosenRole,
+            email: currentUser.email,
+            // NEW: only populated when submitting a fresh landlord request
+            landlord_documents: landlordDocuments
         };
 
-        saveBtn.disabled = true;
         saveBtn.innerText = "Updating...";
 
         try {
@@ -763,12 +831,14 @@ function setupSettingsLogic() {
             const result = await response.json();
 
             if (response.ok && (result.success || result.status === 'success')) {
-                const newUserObj = { ...currentUser, ...updatedData };
+                // NEW: trust the server's real role/landlord_status, same as dashboard.js
+                const newUserObj = { ...currentUser, ...updatedData, role: result.role || updatedData.role, landlord_status: result.landlord_status };
+                delete newUserObj.landlord_documents; // don't keep base64 blobs in localStorage
                 localStorage.setItem('user', JSON.stringify(newUserObj));
 
                 Swal.fire({
-                    title: 'Success!',
-                    text: 'Profile updated successfully.',
+                    title: result.landlord_status === 'pending' ? 'Request Submitted' : 'Success!',
+                    text: result.message || 'Profile updated successfully.',
                     icon: 'success',
                     target: '#settingsModal'
                 }).then(() => location.reload());
