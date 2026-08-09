@@ -92,19 +92,31 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
         const result = await response.json();
 
         if (response.ok && result.success) {
-            // Sync all new fields back to local storage
-            currentUser.role = userRole;
+            // UPDATED: Landlord approval gate. The server now tells us the
+            // REAL role/landlord_status it applied, since picking "Landlord"
+            // no longer instantly grants the role — it may come back as
+            // role: 'tenant', landlord_status: 'pending' instead. We trust
+            // the server's response rather than assuming userRole was granted.
+            currentUser.role = result.role || userRole;
+            currentUser.landlord_status = result.landlord_status;
             currentUser.full_name = profileData.full_name;
             currentUser.address = profileData.address;
             currentUser.contact = profileData.contact;
             
             localStorage.setItem('user', JSON.stringify(currentUser));
 
+            // NEW: Different success message depending on whether the
+            // landlord request is pending admin approval or the profile
+            // was just completed normally (tenant, or already-approved landlord).
+            const isPendingLandlord = (userRole === 'landlord' && currentUser.role !== 'landlord');
+
             Swal.fire({
                 icon: 'success',
-                title: 'Profile Completed!',
-                text: 'Welcome to StayFind, ' + profileData.full_name + '!',
-                timer: 2000,
+                title: isPendingLandlord ? 'Request Submitted!' : 'Profile Completed!',
+                text: isPendingLandlord 
+                    ? (result.message || 'Your landlord request is waiting for admin approval. You can browse as a tenant in the meantime.')
+                    : ('Welcome to StayFind, ' + profileData.full_name + '!'),
+                timer: 2500,
                 showConfirmButton: false
             }).then(() => {
                 window.location.href = "home.html";
