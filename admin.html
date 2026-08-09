@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StayFind - Admin Panel</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css?family=Montserrat:400,600,800');
+    :root { --primary: #0d47a1; --secondary: #42a5f5; --bg: #f0f4f8; --text: #37474f; --danger: #ff5252; --success: #43a047; --warn: #ffa000; }
+    * { box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    /* --- LOGIN SCREEN --- */
+    #loginScreen { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .login-card { background: #fff; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 380px; text-align: center; }
+    .login-card .brand { font-size: 26px; font-weight: 800; color: var(--primary); margin-bottom: 5px; }
+    .login-card .brand span { color: var(--secondary); }
+    .login-card h2 { font-size: 16px; color: #78909c; font-weight: 600; margin-bottom: 25px; }
+    .login-card input { width: 100%; padding: 12px 15px; margin-bottom: 15px; border: 2px solid #e3f2fd; border-radius: 8px; font-size: 14px; background: #f8fbff; }
+    .login-card input:focus { outline: none; border-color: var(--secondary); }
+    .login-card button { width: 100%; padding: 13px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px; letter-spacing: 0.5px; }
+    .login-card button:hover { background: #0a367a; }
+
+    /* --- DASHBOARD LAYOUT --- */
+    #dashboardScreen { display: none; min-height: 100vh; }
+    .sidebar { width: 230px; background: var(--primary); color: white; position: fixed; top: 0; left: 0; height: 100%; padding: 25px 0; z-index: 100; }
+    .sidebar .brand { font-size: 20px; font-weight: 800; text-align: center; margin-bottom: 30px; }
+    .sidebar .brand span { color: var(--secondary); }
+    .sidebar nav a { display: flex; align-items: center; gap: 12px; padding: 14px 25px; color: #cfd8dc; text-decoration: none; font-size: 14px; font-weight: 600; cursor: pointer; border-left: 4px solid transparent; }
+    .sidebar nav a:hover { background: rgba(255,255,255,0.06); color: white; }
+    .sidebar nav a.active { background: rgba(255,255,255,0.1); color: white; border-left-color: var(--secondary); }
+    .sidebar nav a .badge { margin-left: auto; background: var(--danger); color: white; font-size: 10px; padding: 2px 7px; border-radius: 10px; }
+    .sidebar .logout { position: absolute; bottom: 20px; width: 100%; }
+
+    .main { margin-left: 230px; padding: 30px 35px; }
+    .main h1 { margin: 0 0 5px 0; color: var(--primary); }
+    .main .subtitle { color: #90a4ae; font-size: 13px; margin-bottom: 25px; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 18px; margin-bottom: 30px; }
+    .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    .stat-card i { font-size: 20px; color: var(--secondary); margin-bottom: 10px; }
+    .stat-card .num { font-size: 26px; font-weight: 800; color: var(--primary); }
+    .stat-card .label { font-size: 12px; color: #90a4ae; font-weight: 600; text-transform: uppercase; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 15px; flex-wrap: wrap; }
+    .toolbar input { flex: 1; min-width: 220px; padding: 10px 15px; border-radius: 8px; border: 1px solid #e0e0e0; font-size: 14px; }
+
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    thead { background: #f5f8fb; }
+    th, td { padding: 12px 15px; text-align: left; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
+    th { color: #607d8b; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+    tbody tr:hover { background: #fafcff; }
+    .table-wrap { overflow-x: auto; }
+
+    .pill { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: capitalize; }
+    .pill.tenant { background: #e3f2fd; color: #1565c0; }
+    .pill.landlord { background: #e8f5e9; color: #2e7d32; }
+    .pill.pending { background: #fff8e1; color: #f57f17; }
+    .pill.approved { background: #e8f5e9; color: #2e7d32; }
+    .pill.rejected { background: #ffebee; color: #c62828; }
+    .pill.none { background: #eceff1; color: #78909c; }
+
+    .btn { border: none; padding: 7px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; margin-right: 5px; }
+    .btn-approve { background: var(--success); color: white; }
+    .btn-reject { background: var(--danger); color: white; }
+    .btn-edit { background: var(--secondary); color: white; }
+    .btn-delete { background: var(--danger); color: white; }
+
+    .empty-state { text-align: center; padding: 40px; color: #b0bec5; }
+
+    /* --- MODAL --- */
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 2000; align-items: center; justify-content: center; }
+    .modal-box { background: white; padding: 28px; border-radius: 14px; width: 90%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
+    .modal-box h3 { margin-top: 0; color: var(--primary); }
+    .modal-box label { display: block; font-size: 12px; font-weight: 700; color: #607d8b; margin: 12px 0 5px; }
+    .modal-box input, .modal-box select { width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 22px; }
+    .modal-actions button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+    .btn-save { background: var(--primary); color: white; }
+    .btn-cancel { background: #eceff1; color: #455a64; }
+
+    @media (max-width: 768px) {
+        .sidebar { width: 70px; }
+        .sidebar .brand, .sidebar nav a span, .sidebar .logout span { display: none; }
+        .sidebar nav a { justify-content: center; padding: 14px 0; }
+        .sidebar nav a .badge { position: absolute; margin-left: 0; top: 6px; right: 10px; }
+        .main { margin-left: 70px; padding: 20px; }
+    }
+</style>
+</head>
+<body>
+
+    <!-- LOGIN -->
+    <div id="loginScreen">
+        <div class="login-card">
+            <div class="brand">Stay<span>Find</span></div>
+            <h2>Admin Panel Login</h2>
+            <input type="email" id="adminEmail" placeholder="Admin Email">
+            <input type="password" id="adminPassword" placeholder="Password">
+            <button id="adminLoginBtn">Sign In</button>
+        </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboardScreen">
+        <div class="sidebar">
+            <div class="brand">Stay<span>Find</span> Admin</div>
+            <nav>
+                <a data-panel="overview" class="active"><i class="fas fa-chart-pie"></i> <span>Overview</span></a>
+                <a data-panel="requests"><i class="fas fa-user-clock"></i> <span>Landlord Requests</span><span id="reqBadge" class="badge" style="display:none;">0</span></a>
+                <a data-panel="users"><i class="fas fa-users"></i> <span>Users</span></a>
+                <a data-panel="listings"><i class="fas fa-home"></i> <span>Listings</span></a>
+                <a data-panel="reviews"><i class="fas fa-comments"></i> <span>Reviews</span></a>
+            </nav>
+            <div class="logout">
+                <a id="adminLogoutBtn"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></a>
+            </div>
+        </div>
+
+        <div class="main">
+            <!-- OVERVIEW -->
+            <div class="panel active" id="panel-overview">
+                <h1>Overview</h1>
+                <div class="subtitle">Snapshot of your StayFind platform</div>
+                <div class="stats-grid" id="statsGrid"></div>
+            </div>
+
+            <!-- LANDLORD REQUESTS -->
+            <div class="panel" id="panel-requests">
+                <h1>Landlord Requests</h1>
+                <div class="subtitle">Users are only able to post listings after you approve them here</div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Name</th><th>Email</th><th>Contact</th><th>Address</th><th>Action</th></tr></thead>
+                        <tbody id="requestsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- USERS -->
+            <div class="panel" id="panel-users">
+                <h1>Manage Users</h1>
+                <div class="subtitle">Full CRUD over every registered account</div>
+                <div class="toolbar">
+                    <input type="text" id="userSearch" placeholder="Search by name or email...">
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Landlord Status</th><th>Contact</th><th>Actions</th></tr></thead>
+                        <tbody id="usersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- LISTINGS -->
+            <div class="panel" id="panel-listings">
+                <h1>Manage Listings</h1>
+                <div class="subtitle">Every property posted on the platform</div>
+                <div class="toolbar">
+                    <input type="text" id="listingSearch" placeholder="Search by title or location...">
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Title</th><th>Landlord</th><th>Price</th><th>Location</th><th>Actions</th></tr></thead>
+                        <tbody id="listingsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- REVIEWS -->
+            <div class="panel" id="panel-reviews">
+                <h1>Manage Reviews</h1>
+                <div class="subtitle">Moderate comments and ratings</div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Listing</th><th>User</th><th>Rating</th><th>Comment</th><th>Action</th></tr></thead>
+                        <tbody id="reviewsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT USER MODAL -->
+    <div class="modal" id="editUserModal">
+        <div class="modal-box">
+            <h3>Edit User</h3>
+            <label>Full Name</label>
+            <input type="text" id="euFullName">
+            <label>Email</label>
+            <input type="email" id="euEmail">
+            <label>Contact</label>
+            <input type="text" id="euContact">
+            <label>Address</label>
+            <input type="text" id="euAddress">
+            <label>Role</label>
+            <select id="euRole">
+                <option value="tenant">Tenant</option>
+                <option value="landlord">Landlord</option>
+                <option value="pending">Pending Setup</option>
+            </select>
+            <label>Landlord Status</label>
+            <select id="euLandlordStatus">
+                <option value="none">None</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+            </select>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('editUserModal')">Cancel</button>
+                <button class="btn-save" id="saveUserBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT LISTING MODAL -->
+    <div class="modal" id="editListingModal">
+        <div class="modal-box">
+            <h3>Edit Listing</h3>
+            <label>Title</label>
+            <input type="text" id="elTitle">
+            <label>Category</label>
+            <select id="elCategory">
+                <option value="Apartment">Apartment</option>
+                <option value="House">House</option>
+                <option value="Bedspace">Bedspace</option>
+                <option value="Condo">Condo</option>
+            </select>
+            <label>Price (₱/mo)</label>
+            <input type="number" id="elPrice">
+            <label>Location</label>
+            <input type="text" id="elLocation">
+            <label>Rooms</label>
+            <input type="number" id="elRooms">
+            <label>Size (sqm)</label>
+            <input type="number" id="elSize">
+            <label>Amenities</label>
+            <input type="text" id="elAmenities">
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('editListingModal')">Cancel</button>
+                <button class="btn-save" id="saveListingBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
