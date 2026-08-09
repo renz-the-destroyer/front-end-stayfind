@@ -7,6 +7,46 @@ const listingsGrid = document.getElementById('listingsGrid');
 // Global variable to track selected stars
 let selectedRating = 0;
 
+// NEW: Persistent list of File objects picked for "Post a Listing" / "Edit
+// Listing". A native <input type="file"> REPLACES its entire FileList every
+// time the picker is opened again - so choosing one photo, then opening
+// "Choose files" a second time to add another, was silently discarding the
+// first pick. That was the real cause of "uploading a different photo just
+// replaces the one I picked." This array is now the single source of truth
+// for what actually gets uploaded; the <input> is only used to grab new
+// picks, which get appended here and then the input is cleared.
+let selectedListingFiles = [];
+
+// NEW: Rebuilds the photo preview strip from selectedListingFiles. Each
+// thumbnail gets a small "x" button so a specific photo can be removed
+// before publishing/saving, without clearing the whole selection.
+function renderSelectedFilePreviews() {
+    const previewDiv = document.getElementById('imagePreview');
+    if (!previewDiv) return;
+
+    if (selectedListingFiles.length === 0) {
+        previewDiv.innerHTML = "";
+        return;
+    }
+
+    previewDiv.innerHTML = selectedListingFiles.map((file, idx) => {
+        const url = URL.createObjectURL(file);
+        return `
+            <div style="position:relative; width:60px; height:60px;">
+                <img src="${url}" style="width:60px; height:60px; object-fit:cover; border-radius:5px; border:1px solid #ddd;">
+                <span onclick="removeSelectedListingFile(${idx})" title="Remove photo" style="position:absolute; top:-6px; right:-6px; background:#ff5252; color:white; width:18px; height:18px; border-radius:50%; font-size:11px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; box-shadow:0 1px 3px rgba(0,0,0,0.4);">&times;</span>
+            </div>
+        `;
+    }).join('');
+}
+
+// NEW: Removes one photo from the pending selection (called by the "x"
+// button rendered in renderSelectedFilePreviews above).
+function removeSelectedListingFile(index) {
+    selectedListingFiles.splice(index, 1);
+    renderSelectedFilePreviews();
+}
+
 // --- IMAGE HELPERS (NEW: shared by grid cards, the details modal, New Listing, and Edit Listing) ---
 
 // UPDATED: This carousel builder used to live only inline inside renderListings().
@@ -391,6 +431,12 @@ function openEditModal(item) {
     // into Edit mode.
     const imageInputEl = document.getElementById('postImages');
     const previewDivEl = document.getElementById('imagePreview');
+    // NEW: clear any pending multi-photo selection left over from a previous
+    // "Post a Listing" or Edit session before showing this listing's current
+    // photos - keeps the accumulating-selection behavior (see
+    // renderSelectedFilePreviews / imageInput.onchange in
+    // setupPostListingLogic) from mixing sessions together.
+    selectedListingFiles = [];
     if (imageInputEl) imageInputEl.value = "";
     if (previewDivEl) {
         previewDivEl.innerHTML = "";
@@ -416,9 +462,13 @@ function openEditModal(item) {
         // the server. Now we compress any newly selected files and include
         // them in the update, exactly like New Listing does.
         let newImages = [];
-        if (imageInputEl && imageInputEl.files && imageInputEl.files.length > 0) {
+        // UPDATED: use the accumulated selectedListingFiles array instead of
+        // imageInputEl.files directly, so picking replacement photos across
+        // multiple "Choose files" clicks accumulates instead of only keeping
+        // the last click's picks.
+        if (selectedListingFiles.length > 0) {
             try {
-                newImages = await Promise.all(Array.from(imageInputEl.files).map(file => compressImageFile(file)));
+                newImages = await Promise.all(selectedListingFiles.map(file => compressImageFile(file)));
                 // NEW: warn (non-blocking) if the newly selected photos are large
                 // enough to risk hitting a DB/server payload limit.
                 warnIfImagesTooLarge(newImages);
@@ -745,30 +795,22 @@ function setupPostListingLogic() {
     if (!postBtn || !postModal) return;
 
     if (imageInput) {
-        // UPDATED: rewritten with Promise.all so every selected photo finishes
-        // reading before the preview renders. This keeps multi-photo previews
-        // in the correct order and avoids any chance of a partial/flickery
-        // preview when picking several photos at once.
-        imageInput.onchange = async () => {
-            previewDiv.innerHTML = "";
-            const files = Array.from(imageInput.files);
-            if (files.length === 0) return;
-
-            try {
-                const previews = await Promise.all(files.map(file => {
-                    return new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onload = (e) => resolve(e.target.result);
-                        reader.onerror = reject;
-                        reader.readAsDataURL(file);
-                    });
-                }));
-                previewDiv.innerHTML = previews.map(src =>
-                    `<img src="${src}" style="width:60px; height:60px; object-fit:cover; border-radius:5px; border:1px solid #ddd;">`
-                ).join('');
-            } catch (err) {
-                console.error("Preview generation error:", err);
-            }
+        // UPDATED: this used to read imageInput.files directly and REPLACE the
+        // whole preview every time it fired - which meant picking photos in
+        // more than one "Choose files" click threw away the earlier picks
+        // (browsers replace the input's FileList on every open, they never
+        // merge). Now every newly chosen batch is APPENDED to the persistent
+        // selectedListingFiles array (declared near the top of this file),
+        // the input is cleared so it's ready for the next pick, and the whole
+        // preview strip (with per-photo remove buttons) is re-rendered from
+        // that array - so choosing photo 1, then photo 2, then photo 3 in
+        // separate clicks now correctly keeps all three.
+        imageInput.onchange = () => {
+            const newFiles = Array.from(imageInput.files);
+            if (newFiles.length === 0) return;
+            selectedListingFiles = selectedListingFiles.concat(newFiles);
+            imageInput.value = ""; // reset so re-picking the same file still fires onchange
+            renderSelectedFilePreviews();
         };
     }
 
@@ -784,6 +826,10 @@ function setupPostListingLogic() {
         document.getElementById('postRooms').value = "";
         document.getElementById('postSize').value = "";
         if(document.getElementById('postAmenities')) document.getElementById('postAmenities').value = "";
+        // NEW: clear the persistent multi-photo selection whenever a fresh
+        // "Post a Listing" session starts, so nothing carries over from a
+        // previous attempt or from Edit mode.
+        selectedListingFiles = [];
         if(previewDiv) previewDiv.innerHTML = "";
         if(imageInput) imageInput.value = "";
 
@@ -796,7 +842,11 @@ function setupPostListingLogic() {
     // this function), so New Listing and Edit Listing both compress photos
     // exactly the same way.
     async function addNewListingAction() {
-        const imageFiles = Array.from(imageInput.files);
+        // UPDATED: use the accumulated selectedListingFiles array (built up
+        // across possibly multiple "Choose files" clicks) instead of
+        // imageInput.files, which only ever reflects the most recent single
+        // picker interaction.
+        const imageFiles = selectedListingFiles;
         submitPostBtn.disabled = true;
         submitPostBtn.innerText = "Processing...";
 
