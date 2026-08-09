@@ -64,6 +64,32 @@ function compressImageFile(file) {
     });
 }
 
+// NEW: Shared helper used by both "New Listing" and "Edit Listing" right
+// before submitting. It doesn't block the upload - it just warns the user if
+// the combined compressed photos are large enough that they might exceed a
+// hosting provider's database packet-size limit (a common reason multi-photo
+// uploads fail while single-photo uploads succeed). If you still see photos
+// fail to save after raising the DB column to LONGTEXT, this is the next
+// thing to check - either reduce photo count or ask your DB host to raise
+// max_allowed_packet.
+function warnIfImagesTooLarge(base64Images) {
+    if (!base64Images || base64Images.length === 0) return 0;
+    const totalBytes = base64Images.reduce((sum, img) => sum + img.length, 0);
+    const totalMB = totalBytes / (1024 * 1024);
+    if (totalMB > 8) {
+        Swal.fire({
+            title: 'Heads up: large photos',
+            text: `Your selected photos total about ${totalMB.toFixed(1)}MB after compression. If the upload fails, try using fewer photos or smaller images.`,
+            icon: 'info',
+            timer: 3500,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
+        });
+    }
+    return totalMB;
+}
+
 // --- 1. SECURITY & ROLE CHECK ---
 window.onload = () => {
     if (!currentUser) {
@@ -393,6 +419,9 @@ function openEditModal(item) {
         if (imageInputEl && imageInputEl.files && imageInputEl.files.length > 0) {
             try {
                 newImages = await Promise.all(Array.from(imageInputEl.files).map(file => compressImageFile(file)));
+                // NEW: warn (non-blocking) if the newly selected photos are large
+                // enough to risk hitting a DB/server payload limit.
+                warnIfImagesTooLarge(newImages);
             } catch (e) {
                 console.error("Image conversion error (edit):", e);
             }
@@ -425,7 +454,12 @@ function openEditModal(item) {
             if (response.ok) {
                 Swal.fire({ title: 'Updated!', text: 'Your listing has been updated.', icon: 'success' }).then(() => location.reload());
             } else {
-                Swal.fire('Error', 'Failed to update listing.', 'error');
+                // FIX: this branch used to show a hardcoded generic message and
+                // never looked at the response body, so the real reason a
+                // multi-photo edit failed (e.g. a DB "Data too long for column"
+                // error) was completely invisible. Now we surface it.
+                const errResult = await response.json().catch(() => ({ message: "Failed to update listing." }));
+                Swal.fire('Error', errResult.message || errResult.error || 'Failed to update listing.', 'error');
             }
         } catch (err) {
             Swal.fire('Error', 'Server connection error.', 'error');
@@ -769,6 +803,9 @@ function setupPostListingLogic() {
         let base64Images = [];
         try {
             base64Images = await Promise.all(imageFiles.map(file => compressImageFile(file)));
+            // NEW: warn (non-blocking) if the selected photos are large enough
+            // to risk hitting a DB/server payload limit once combined.
+            warnIfImagesTooLarge(base64Images);
         } catch (e) {
             console.error("Image conversion error", e);
         }
@@ -806,7 +843,12 @@ function setupPostListingLogic() {
                 Swal.fire({ title: 'Success!', text: 'Listing published.', icon: 'success', target: '#postModal' }).then(() => location.reload());
             } else {
                 const errResult = await response.json().catch(() => ({ message: "Submission Failed" }));
-                Swal.fire({ title: 'Error', text: errResult.message || 'Failed to post', icon: 'error', target: '#postModal' });
+                // FIX: the backend's addListing controller sends the failure
+                // reason as `error`, not `message`, so this was always falling
+                // through to the generic "Failed to post" text and hiding the
+                // real DB error (e.g. "Data too long for column 'images'" when
+                // multiple photos are uploaded and the column is still TEXT).
+                Swal.fire({ title: 'Error', text: errResult.message || errResult.error || 'Failed to post', icon: 'error', target: '#postModal' });
             }
         } catch (err) {
             Swal.fire({ title: 'Error', text: 'Could not connect to server', icon: 'error', target: '#postModal' });
