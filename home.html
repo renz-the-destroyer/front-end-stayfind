@@ -7,57 +7,159 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css?family=Montserrat:400,700');
+        @import url('https://fonts.googleapis.com/css?family=Montserrat:400,600,700,800');
         * { box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
-        
-        body { 
-            background: #f4f7f6; 
-            margin: 0; 
-            padding-top: 70px; 
-            padding-bottom: calc(80px + env(safe-area-inset-bottom)); 
+
+        body {
+            background: #f4f7f6;
+            margin: 0;
+            padding-top: 68px;
         }
 
-        /* NAVBAR */
-        nav { background: #0d47a1; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; position: fixed; top: 0; width: 100%; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .logo { color: white; font-weight: 800; font-size: 1.5rem; text-decoration: none; }
+        /* ============ TOP NAVBAR (slimmed down) ============ */
+        nav {
+            background: #0d47a1;
+            padding: 12px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .nav-left { display: flex; align-items: center; gap: 14px; }
+        .menu-toggle {
+            background: rgba(255,255,255,0.12);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+        .menu-toggle:hover { background: rgba(255,255,255,0.24); }
+        .logo { color: white; font-weight: 800; font-size: 1.4rem; text-decoration: none; letter-spacing: -0.5px; }
         .logo span { color: #42a5f5; }
-        .nav-links { display: flex; align-items: center; }
-        .nav-links a { color: white; text-decoration: none; margin-left: 20px; font-size: 14px; transition: 0.3s; cursor: pointer; }
-        .nav-links a:hover { color: #42a5f5; }
-        .btn-post { background: #42a5f5; color: white !important; padding: 8px 15px; border-radius: 5px; font-weight: bold; display: none; }
-        
-        .nav-active { color: #42a5f5 !important; font-weight: bold; }
+
+        /* ============ SIDE DRAWER ============ */
+        .drawer-overlay {
+            position: fixed; inset: 0; background: rgba(9, 25, 49, 0.55);
+            backdrop-filter: blur(2px);
+            z-index: 1900; opacity: 0; visibility: hidden; transition: opacity 0.25s ease;
+        }
+        .drawer-overlay.open { opacity: 1; visibility: visible; }
+
+        .side-drawer {
+            position: fixed; top: 0; left: 0; height: 100%;
+            width: 280px; max-width: 85vw;
+            background: #ffffff;
+            z-index: 1950;
+            box-shadow: 6px 0 30px rgba(0,0,0,0.18);
+            transform: translateX(-105%);
+            transition: transform 0.3s cubic-bezier(.25,.8,.35,1);
+            display: flex; flex-direction: column;
+        }
+        .side-drawer.open { transform: translateX(0); }
+
+        .drawer-header {
+            background: linear-gradient(135deg, #0d47a1, #1565c0);
+            color: white; padding: 22px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            flex-shrink: 0;
+        }
+        .drawer-brand { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.5px; }
+        .drawer-brand span { color: #90caf9; }
+        .drawer-close {
+            background: rgba(255,255,255,0.15); border: none; color: white;
+            width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 14px;
+        }
+        .drawer-close:hover { background: rgba(255,255,255,0.28); }
+
+        .drawer-user {
+            display: flex; align-items: center; gap: 12px;
+            padding: 18px 20px; border-bottom: 1px solid #eef2f7; flex-shrink: 0;
+        }
+        .drawer-avatar {
+            width: 42px; height: 42px; border-radius: 50%; background: #e3f2fd; color: #0d47a1;
+            font-weight: 800; display: flex; align-items: center; justify-content: center;
+            font-size: 16px; flex-shrink: 0;
+        }
+        .drawer-user-name { font-weight: 700; font-size: 14px; color: #263238; line-height: 1.3; }
+        .drawer-user-role { font-size: 11px; color: #90a4ae; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+        .drawer-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+        .drawer-section-label {
+            font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
+            color: #b0bec5; padding: 12px 14px 6px;
+        }
+        .drawer-link {
+            display: flex; align-items: center; padding: 13px 14px; border-radius: 10px;
+            color: #37474f; text-decoration: none; font-size: 14px; font-weight: 600;
+            cursor: pointer; margin-bottom: 4px; transition: background 0.15s, color 0.15s;
+        }
+        .drawer-link i { width: 18px; text-align: center; color: #90a4ae; margin-right: 14px; }
+        .drawer-link:hover { background: #f1f6fc; }
+        .drawer-link.nav-active { background: #e3f2fd; color: #0d47a1; }
+        .drawer-link.nav-active i { color: #0d47a1; }
+        .drawer-link.post-drawer-link { background: #42a5f5; color: white; margin-top: 6px; }
+        .drawer-link.post-drawer-link i { color: white; }
+        .drawer-link.post-drawer-link:hover { background: #1e88e5; }
+
+        .drawer-footer { padding: 10px 10px 20px; border-top: 1px solid #eef2f7; flex-shrink: 0; }
+        .drawer-link.logout-link { color: #ff5252; }
+        .drawer-link.logout-link i { color: #ff5252; }
+
+        /* Floating "Post" action button, mobile only, landlords only */
+        .post-fab {
+            position: fixed;
+            bottom: calc(24px + env(safe-area-inset-bottom));
+            right: 22px;
+            width: 56px; height: 56px; border-radius: 50%;
+            background: #0d47a1; color: white; border: none; font-size: 20px;
+            box-shadow: 0 6px 20px rgba(13,71,161,0.45);
+            cursor: pointer; z-index: 998;
+            display: none;
+            align-items: center; justify-content: center;
+        }
 
         /* --- SMART SEARCH MOBILE ADAPTATION --- */
         #smartSearchBtn {
-            position: fixed; 
-            bottom: calc(90px + env(safe-area-inset-bottom)); /* Lifted to stay above mobile nav */
-            right: 20px; 
-            z-index: 999; 
-            padding: 12px 20px; 
-            border-radius: 30px; 
-            border: none; 
-            background: #007bff; 
-            color: white; 
-            cursor: pointer; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+            position: fixed;
+            bottom: calc(24px + env(safe-area-inset-bottom));
+            right: 20px;
+            z-index: 999;
+            padding: 12px 20px;
+            border-radius: 30px;
+            border: none;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             font-weight: bold;
             transition: transform 0.2s;
         }
         #smartSearchBtn:active { transform: scale(0.9); }
 
         #smartSearchBox {
-            display: none; 
-            position: fixed; 
-            bottom: calc(150px + env(safe-area-inset-bottom)); 
-            right: 20px; 
-            z-index: 1001; 
-            width: 320px; 
-            max-width: calc(100vw - 40px); /* Responsive width */
-            background: white; 
-            border-radius: 15px; 
-            box-shadow: 0 5px 25px rgba(0,0,0,0.3); 
-            overflow: hidden; 
+            display: none;
+            position: fixed;
+            bottom: calc(90px + env(safe-area-inset-bottom));
+            right: 20px;
+            z-index: 1001;
+            width: 320px;
+            max-width: calc(100vw - 40px);
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.3);
+            overflow: hidden;
             border: 1px solid #ddd;
         }
 
@@ -66,41 +168,37 @@
                 width: 100%;
                 right: 0;
                 bottom: 0;
-                border-radius: 20px 20px 0 0; /* Bottom sheet style for phones */
+                border-radius: 20px 20px 0 0;
                 max-width: 100vw;
-            }
-            #smartSearchBtn {
-                bottom: calc(85px + env(safe-area-inset-bottom));
-                right: 15px;
             }
         }
 
         /* MODAL STYLES */
-        .modal { 
-            display: none; 
-            position: fixed; 
-            z-index: 1500; 
-            left: 0; 
-            top: 0; 
-            width: 100%; 
-            height: 100%; 
-            background: rgba(0,0,0,0.6); 
-            backdrop-filter: blur(3px); 
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1500;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(3px);
         }
 
         #postModal { z-index: 2000 !important; }
 
-        .modal-content { 
-            background: white; 
+        .modal-content {
+            background: white;
             position: relative;
-            top: 50%; 
-            left: 50%; 
-            transform: translate(-50%, -50%); 
-            padding: 30px; 
-            border-radius: 15px; 
-            width: 90%; 
-            max-width: 450px; 
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3); 
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
             max-height: 90vh;
             overflow-y: auto;
         }
@@ -109,12 +207,12 @@
 
         .modal-content h3 { color: #0d47a1; margin-top: 0; text-align: center; margin-bottom: 20px; }
         .modal-content label { display: block; font-size: 12px; font-weight: bold; color: #555; margin-bottom: 5px; }
-        .modal-content input, .modal-content select { 
-            width: 100%; 
-            padding: 12px; 
-            margin-bottom: 20px; 
-            border: 1px solid #ddd; 
-            border-radius: 8px; 
+        .modal-content input, .modal-content select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
             font-size: 14px;
         }
 
@@ -122,10 +220,10 @@
         .landlord-info-box { background: #e3f2fd; padding: 15px; border-radius: 10px; margin-top: 20px; }
         .landlord-info-box h4 { margin: 0 0 10px 0; color: #0d47a1; font-size: 14px; }
         .landlord-info-box p { margin: 5px 0; font-size: 13px; color: #333; }
-        
+
         .btn-delete { background: #ff5252; color: white; border: none; padding: 12px; border-radius: 8px; flex: 1; font-weight: bold; cursor: pointer; transition: 0.3s; }
         .btn-delete:hover { background: #e53935; }
-        
+
         .btn-edit { background: #0d47a1; color: white; border: none; padding: 12px; border-radius: 8px; flex: 1; font-weight: bold; cursor: pointer; transition: 0.3s; }
         .btn-edit:hover { background: #0a367a; }
 
@@ -148,88 +246,131 @@
         .star-rating i.active { color: #ffc107; }
         .comment-item { border-bottom: 1px solid #eee; padding: 10px 0; }
         .comment-item:last-child { border: none; }
-        
+
         .review-badge { background: #ffc107; color: #333; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-left: 10px; vertical-align: middle; }
-        
+
         .landlord-reply-badge { background: #0d47a1; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 5px; text-transform: uppercase; }
         .reply-item { margin-left: 30px; border-left: 3px solid #42a5f5; padding-left: 10px; background: #f9f9f9; }
 
-        .filter-container { background: #fff; padding: 20px 5%; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 20px; }
-        .search-box-wrapper { display: flex; align-items: center; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 5px 15px; margin-bottom: 20px; transition: 0.3s; }
+        /* ============ FILTER BAR (roomier + collapsible on mobile) ============ */
+        .filter-container { background: #fff; padding: 24px 5%; box-shadow: 0 4px 20px rgba(0,0,0,0.06); margin-bottom: 30px; }
+        .search-box-wrapper { display: flex; align-items: center; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 5px 15px; transition: 0.3s; }
         .search-box-wrapper:focus-within { border-color: #42a5f5; box-shadow: 0 0 0 4px rgba(66, 165, 245, 0.1); }
         .search-icon { color: #9e9e9e; margin-right: 15px; }
         .search-box-wrapper input { border: none; padding: 12px; font-size: 16px; width: 100%; outline: none; }
-        .search-btn { background: #42a5f5; color: white; border: none; padding: 10px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .filter-layout-wrapper { display: flex; flex-wrap: wrap; gap: 20px; }
+        .search-btn { background: #42a5f5; color: white; border: none; padding: 10px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; flex-shrink: 0; }
+
+        .filters-toggle-btn {
+            display: none;
+            align-items: center; justify-content: center; gap: 8px;
+            width: 100%; margin-top: 14px; padding: 12px 16px;
+            background: #f1f6fc; border: 1px solid #e3f2fd; color: #0d47a1;
+            font-weight: 700; font-size: 13px; border-radius: 10px; cursor: pointer;
+        }
+
+        #advancedFiltersBody { margin-top: 22px; }
+
+        .filter-layout-wrapper { display: flex; flex-wrap: wrap; gap: 24px; }
         .advanced-filters { flex: 3; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
         .filter-item { flex: 1; min-width: 150px; }
         .filter-item label { display: block; font-size: 13px; font-weight: 600; color: #616161; margin-bottom: 8px; }
         .filter-item select, .filter-item input { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px; width: 100%; }
-        .apply-filters-btn { background: #0d47a1; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-        
-        .quick-actions { flex: 1; min-width: 250px; background: #fff; border: 1px solid #f0f0f0; border-radius: 12px; padding: 15px; }
+        .apply-filters-btn { background: #0d47a1; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+
+        .quick-actions { flex: 1; min-width: 220px; background: #fff; border: 1px solid #f0f0f0; border-radius: 12px; padding: 15px; }
         .quick-actions h4 { margin: 0 0 10px 0; font-size: 14px; color: #444; }
         .browse-all-btn { width: 100%; background: #fff; border: 2px solid #42a5f5; color: #42a5f5; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
         .browse-all-btn:hover { background: #42a5f5; color: #fff; }
 
-        .container { padding: 30px 5%; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; }
-        .listing-card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s; position: relative; cursor: pointer; }
-        .listing-card:hover { transform: translateY(-5px); }
-        
+        /* ============ LISTINGS GRID (centered, capped width, more breathing room) ============ */
+        .container {
+            padding: 8px 5% 60px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 26px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .listing-card {
+            background: white; border-radius: 14px; overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06); transition: transform 0.25s, box-shadow 0.25s;
+            position: relative; cursor: pointer;
+        }
+        .listing-card:hover { transform: translateY(-5px); box-shadow: 0 12px 28px rgba(0,0,0,0.12); }
+
         .save-btn { position: absolute; top: 15px; right: 15px; background: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); cursor: pointer; z-index: 10; transition: 0.3s; }
         .save-btn i { color: #ccc; font-size: 18px; }
         .save-btn.active i { color: #ff5252; }
-        
-        .listing-info { padding: 15px; }
-        .price { color: #0d47a1; font-size: 1.2rem; font-weight: 800; }
-        .location { font-size: 13px; color: #546e7a; margin: 5px 0; }
-        .details { display: flex; gap: 10px; font-size: 12px; color: #78909c; margin-top: 10px; }
 
-        .mobile-nav { display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); justify-content: space-around; padding: 10px 0; padding-bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 1000; }
-        .mobile-nav a { color: #555; text-decoration: none; font-size: 20px; display: flex; flex-direction: column; align-items: center; }
-        .mobile-nav span { font-size: 10px; margin-top: 2px; }
-        
-        @media (max-width: 768px) { 
-            nav { padding: 10px 5%; }
-            .nav-links a:not(.btn-post) { display: none; } 
-            .filter-layout-wrapper { flex-direction: column; }
-            .advanced-filters { flex-direction: column; align-items: stretch; gap: 10px; }
+        .listing-info { padding: 16px 16px 20px; }
+        .price { color: #0d47a1; font-size: 1.2rem; font-weight: 800; }
+        .location { font-size: 13px; color: #546e7a; margin: 6px 0; }
+        .details { display: flex; gap: 10px; font-size: 12px; color: #78909c; margin-top: 12px; }
+
+        /* ============ RESPONSIVE ============ */
+        @media (max-width: 768px) {
+            body { padding-top: 60px; }
+            nav { padding: 10px 4%; }
+            .logo { font-size: 1.25rem; }
+            .filter-container { padding: 18px 5% 20px; margin-bottom: 20px; }
+            .filters-toggle-btn { display: flex; }
+            #advancedFiltersBody { display: none; margin-top: 0; }
+            #advancedFiltersBody.open { display: block; margin-top: 18px; }
+            .filter-layout-wrapper { flex-direction: column; gap: 14px; }
+            .advanced-filters { flex-direction: column; align-items: stretch; gap: 12px; }
             .filter-item { min-width: 100%; }
             .modal-content { width: 95%; padding: 20px; }
-            .container { grid-template-columns: 1fr; padding: 15px; }
-            .mobile-nav { display: flex; }
+            .container { grid-template-columns: 1fr; padding: 4px 5% 100px; gap: 18px; }
             .search-box-wrapper { flex-direction: row; }
             .search-btn { padding: 10px 15px; font-size: 14px; }
+            .post-fab { display: flex; }
+        }
+
+        @media (min-width: 1600px) {
+            .container { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
         }
     </style>
 </head>
 <body>
 
     <nav>
-        <a href="home.html" class="logo">Stay<span>Find</span></a>
-        <div class="nav-links">
-            <a id="viewAllBtn" class="nav-active">Browse</a>
-            <a id="landlordDashboardBtn" style="display:none;"><i class="fas fa-chart-line"></i> My Dashboard</a>
-            <a id="viewSavedBtn"><i class="fas fa-heart"></i> Saved</a>
-            <a href="#" class="btn-post" id="postBtn"><i class="fas fa-plus"></i> Post</a>
-            <!-- Admin Panel link. Plain <a href>, no JS needed - it just
-                 navigates to admin.html, which has its own separate
-                 login/session system (ADMIN_KEY), completely independent
-                 from the regular tenant/landlord user session. -->
-            <a href="admin.html" id="adminPanelLink" title="Admin Panel"><i class="fas fa-user-shield"></i> Admin</a>
-            <a id="settingsBtn"><i class="fas fa-cog"></i> Settings</a>
-            <a id="logoutLink"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        <div class="nav-left">
+            <button class="menu-toggle" id="menuToggleBtn" aria-label="Open menu" aria-expanded="false">
+                <i class="fas fa-bars"></i>
+            </button>
+            <a href="home.html" class="logo">Stay<span>Find</span></a>
         </div>
     </nav>
 
-    <div class="mobile-nav">
-        <a href="home.html"><i class="fas fa-search"></i><span>Explore</span></a>
-        <a onclick="document.getElementById('viewSavedBtn').click()"><i class="fas fa-heart"></i><span>Saved</span></a>
-        <!-- Admin Panel link for mobile bottom nav, same target as desktop -->
-        <a href="admin.html"><i class="fas fa-user-shield"></i><span>Admin</span></a>
-        <a onclick="document.getElementById('settingsBtn').click()"><i class="fas fa-user"></i><span>Profile</span></a>
-        <a onclick="document.getElementById('logoutLink').click()"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
-    </div>
+    <!-- ============ SIDE DRAWER (replaces the old top nav links + bottom mobile nav) ============ -->
+    <div class="drawer-overlay" id="sideDrawerOverlay"></div>
+    <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
+        <div class="drawer-header">
+            <div class="drawer-brand">Stay<span>Find</span></div>
+            <button class="drawer-close" id="closeDrawerBtn" aria-label="Close menu"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="drawer-user" id="drawerUserInfo"></div>
+
+        <nav class="drawer-nav">
+            <div class="drawer-section-label">Menu</div>
+            <a id="viewAllBtn" class="drawer-link nav-active"><i class="fas fa-compass"></i> Browse</a>
+            <a id="landlordDashboardBtn" class="drawer-link" style="display:none;"><i class="fas fa-chart-line"></i> My Dashboard</a>
+            <a id="viewSavedBtn" class="drawer-link"><i class="fas fa-heart"></i> Saved</a>
+            <a href="#" class="drawer-link post-drawer-link" id="postBtn" style="display:none;"><i class="fas fa-plus"></i> Post a Listing</a>
+
+            <div class="drawer-section-label">Account</div>
+            <a id="settingsBtn" class="drawer-link"><i class="fas fa-cog"></i> Settings</a>
+            <a href="admin.html" class="drawer-link"><i class="fas fa-user-shield"></i> Admin Panel</a>
+        </nav>
+
+        <div class="drawer-footer">
+            <a id="logoutLink" class="drawer-link logout-link"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </aside>
+
+    <!-- Floating "Post" button shown on mobile for landlords only (mirrors the drawer's Post link) -->
+    <button class="post-fab" id="postFab" aria-label="Post a new listing"><i class="fas fa-plus"></i></button>
 
     <div id="settingsModal" class="modal">
         <div class="modal-content">
@@ -240,7 +381,7 @@
             <input type="text" id="editAddress" placeholder="Your Address">
             <label>Contact</label>
             <input type="text" id="editContact" placeholder="Phone Number">
-            
+
             <p style="font-size: 11px; color: #e53935; margin-top: -15px; margin-bottom: 15px;">* Name, Address, and Contact can only be changed once a month.</p>
 
             <label>Your Role</label>
@@ -276,10 +417,10 @@
     <div id="postModal" class="modal">
         <div class="modal-content">
             <h3 id="postModalTitle">Post New Listing</h3>
-            
+
             <label>Listing Title</label>
             <input type="text" id="postTitle" placeholder="e.g. Modern Studio Apartment">
-            
+
             <label>Property Category</label>
             <select id="postCategory">
                 <option value="Apartment">Apartment</option>
@@ -290,10 +431,10 @@
 
             <label>Price (₱ per month)</label>
             <input type="number" id="postPrice" placeholder="5000" min="0">
-            
+
             <label>Location / Address</label>
             <input type="text" id="postLocation" placeholder="e.g. Los Baños, Laguna">
-            
+
             <div style="display: flex; gap: 10px;">
                 <div style="flex: 1;">
                     <label>Rooms</label>
@@ -319,12 +460,12 @@
 
     <div id="detailsModal" class="modal">
         <div class="modal-content" style="max-width: 500px;">
-            <div id="carouselWrapper"></div> 
+            <div id="carouselWrapper"></div>
             <div class="detail-header">
                 <h2 id="detTitle" style="margin:0; color:#0d47a1;">Listing Details</h2>
                 <p style="color:gray; font-size:14px;"><i class="fas fa-map-marker-alt"></i> <span id="detLocation"></span></p>
             </div>
-            
+
             <p><strong>Price:</strong> ₱<span id="detPrice"></span>/mo</p>
             <p><strong>Type:</strong> <span id="detType"></span></p>
             <p><strong>Specs:</strong> <span id="detRooms"></span> Rooms | <span id="detSize"></span> sqm</p>
@@ -338,7 +479,7 @@
 
             <div style="margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px;">
                 <h4 style="margin-bottom: 15px; color: #333;">Reviews & Comments <span id="revCount" class="review-badge">0</span></h4>
-                
+
                 <div id="ratingInputArea" style="margin-bottom: 15px;">
                     <label id="ratingLabel" style="margin-bottom: 8px;">Rate this stay:</label>
                     <div class="star-rating" id="starContainer">
@@ -373,38 +514,44 @@
             <button type="submit" class="search-btn">Search</button>
         </form>
 
-        <div class="filter-layout-wrapper">
-            <div class="advanced-filters">
-                <div class="filter-item">
-                    <label>Price Range (₱)</label>
-                    <select id="maxPrice" onchange="filterListings()">
-                        <option value="Infinity">Any Price</option>
-                        <option value="5000">Under ₱5,000</option>
-                        <option value="10000">Under ₱10,000</option>
-                        <option value="20000">Under ₱20,000</option>
-                    </select>
-                </div>
-                <div class="filter-item">
-                    <label>Rooms</label>
-                    <select id="roomFilter" onchange="filterListings()">
-                        <option value="all">Any</option>
-                        <option value="1">1+ Room</option>
-                        <option value="2">2+ Rooms</option>
-                        <option value="3">3+ Rooms</option>
-                    </select>
-                </div>
-                <div class="filter-item">
-                    <label>Location</label>
-                    <input type="text" id="locFilter" placeholder="e.g., Los Baños" oninput="filterListings()">
-                </div>
-                <button class="apply-filters-btn" onclick="filterListings()">
-                    <i class="fas fa-filter"></i> Apply Filters
-                </button>
-            </div>
+        <button type="button" id="filtersToggleBtn" class="filters-toggle-btn" aria-expanded="false">
+            <i class="fas fa-filter"></i> <span id="filtersToggleLabel">Filters</span>
+        </button>
 
-            <div class="quick-actions">
-                <h4>Quick actions</h4>
-                <button class="browse-all-btn" onclick="resetFilters()">Clear Filters</button>
+        <div id="advancedFiltersBody">
+            <div class="filter-layout-wrapper">
+                <div class="advanced-filters">
+                    <div class="filter-item">
+                        <label>Price Range (₱)</label>
+                        <select id="maxPrice" onchange="filterListings()">
+                            <option value="Infinity">Any Price</option>
+                            <option value="5000">Under ₱5,000</option>
+                            <option value="10000">Under ₱10,000</option>
+                            <option value="20000">Under ₱20,000</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label>Rooms</label>
+                        <select id="roomFilter" onchange="filterListings()">
+                            <option value="all">Any</option>
+                            <option value="1">1+ Room</option>
+                            <option value="2">2+ Rooms</option>
+                            <option value="3">3+ Rooms</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label>Location</label>
+                        <input type="text" id="locFilter" placeholder="e.g., Los Baños" oninput="filterListings()">
+                    </div>
+                    <button class="apply-filters-btn" onclick="filterListings()">
+                        <i class="fas fa-filter"></i> Apply Filters
+                    </button>
+                </div>
+
+                <div class="quick-actions">
+                    <h4>Quick actions</h4>
+                    <button class="browse-all-btn" onclick="resetFilters()">Clear Filters</button>
+                </div>
             </div>
         </div>
     </div>
