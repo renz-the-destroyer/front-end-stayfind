@@ -26,15 +26,15 @@
     /* --- DASHBOARD LAYOUT --- */
     #dashboardScreen { display: none; min-height: 100vh; }
     .sidebar { width: 230px; background: var(--primary); color: white; position: fixed; top: 0; left: 0; height: 100%; padding: 25px 0; z-index: 100; }
-    .sidebar .brand { font-size: 20px; font-weight: 800; text-align: center; margin-bottom: 30px; }
+    .sidebar .brand { font-size: 20px; font-weight: 800; text-align: center; margin-bottom: 4px; }
     .sidebar .brand span { color: var(--secondary); }
+    /* NEW: shows who's currently logged in, filled in by admin.js after login */
+    .sidebar .admin-identity { text-align: center; font-size: 11px; color: #90caf9; margin-bottom: 26px; padding: 0 15px; overflow-wrap: break-word; }
     .sidebar nav a { display: flex; align-items: center; gap: 12px; padding: 14px 25px; color: #cfd8dc; text-decoration: none; font-size: 14px; font-weight: 600; cursor: pointer; border-left: 4px solid transparent; }
     .sidebar nav a:hover { background: rgba(255,255,255,0.06); color: white; }
     .sidebar nav a.active { background: rgba(255,255,255,0.1); color: white; border-left-color: var(--secondary); }
     .sidebar nav a .badge { margin-left: auto; background: var(--danger); color: white; font-size: 10px; padding: 2px 7px; border-radius: 10px; }
     .sidebar .logout { position: absolute; bottom: 20px; width: 100%; }
-    /* NEW: same visual treatment as .sidebar nav a, applied to the bottom
-       action links (Back to Site + Logout) so they line up consistently */
     .sidebar .logout a { display: flex; align-items: center; gap: 12px; padding: 14px 25px; color: #cfd8dc; text-decoration: none; font-size: 14px; font-weight: 600; cursor: pointer; }
     .sidebar .logout a:hover { background: rgba(255,255,255,0.06); color: white; }
 
@@ -53,6 +53,9 @@
 
     .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 15px; flex-wrap: wrap; }
     .toolbar input { flex: 1; min-width: 220px; padding: 10px 15px; border-radius: 8px; border: 1px solid #e0e0e0; font-size: 14px; }
+    /* NEW: "Add Admin" button, matches .apply-filters-btn style used in home.html */
+    .btn-primary-small { background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+    .btn-primary-small:hover { background: #0a367a; }
 
     table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
     thead { background: #f5f8fb; }
@@ -68,12 +71,15 @@
     .pill.approved { background: #e8f5e9; color: #2e7d32; }
     .pill.rejected { background: #ffebee; color: #c62828; }
     .pill.none { background: #eceff1; color: #78909c; }
+    /* NEW: "You" badge next to the currently logged-in admin's own row */
+    .pill.you { background: #e3f2fd; color: #1565c0; }
 
     .btn { border: none; padding: 7px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; margin-right: 5px; margin-bottom: 5px; }
     .btn-approve { background: var(--success); color: white; }
     .btn-reject { background: var(--danger); color: white; }
     .btn-edit { background: var(--secondary); color: white; }
     .btn-delete { background: var(--danger); color: white; }
+    .btn-delete:disabled, .btn[disabled] { background: #cfd8dc; cursor: not-allowed; }
 
     .empty-state { text-align: center; padding: 40px; color: #b0bec5; }
 
@@ -83,18 +89,19 @@
     .modal-box h3 { margin-top: 0; color: var(--primary); }
     .modal-box label { display: block; font-size: 12px; font-weight: 700; color: #607d8b; margin: 12px 0 5px; }
     .modal-box input, .modal-box select { width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; }
+    .modal-box .field-hint { font-size: 11px; color: #90a4ae; margin-top: 4px; }
     .modal-actions { display: flex; gap: 10px; margin-top: 22px; }
     .modal-actions button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
     .btn-save { background: var(--primary); color: white; }
     .btn-cancel { background: #eceff1; color: #455a64; }
 
-    /* NEW: document viewer modal */
+    /* document viewer modal */
     .doc-preview { width: 100%; border-radius: 8px; border: 1px solid #e0e0e0; cursor: zoom-in; display: block; }
     .doc-preview-label { font-size: 12px; font-weight: 700; color: #607d8b; margin-bottom: 6px; display: block; }
 
     @media (max-width: 768px) {
         .sidebar { width: 70px; }
-        .sidebar .brand, .sidebar nav a span, .sidebar .logout span { display: none; }
+        .sidebar .brand, .sidebar .admin-identity, .sidebar nav a span, .sidebar .logout span { display: none; }
         .sidebar nav a { justify-content: center; padding: 14px 0; }
         .sidebar nav a .badge { position: absolute; margin-left: 0; top: 6px; right: 10px; }
         .sidebar .logout a { justify-content: center; padding: 14px 0; }
@@ -119,15 +126,18 @@
     <div id="dashboardScreen">
         <div class="sidebar">
             <div class="brand">Stay<span>Find</span> Admin</div>
+            <!-- NEW: filled in by admin.js after login with the current admin's name/email -->
+            <div class="admin-identity" id="adminIdentity"></div>
             <nav>
                 <a data-panel="overview" class="active"><i class="fas fa-chart-pie"></i> <span>Overview</span></a>
                 <a data-panel="requests"><i class="fas fa-user-clock"></i> <span>Landlord Requests</span><span id="reqBadge" class="badge" style="display:none;">0</span></a>
                 <a data-panel="users"><i class="fas fa-users"></i> <span>Users</span></a>
                 <a data-panel="listings"><i class="fas fa-home"></i> <span>Listings</span></a>
                 <a data-panel="reviews"><i class="fas fa-comments"></i> <span>Reviews</span></a>
+                <!-- NEW: Settings panel, holds Admin Account Management -->
+                <a data-panel="settings"><i class="fas fa-cog"></i> <span>Settings</span></a>
             </nav>
             <div class="logout">
-                <!-- NEW: plain link back to the main site, no JS needed -->
                 <a href="home.html" id="backToHomeBtn"><i class="fas fa-arrow-left"></i> <span>Back to Site</span></a>
                 <a id="adminLogoutBtn"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></a>
             </div>
@@ -191,6 +201,22 @@
                     <table>
                         <thead><tr><th>Listing</th><th>User</th><th>Rating</th><th>Comment</th><th>Action</th></tr></thead>
                         <tbody id="reviewsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- NEW: SETTINGS (Admin Account Management) -->
+            <div class="panel" id="panel-settings">
+                <h1>Settings</h1>
+                <div class="subtitle">Manage who has access to this admin panel</div>
+                <div class="toolbar">
+                    <div></div>
+                    <button class="btn-primary-small" id="addAdminBtn"><i class="fas fa-plus"></i> Add Admin</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Name</th><th>Email</th><th>Added</th><th>Actions</th></tr></thead>
+                        <tbody id="adminsTableBody"></tbody>
                     </table>
                 </div>
             </div>
@@ -266,6 +292,24 @@
             <div id="docsModalBody" style="display:flex; flex-direction:column; gap:20px;"></div>
             <div class="modal-actions">
                 <button class="btn-cancel" onclick="closeModal('viewDocsModal')" style="flex:1;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: ADD / EDIT ADMIN MODAL -->
+    <div class="modal" id="adminAccountModal">
+        <div class="modal-box">
+            <h3 id="adminAccountModalTitle">Add Admin</h3>
+            <label>Full Name</label>
+            <input type="text" id="aaFullName" placeholder="Jane Dela Cruz">
+            <label>Email</label>
+            <input type="email" id="aaEmail" placeholder="jane@stayfind.com">
+            <label>Password</label>
+            <input type="password" id="aaPassword" placeholder="At least 6 characters">
+            <p class="field-hint" id="aaPasswordHint">Required for a new admin.</p>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('adminAccountModal')">Cancel</button>
+                <button class="btn-save" id="saveAdminAccountBtn">Save</button>
             </div>
         </div>
     </div>
