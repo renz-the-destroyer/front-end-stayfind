@@ -3,113 +3,457 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StayFind - Login & Register</title>
+    <title>StayFind — Sign In or Sign Up</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css?family=Montserrat:400,800');
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,900&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+        :root {
+            --ink: #0b1220;
+            --muted: #57657c;
+            --primary: #0d47a1;
+            --primary-deep: #072a5e;
+            --accent: #42a5f5;
+            --amber: #ffc069;
+            --amber-deep: #f59e0b;
+            --paper: #ffffff;
+            --canvas: #f5f7fb;
+            --line: #e3e8f2;
+            --radius-lg: 22px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
+        }
+
         * { box-sizing: border-box; }
-        body { background: #e0f2f1; display: flex; justify-content: center; align-items: center; flex-direction: column; font-family: 'Montserrat', sans-serif; min-height: 100vh; margin: 0; }
+        html, body { margin: 0; padding: 0; }
+        body {
+            font-family: 'Manrope', sans-serif;
+            color: var(--ink);
+            background: var(--canvas);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        input, button, textarea, select { font-family: 'Manrope', sans-serif; }
+
+        a { color: inherit; }
+
+        :focus-visible {
+            outline: 2.5px solid var(--amber-deep);
+            outline-offset: 2px;
+        }
+
         .swal2-container { z-index: 15000 !important; }
-        .brand-logo { margin: 20px 0; font-size: 2.5rem; color: #0d47a1; font-weight: 800; letter-spacing: -1px; }
-        .brand-logo span { color: #42a5f5; }
-        h1 { font-weight: bold; margin: 0; color: #0d47a1; }
-        p { font-size: 14px; font-weight: 300; line-height: 20px; letter-spacing: 0.5px; margin: 20px 0 30px; }
-        span { font-size: 12px; color: #546e7a; margin-bottom: 10px; }
-        button { border-radius: 20px; border: 1px solid #0d47a1; background-color: #0d47a1; color: #FFFFFF; font-size: 12px; font-weight: bold; padding: 12px 45px; letter-spacing: 1px; text-transform: uppercase; transition: transform 80ms ease-in, background 0.2s; cursor: pointer; margin-top: 10px; }
-        button:hover { background-color: #1565c0; }
-        button:active { transform: scale(0.95); }
-        button:disabled { background-color: #b0bec5; border-color: #b0bec5; cursor: not-allowed; }
-        button.ghost { background-color: transparent; border-color: #FFFFFF; }
-        form { background-color: #FFFFFF; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 0 40px; height: 100%; text-align: center; }
-        input { background-color: #e3f2fd; border: none; padding: 12px 15px; margin: 8px 0; width: 100%; border-radius: 5px; outline-color: #42a5f5; font-family: 'Montserrat', sans-serif; }
-        .container { background-color: #fff; border-radius: 10px; box-shadow: 0 14px 28px rgba(0,0,0,0.1), 0 10px 10px rgba(0,0,0,0.1); position: relative; overflow: hidden; width: 768px; max-width: 95vw; min-height: 520px; }
-        .password-wrapper { position: relative; width: 100%; }
-        .toggle-password { position: absolute; right: 15px; top: 20px; cursor: pointer; color: #546e7a; }
-        .form-container { position: absolute; top: 0; height: 100%; transition: all 0.6s ease-in-out; }
-        .sign-in-container { left: 0; width: 50%; z-index: 2; }
-        .sign-up-container { left: 0; width: 50%; opacity: 0; z-index: 1; }
-        .container.right-panel-active .sign-in-container { transform: translateX(100%); }
-        .container.right-panel-active .sign-up-container { transform: translateX(100%); opacity: 1; z-index: 5; animation: show 0.6s; }
-        @keyframes show { 0%, 49.99% { opacity: 0; z-index: 1; } 50%, 100% { opacity: 1; z-index: 5; } }
-        .overlay-container { position: absolute; top: 0; left: 50%; width: 50%; height: 100%; overflow: hidden; transition: transform 0.6s ease-in-out; z-index: 100; }
-        .container.right-panel-active .overlay-container { transform: translateX(-100%); }
-        .overlay { background: linear-gradient(to right, #0d47a1, #42a5f5); color: #FFFFFF; position: relative; left: -100%; height: 100%; width: 200%; transform: translateX(0); transition: transform 0.6s ease-in-out; }
-        .container.right-panel-active .overlay { transform: translateX(50%); }
-        .overlay-panel { position: absolute; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 0 40px; text-align: center; top: 0; height: 100%; width: 50%; transition: transform 0.6s ease-in-out; }
-        .overlay-left { transform: translateX(-20%); }
-        .container.right-panel-active .overlay-left { transform: translateX(0); }
-        .overlay-right { right: 0; transform: translateX(0); }
-        .container.right-panel-active .overlay-right { transform: translateX(20%); }
-        .mobile-switch { display: none; margin-top: 15px; font-size: 13px; }
-        .mobile-switch a { color: #0d47a1; font-weight: bold; text-decoration: none; }
-        @media (max-width: 768px) { .overlay-container { display: none; } .form-container { width: 100%; } .container.right-panel-active .sign-in-container { transform: translateX(-100%); opacity: 0; } .container.right-panel-active .sign-up-container { transform: translateX(0); } .mobile-switch { display: block !important; } }
-        #otpInput { text-align: center; font-size: 24px; letter-spacing: 8px; font-weight: bold; color: #0d47a1; margin: 20px 0; }
-        #otpModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10001; justify-content: center; align-items: center; }
-        .otp-box { background: white; padding: 30px; border-radius: 10px; text-align: center; width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; margin-right: 8px; }
+
+        /* ===================== PAGE SHELL ===================== */
+        .page {
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* ===================== LEFT: FORM COLUMN ===================== */
+        .form-column {
+            flex: 1 1 480px;
+            order: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 56px 8vw;
+            background: var(--paper);
+        }
+        .form-column-inner { width: 100%; max-width: 400px; }
+
+        .brand-mark {
+            font-family: 'Fraunces', serif;
+            font-weight: 700;
+            font-size: 1.6rem;
+            letter-spacing: -0.02em;
+            text-decoration: none;
+            color: var(--ink);
+            display: inline-flex;
+            margin-bottom: 44px;
+        }
+        .brand-mark span { color: var(--primary); }
+
+        .tab-switch {
+            display: inline-flex;
+            gap: 2px;
+            padding: 4px;
+            margin-bottom: 30px;
+            background: var(--canvas);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+        }
+        .tab-btn {
+            border: none;
+            background: transparent;
+            padding: 10px 20px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 12.5px;
+            letter-spacing: 0.02em;
+            color: var(--muted);
+            cursor: pointer;
+            transition: background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+        }
+        #container:not(.right-panel-active) #signIn,
+        #container.right-panel-active #signUp {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 10px 20px -8px rgba(13,71,161,0.55);
+        }
+
+        .form-panel { display: none; }
+        .sign-in-panel { display: block; }
+        #container.right-panel-active .sign-in-panel { display: none; }
+        #container.right-panel-active .sign-up-panel { display: block; }
+
+        @keyframes panelIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .form-panel { animation: panelIn 0.4s ease; }
+
+        .form-title {
+            font-family: 'Fraunces', serif;
+            font-weight: 600;
+            font-size: 1.9rem;
+            letter-spacing: -0.01em;
+            margin: 0 0 8px;
+            color: var(--ink);
+        }
+        .form-sub {
+            font-size: 13.5px;
+            color: var(--muted);
+            margin: 0 0 26px;
+            line-height: 1.55;
+        }
+
+        .field-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--muted);
+            margin: 16px 0 6px;
+        }
+        input[type="text"], input[type="email"], input[type="password"] {
+            width: 100%;
+            border: 1.5px solid var(--line);
+            background: var(--canvas);
+            border-radius: var(--radius-sm);
+            padding: 13px 15px;
+            font-size: 14.5px;
+            color: var(--ink);
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+        input::placeholder { color: #9aa7ba; }
+        input:focus {
+            border-color: var(--accent);
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(66,165,245,0.15);
+        }
+
+        .password-wrapper { position: relative; }
+        .toggle-password {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            width: 100%;
+            margin-top: 26px;
+            padding: 14px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+            color: #fff;
+            font-weight: 800;
+            font-size: 13.5px;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 16px 26px -12px rgba(13,71,161,0.6);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 18px 30px -10px rgba(13,71,161,0.65); }
+        .btn-primary:active { transform: translateY(0); }
+        .btn-primary:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+
+        .switch-line {
+            text-align: center;
+            margin: 22px 0 0;
+            font-size: 13px;
+            color: var(--muted);
+        }
+        .switch-line a { color: var(--primary); font-weight: 700; text-decoration: none; }
+        .switch-line a:hover { text-decoration: underline; }
+
+        .spinner {
+            display: inline-block; width: 13px; height: 13px;
+            border: 2px solid rgba(255,255,255,.35); border-radius: 50%;
+            border-top-color: #fff; animation: spin 0.9s linear infinite;
+            margin-right: 8px; vertical-align: -2px;
+        }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ===================== RIGHT: BRAND COLUMN ===================== */
+        .brand-column {
+            flex: 1 1 46%;
+            order: 2;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 64px;
+            color: #fff;
+            background: linear-gradient(160deg, var(--primary) 0%, var(--primary-deep) 65%, #05204d 100%);
+        }
+        .brand-glow {
+            position: absolute; z-index: 0;
+            width: 480px; height: 480px; border-radius: 50%;
+            top: -140px; right: -110px;
+            background: radial-gradient(circle, rgba(255,192,105,0.35), transparent 70%);
+            filter: blur(6px);
+            pointer-events: none;
+        }
+        .route-lines {
+            position: absolute; inset: 0; z-index: 1;
+            width: 100%; height: 100%; opacity: 0.16;
+        }
+
+        .brand-content { position: relative; z-index: 2; max-width: 380px; display: none; }
+        .signin-copy { display: block; }
+        #container.right-panel-active .signin-copy { display: none; }
+        #container.right-panel-active .signup-copy { display: block; }
+
+        .brand-eyebrow {
+            font-weight: 800; font-size: 11px; letter-spacing: 0.14em;
+            text-transform: uppercase; color: var(--amber); margin: 0 0 14px;
+        }
+        .brand-headline {
+            font-family: 'Fraunces', serif;
+            font-weight: 600; font-size: 2.5rem; line-height: 1.1;
+            letter-spacing: -0.01em; margin: 0 0 16px;
+        }
+        .brand-sub {
+            font-size: 14.5px; line-height: 1.65;
+            color: rgba(255,255,255,0.82); margin: 0;
+        }
+
+        /* Signature element: a "key tag" mockup of a real StayFind listing card */
+        .key-tag {
+            position: relative; z-index: 2;
+            margin-top: 42px; width: 262px;
+            background: #fff; border-radius: 18px;
+            padding: 16px 16px 18px;
+            box-shadow: 0 30px 60px -18px rgba(0,0,0,0.5);
+            transform: rotate(-4deg);
+        }
+        .key-tag-ring {
+            position: absolute; top: -13px; left: 24px;
+            width: 24px; height: 24px; border-radius: 50%;
+            border: 5px solid #fff; background: var(--primary-deep);
+            box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+        }
+        .key-tag-photo {
+            position: relative;
+            width: 100%; height: 82px; border-radius: 12px; margin-bottom: 12px;
+            background: linear-gradient(135deg, #ffd48a, #ff9d6c);
+        }
+        .key-tag-category {
+            position: absolute; top: 8px; left: 8px;
+            background: rgba(11,18,32,0.55); color: #fff;
+            font-size: 9.5px; font-weight: 800; letter-spacing: 0.03em;
+            padding: 3px 9px; border-radius: 20px;
+        }
+        .key-tag-title {
+            font-family: 'Fraunces', serif; font-weight: 600; font-size: 14.5px;
+            color: var(--ink); margin: 0 0 4px;
+        }
+        .key-tag-loc {
+            font-size: 11.5px; color: var(--muted); margin: 0 0 12px;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .key-tag-meta { display: flex; align-items: center; justify-content: space-between; }
+        .key-tag-price { font-weight: 800; font-size: 15px; color: var(--primary); }
+        .key-tag-price small { font-weight: 700; font-size: 10.5px; color: var(--muted); }
+        .key-tag-rating {
+            font-size: 12px; font-weight: 700; color: #b8860b;
+            display: flex; align-items: center; gap: 4px;
+        }
+        .key-tag-rating i { color: #ffb300; }
+
+        /* ===================== OTP MODAL ===================== */
+        #otpModal {
+            display: none; position: fixed; inset: 0; padding: 20px;
+            background: rgba(5,10,20,0.72); backdrop-filter: blur(3px);
+            z-index: 10001; align-items: center; justify-content: center;
+        }
+        .otp-box {
+            width: 340px; max-width: 100%;
+            background: #fff; border-radius: 20px;
+            padding: 34px 30px; text-align: center;
+            box-shadow: 0 30px 70px rgba(0,0,0,0.35);
+        }
+        .otp-icon {
+            width: 54px; height: 54px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--amber), var(--amber-deep));
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px; color: #fff; font-size: 20px;
+        }
+        .otp-box h3 { font-family: 'Fraunces', serif; margin: 0 0 8px; font-size: 1.25rem; color: var(--ink); }
+        .otp-copy { color: var(--muted); font-size: 13px; line-height: 1.55; margin: 0 0 22px; }
+        #otpInput {
+            width: 100%; text-align: center; font-weight: 800;
+            font-size: 1.5rem; letter-spacing: 9px;
+            padding: 13px; border-radius: 12px;
+            border: 1.5px solid var(--line); background: var(--canvas);
+            color: var(--primary); margin: 0 0 20px;
+        }
+        #otpInput:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px rgba(66,165,245,0.15); }
+        .otp-cancel {
+            background: none; border: none; color: var(--muted);
+            margin-top: 16px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+        }
+        .otp-cancel:hover { color: var(--ink); }
+
+        /* ===================== RESPONSIVE ===================== */
+        @media (max-width: 900px) {
+            .page { flex-direction: column; }
+            .brand-column {
+                order: -1;
+                min-height: auto;
+                padding: 36px 8vw 48px;
+            }
+            .route-lines, .key-tag { display: none; }
+            .brand-content { max-width: 100%; }
+            .brand-headline { font-size: 1.7rem; }
+            .brand-sub { display: none; }
+            .form-column { padding: 40px 7vw 64px; }
+        }
+        @media (max-width: 480px) {
+            .brand-headline { font-size: 1.45rem; }
+            .form-title { font-size: 1.6rem; }
+            .key-tag { width: 230px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; transition: none !important; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="brand-logo">Stay<span>Find</span></div>
+    <div class="page" id="container">
 
-    <div class="container" id="container">
-        <div class="form-container sign-up-container">
-            <form id="signUpForm">
-                <h1>Create Account</h1>
-                <span>Register with your email</span>
-                <input type="text" id="regName" placeholder="Full Name" required />
-                <input type="email" id="regEmail" placeholder="Email" required />
-                <div class="password-wrapper">
-                    <input type="password" id="regPassword" placeholder="Password (min 8 chars)" required />
-                    <i class="fas fa-eye toggle-password" data-target="regPassword"></i>
-                </div>
-                <button type="submit" id="signUpBtn">Sign Up</button>
-                <div class="mobile-switch">Already have an account? <a href="#" id="mobileSignIn">Sign In</a></div>
-            </form>
-        </div>
+        <!-- ===================== RIGHT (visually) / TOP on mobile: BRAND COLUMN ===================== -->
+        <div class="brand-column" aria-hidden="true">
+            <div class="brand-glow"></div>
+            <svg class="route-lines" viewBox="0 0 600 800" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+                <path d="M60,700 C160,600 120,420 260,360 S420,220 520,120" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="2 11" stroke-linecap="round"/>
+                <circle cx="60" cy="700" r="5" fill="#ffffff"/>
+                <circle cx="260" cy="360" r="5" fill="#ffffff"/>
+                <circle cx="520" cy="120" r="5" fill="#ffffff"/>
+            </svg>
 
-        <div class="form-container sign-in-container">
-            <form id="signInForm">
-                <h1>Sign in</h1>
-                <span>Enter your account details</span>
-                <input type="email" id="loginEmail" placeholder="Email" required />
-                <div class="password-wrapper">
-                    <input type="password" id="loginPassword" placeholder="Password" required />
-                    <i class="fas fa-eye toggle-password" data-target="loginPassword"></i>
-                </div>
-                <button type="submit" id="signInBtn">Sign In</button>
-                <div class="mobile-switch">Don't have an account? <a href="#" id="mobileSignUp">Sign Up</a></div>
-            </form>
-        </div>
+            <div class="brand-content signin-copy">
+                <p class="brand-eyebrow">Welcome back</p>
+                <h2 class="brand-headline">Good to have you home.</h2>
+                <p class="brand-sub">Pick up right where you left off — saved stays, verified landlords, and listings across the Philippines.</p>
+            </div>
+            <div class="brand-content signup-copy">
+                <p class="brand-eyebrow">New here?</p>
+                <h2 class="brand-headline">Let's find your next address.</h2>
+                <p class="brand-sub">Create a free account to browse verified rentals and message landlords directly.</p>
+            </div>
 
-        <div class="overlay-container">
-            <div class="overlay">
-                <div class="overlay-panel overlay-left">
-                    <h1 style="color: white;">Welcome Back!</h1>
-                    <p>To keep connected with StayFind please login</p>
-                    <button class="ghost" id="signIn">Sign In</button>
+            <div class="key-tag">
+                <span class="key-tag-ring"></span>
+                <div class="key-tag-photo">
+                    <span class="key-tag-category">Studio</span>
                 </div>
-                <div class="overlay-panel overlay-right">
-                    <h1 style="color: white;">Hello, Friend!</h1>
-                    <p>Enter your details and start your journey with StayFind</p>
-                    <button class="ghost" id="signUp">Sign Up</button>
+                <p class="key-tag-title">Sunlit Studio, Los Baños</p>
+                <p class="key-tag-loc"><i class="fas fa-location-dot"></i> Los Baños, Laguna</p>
+                <div class="key-tag-meta">
+                    <span class="key-tag-price">₱6,500<small>&nbsp;/mo</small></span>
+                    <span class="key-tag-rating"><i class="fas fa-star"></i> 4.8</span>
                 </div>
             </div>
         </div>
+
+        <!-- ===================== LEFT: FORM COLUMN ===================== -->
+        <div class="form-column">
+            <div class="form-column-inner">
+                <a href="index.html" class="brand-mark">Stay<span>Find</span></a>
+
+                <div class="tab-switch" role="tablist">
+                    <button type="button" id="signIn" class="tab-btn" role="tab">Sign In</button>
+                    <button type="button" id="signUp" class="tab-btn" role="tab">Create Account</button>
+                </div>
+
+                <div class="form-panel sign-in-panel">
+                    <form id="signInForm" novalidate>
+                        <h1 class="form-title">Sign in to StayFind</h1>
+                        <p class="form-sub">Enter your account details to continue.</p>
+
+                        <label class="field-label" for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" placeholder="you@email.com" autocomplete="email" required />
+
+                        <label class="field-label" for="loginPassword">Password</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" required />
+                            <i class="fas fa-eye toggle-password" data-target="loginPassword"></i>
+                        </div>
+
+                        <button type="submit" id="signInBtn" class="btn-primary">Sign In</button>
+                        <p class="switch-line">New to StayFind? <a href="#" id="mobileSignUp">Create an account</a></p>
+                    </form>
+                </div>
+
+                <div class="form-panel sign-up-panel">
+                    <form id="signUpForm" novalidate>
+                        <h1 class="form-title">Create your account</h1>
+                        <p class="form-sub">Takes less than a minute — verify your email and you're in.</p>
+
+                        <label class="field-label" for="regName">Full name</label>
+                        <input type="text" id="regName" placeholder="Juan Dela Cruz" autocomplete="name" required />
+
+                        <label class="field-label" for="regEmail">Email</label>
+                        <input type="email" id="regEmail" placeholder="you@email.com" autocomplete="email" required />
+
+                        <label class="field-label" for="regPassword">Password</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="regPassword" placeholder="At least 8 characters" autocomplete="new-password" required />
+                            <i class="fas fa-eye toggle-password" data-target="regPassword"></i>
+                        </div>
+
+                        <button type="submit" id="signUpBtn" class="btn-primary">Sign Up</button>
+                        <p class="switch-line">Already have an account? <a href="#" id="mobileSignIn">Sign in</a></p>
+                    </form>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <div id="otpModal">
         <div class="otp-box">
-            <div style="font-size: 50px; color: #0d47a1; margin-bottom: 10px;"><i class="fas fa-envelope-open-text"></i></div>
-            <h3>Verify Account</h3>
-            <p style="color: #546e7a; font-size: 14px;">Code sent to:<br><b id="displayEmail"></b></p>
+            <div class="otp-icon"><i class="fas fa-envelope-open-text"></i></div>
+            <h3>Check your email</h3>
+            <p class="otp-copy">We sent a 6-digit code to<br><strong id="displayEmail"></strong></p>
             <input type="text" id="otpInput" maxlength="6" placeholder="000000">
-            <button id="verifyOtpBtn" style="width: 100%;">Verify & Create Account</button>
-            <button type="button" onclick="document.getElementById('otpModal').style.display='none'" style="background:none; border:none; color:#90a4ae; margin-top:20px; cursor:pointer;">Cancel</button>
+            <button id="verifyOtpBtn" class="btn-primary" style="margin-top:0;">Verify & Create Account</button>
+            <button type="button" class="otp-cancel" onclick="document.getElementById('otpModal').style.display='none'">Cancel</button>
         </div>
     </div>
 
