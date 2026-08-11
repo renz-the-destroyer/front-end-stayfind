@@ -66,14 +66,21 @@ function buildCarouselHTML(imagesField, carouselKey) {
         imgArray = ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500'];
     }
 
+    // NEW: the details-modal carousel (carouselKey starts with "modal-") gets
+    // its own rounded corners + bottom margin since it sits inside padded
+    // modal content. Grid-card carousels stay flush/unrounded so the card's
+    // own border-radius + overflow:hidden clips the image at the top edge.
+    const isStandalone = String(carouselKey).startsWith('modal-');
+
     return `
-        <div class="carousel-container" id="carousel-${carouselKey}">
+        <div class="carousel-container ${isStandalone ? 'carousel-standalone' : ''}" id="carousel-${carouselKey}">
             <div class="carousel-track" style="transform: translateX(0px);">
                 ${imgArray.map(img => `<img src="${img}" class="carousel-img" onerror="this.src='https://via.placeholder.com/400x200?text=No+Image'">`).join('')}
             </div>
             ${imgArray.length > 1 ? `
                 <button class="carousel-btn prev-btn" onclick="moveCarousel(event, '${carouselKey}', -1)"><i class="fas fa-chevron-left"></i></button>
                 <button class="carousel-btn next-btn" onclick="moveCarousel(event, '${carouselKey}', 1)"><i class="fas fa-chevron-right"></i></button>
+                <div class="carousel-dots">${imgArray.map((_, i) => `<span class="dot${i === 0 ? ' active' : ''}"></span>`).join('')}</div>
             ` : ''}
         </div>
     `;
@@ -193,6 +200,30 @@ async function checkLandlordStatusUpdate() {
     }
 }
 
+// --- NEW: PERSONALIZED HERO GREETING ---
+// Fills in the hero header with a time-aware greeting and role-specific
+// subtitle. Pure presentation - doesn't touch any data or state.
+function setupHeroGreeting() {
+    const heroGreeting = document.getElementById('heroGreeting');
+    const heroSubtitle = document.getElementById('heroSubtitle');
+    const heroEyebrow = document.getElementById('heroEyebrow');
+    if (!heroGreeting || !currentUser) return;
+
+    const name = (currentUser.full_name || currentUser.name || "there").trim().split(' ')[0];
+    const hour = new Date().getHours();
+    const timeGreeting = hour < 12 ? "Good morning" : (hour < 18 ? "Good afternoon" : "Good evening");
+
+    heroGreeting.innerText = `${timeGreeting}, ${name} 👋`;
+
+    if (currentUser.role === 'landlord') {
+        if (heroEyebrow) heroEyebrow.innerText = "Landlord Dashboard";
+        if (heroSubtitle) heroSubtitle.innerText = "Here's what's happening with your listings today.";
+    } else {
+        if (heroEyebrow) heroEyebrow.innerText = "Find Your Next Stay";
+        if (heroSubtitle) heroSubtitle.innerText = "Discover verified stays across the Philippines.";
+    }
+}
+
 // --- 1. SECURITY & ROLE CHECK ---
 window.onload = () => {
     if (!currentUser) {
@@ -216,6 +247,7 @@ window.onload = () => {
 
     console.log("Welcome back, " + (currentUser.full_name || currentUser.name || "User"));
 
+    setupHeroGreeting(); // NEW: personalized hero header
     loadListings();
     setupSettingsLogic(); 
     setupPostListingLogic(); 
@@ -396,18 +428,47 @@ async function processSmartSearch() {
     }
 }
 
+// --- NEW: SHARED UI HELPERS (empty states + skeleton loaders) ---
+// Small presentational helpers used by loadListings() and the "Saved" view
+// so every empty/loading/error state looks consistent instead of a plain
+// line of text.
+function emptyStateHTML(icon, title, subtitle) {
+    return `
+        <div class="empty-state">
+            <div class="empty-state-icon"><i class="fas ${icon}"></i></div>
+            <h3>${title}</h3>
+            <p>${subtitle}</p>
+        </div>
+    `;
+}
+
+function renderSkeletonCards(count = 8) {
+    if (!listingsGrid) return;
+    listingsGrid.innerHTML = Array.from({ length: count }).map(() => `
+        <div class="listing-card skeleton-card">
+            <div class="skeleton-block skeleton-image"></div>
+            <div class="listing-info">
+                <div class="skeleton-block skeleton-line" style="width:45%;"></div>
+                <div class="skeleton-block skeleton-line" style="width:85%; margin-top:12px;"></div>
+                <div class="skeleton-block skeleton-line" style="width:60%; margin-top:8px;"></div>
+                <div class="skeleton-block skeleton-line" style="width:70%; margin-top:14px; height:12px;"></div>
+            </div>
+        </div>
+    `).join('');
+}
+
 // --- 2. FETCH LISTINGS FROM MYSQL ---
 async function loadListings() {
     if (!listingsGrid) return;
     
-    listingsGrid.innerHTML = "<p style='text-align:center; grid-column: 1/-1;'>Loading stays...</p>";
+    renderSkeletonCards(); // NEW: shimmer placeholders instead of a bare "Loading..." line
     
     try {
         const response = await fetch(`${API_BASE}/view`);
         const data = await response.json();
 
         if (!data || data.length === 0) {
-            listingsGrid.innerHTML = "<p style='text-align:center; grid-column: 1/-1;'>No listings available yet.</p>";
+            listingsGrid.innerHTML = emptyStateHTML('fa-house-circle-xmark', 'No listings yet', 'Check back soon — new stays are added regularly.');
             return;
         }
 
@@ -420,14 +481,14 @@ async function loadListings() {
             : data;
 
         if (dataToShow.length === 0 && currentUser.role === 'landlord') {
-            listingsGrid.innerHTML = "<p style='text-align:center; grid-column: 1/-1;'>You haven't posted any listings yet.</p>";
+            listingsGrid.innerHTML = emptyStateHTML('fa-clipboard-list', "You haven't posted anything yet", 'Tap the + button to publish your first listing.');
             return;
         }
 
         renderListings(dataToShow);
     } catch (error) {
         console.error("Error fetching listings:", error);
-        listingsGrid.innerHTML = "<p style='text-align:center; color:red; grid-column: 1/-1;'>Failed to load listings. Check if backend is Live.</p>";
+        listingsGrid.innerHTML = emptyStateHTML('fa-triangle-exclamation', 'Something went wrong', "We couldn't load listings. Check if the backend is live and try again.");
     }
 }
 
@@ -450,7 +511,7 @@ async function renderListings(items) {
         }
     }
     
-    items.forEach(item => {
+    items.forEach((item, idx) => {
         if (!item.title && !item.price) return;
 
         const isSaved = savedListings.includes(item.id);
@@ -464,6 +525,9 @@ async function renderListings(items) {
         card.setAttribute('data-id', item.id);
         card.setAttribute('data-price', item.price || 0);
         card.setAttribute('data-rooms', item.rooms || 0);
+        // NEW: stagger the fade-in-up animation slightly per card (capped so a
+        // long list doesn't leave later cards waiting too long to appear).
+        card.style.animationDelay = `${Math.min(idx, 10) * 0.05}s`;
         
         card.onclick = () => showFullDetails(item);
 
@@ -476,17 +540,20 @@ async function renderListings(items) {
 
         card.innerHTML = `
             ${saveButtonHTML}
+            <div class="category-badge">${item.category || 'Apartment'}</div>
             ${carouselHTML}
             <div class="listing-info">
-                <div class="price">₱${Number(item.price || 0).toLocaleString()} /mo</div>
-                <div class="title-text" style="font-weight:bold; margin-top:5px; color:#333;">${item.title || 'Cozy Room'}</div>
-                <div class="landlord-name" style="font-size:0.85rem; color:#007bff; margin-bottom:5px;">
+                <div class="price-row">
+                    <span class="price">₱${Number(item.price || 0).toLocaleString()}</span><span class="price-suffix">&nbsp;/mo</span>
+                </div>
+                <div class="title-text">${item.title || 'Cozy Room'}</div>
+                <div class="landlord-name">
                     <i class="fas fa-user-tie"></i> ${item.landlord_name || 'Owner'}
                 </div>
                 <div class="location"><i class="fas fa-map-marker-alt"></i> ${item.location || 'Unknown'}</div>
                 <div class="details">
                     <span><i class="fas fa-bed"></i> ${item.rooms || 0} Rooms</span>
-                    <span style="margin-left:10px;"><i class="fas fa-expand"></i> ${item.size || 0} sqm</span>
+                    <span><i class="fas fa-expand"></i> ${item.size || 0} sqm</span>
                 </div>
             </div>
         `;
@@ -816,6 +883,12 @@ function moveCarousel(event, id, direction) {
     if (newIdx >= images.length) newIdx = 0;
     
     track.style.transform = `translateX(-${newIdx * imgWidth}px)`;
+
+    // NEW: keep the dot indicator in sync with the visible slide
+    const dots = container.querySelectorAll('.carousel-dots .dot');
+    if (dots.length) {
+        dots.forEach((d, i) => d.classList.toggle('active', i === newIdx));
+    }
 }
 
 // --- 9. LOGOUT LOGIC ---
@@ -1203,7 +1276,7 @@ function setupBookmarkToggles() {
             const msgText = (currentUser.role === 'landlord') 
                 ? "You haven't saved any of your own listings yet." 
                 : "You haven't saved any listings yet.";
-            listingsGrid.innerHTML = `<p id='no-saved-msg' style='text-align:center; grid-column: 1/-1;'>${msgText}</p>`;
+            listingsGrid.innerHTML = `<div id="no-saved-msg">${emptyStateHTML('fa-heart-crack', 'Nothing saved yet', msgText)}</div>`;
         }
     };
 
