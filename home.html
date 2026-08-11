@@ -13,41 +13,50 @@
         body {
             background: #f4f7f6;
             margin: 0;
-            padding-top: 68px;
+            padding-top: 84px;
         }
 
-        /* ============ TOP NAVBAR (slimmed down) ============ */
-        nav {
-            background: #0d47a1;
-            padding: 12px 5%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: fixed;
-            top: 0;
-            width: 100%;
-            z-index: 1000;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .nav-left { display: flex; align-items: center; gap: 14px; }
+        /* ============ FLOATING MENU BUTTON (no top navbar strip at all) ============ */
         .menu-toggle {
-            background: rgba(255,255,255,0.12);
+            position: fixed;
+            top: 18px;
+            left: 20px;
+            z-index: 1200;
+            background: #0d47a1;
             border: none;
             color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background 0.2s;
-            flex-shrink: 0;
+            box-shadow: 0 6px 16px rgba(13,71,161,0.35);
+            transition: background 0.2s, transform 0.15s;
         }
-        .menu-toggle:hover { background: rgba(255,255,255,0.24); }
-        .logo { color: white; font-weight: 800; font-size: 1.4rem; text-decoration: none; letter-spacing: -0.5px; }
-        .logo span { color: #42a5f5; }
+        .menu-toggle:hover { background: #1565c0; transform: scale(1.06); }
+        .menu-toggle:active { transform: scale(0.95); }
+
+        /* Small floating brand mark, top-right, purely visual — the real
+           branding lives in the drawer header */
+        .floating-logo {
+            position: fixed;
+            top: 18px;
+            right: 20px;
+            z-index: 1100;
+            font-weight: 800;
+            font-size: 1.15rem;
+            letter-spacing: -0.5px;
+            color: #0d47a1;
+            text-decoration: none;
+            background: #ffffff;
+            padding: 10px 16px;
+            border-radius: 24px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+        }
+        .floating-logo span { color: #42a5f5; }
 
         /* ============ SIDE DRAWER ============ */
         .drawer-overlay {
@@ -309,9 +318,9 @@
 
         /* ============ RESPONSIVE ============ */
         @media (max-width: 768px) {
-            body { padding-top: 60px; }
-            nav { padding: 10px 4%; }
-            .logo { font-size: 1.25rem; }
+            body { padding-top: 76px; }
+            .menu-toggle { top: 14px; left: 16px; width: 44px; height: 44px; font-size: 16px; }
+            .floating-logo { top: 14px; right: 16px; font-size: 1rem; padding: 8px 14px; }
             .filter-container { padding: 18px 5% 20px; margin-bottom: 20px; }
             .filters-toggle-btn { display: flex; }
             #advancedFiltersBody { display: none; margin-top: 0; }
@@ -333,14 +342,12 @@
 </head>
 <body>
 
-    <nav>
-        <div class="nav-left">
-            <button class="menu-toggle" id="menuToggleBtn" aria-label="Open menu" aria-expanded="false">
-                <i class="fas fa-bars"></i>
-            </button>
-            <a href="home.html" class="logo">Stay<span>Find</span></a>
-        </div>
-    </nav>
+    <!-- No top navbar strip — just a floating menu button (opens the drawer)
+         and a small floating brand mark. Page content starts right underneath. -->
+    <button class="menu-toggle" id="menuToggleBtn" aria-label="Open menu" aria-expanded="false">
+        <i class="fas fa-bars"></i>
+    </button>
+    <a href="home.html" class="floating-logo">Stay<span>Find</span></a>
 
     <!-- ============ SIDE DRAWER (replaces the old top nav links + bottom mobile nav) ============ -->
     <div class="drawer-overlay" id="sideDrawerOverlay"></div>
