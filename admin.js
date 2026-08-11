@@ -2,8 +2,14 @@
 const API_BASE = "https://stayfind-app-system.onrender.com/api/admin";
 
 let adminKey = localStorage.getItem('adminKey');
+// NEW: identity of the currently logged-in admin (id/full_name/email),
+// stored after login so we can show "Signed in as..." and prevent an admin
+// from deleting their own account in the Settings panel.
+let currentAdmin = JSON.parse(localStorage.getItem('adminInfo') || 'null');
 let editingUserId = null;
 let editingListingId = null;
+// NEW: tracks which admin account is being edited in the Add/Edit Admin modal
+let editingAdminId = null;
 
 // --- HELPER: build headers with the admin key attached ---
 function adminHeaders() {
@@ -19,6 +25,7 @@ window.onload = () => {
     }
     setupNav();
     setupModalSaveHandlers();
+    setupAdminAccountModal(); // NEW
 };
 
 function showLogin() {
@@ -29,11 +36,19 @@ function showLogin() {
 function showDashboard() {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('dashboardScreen').style.display = 'block';
+
+    // NEW: show who's currently logged in, under the sidebar brand
+    const identityEl = document.getElementById('adminIdentity');
+    if (identityEl && currentAdmin) {
+        identityEl.innerText = `Signed in as ${currentAdmin.full_name || currentAdmin.email}`;
+    }
+
     loadStats();
     loadLandlordRequests();
     loadUsers();
     loadListings();
     loadReviews();
+    loadAdmins(); // NEW
 }
 
 // --- LOGIN ---
@@ -60,6 +75,11 @@ document.getElementById('adminLoginBtn').onclick = async () => {
         if (response.ok && result.success) {
             adminKey = result.adminKey;
             localStorage.setItem('adminKey', adminKey);
+
+            // NEW: remember which admin just logged in
+            currentAdmin = result.admin || null;
+            if (currentAdmin) localStorage.setItem('adminInfo', JSON.stringify(currentAdmin));
+
             showDashboard();
         } else {
             Swal.fire('Login Failed', result.message || 'Invalid credentials', 'error');
@@ -75,7 +95,9 @@ document.getElementById('adminLoginBtn').onclick = async () => {
 // --- LOGOUT ---
 document.getElementById('adminLogoutBtn').onclick = () => {
     localStorage.removeItem('adminKey');
+    localStorage.removeItem('adminInfo'); // NEW
     adminKey = null;
+    currentAdmin = null;
     showLogin();
 };
 
@@ -96,7 +118,9 @@ function handleAuthError(response) {
     if (response.status === 401) {
         Swal.fire('Session Expired', 'Please log in again.', 'warning').then(() => {
             localStorage.removeItem('adminKey');
+            localStorage.removeItem('adminInfo');
             adminKey = null;
+            currentAdmin = null;
             showLogin();
         });
         return true;
@@ -152,9 +176,6 @@ async function loadLandlordRequests() {
             return;
         }
 
-        // "View Documents" button added before Approve/Reject. Docs are
-        // passed via a global lookup map instead of inline JSON (base64 image
-        // strings are too large/unsafe to embed directly in an onclick attribute).
         window.__landlordRequestDocs = window.__landlordRequestDocs || {};
 
         tbody.innerHTML = rows.map(u => {
@@ -178,8 +199,6 @@ async function loadLandlordRequests() {
     }
 }
 
-// Opens a modal showing the 3 uploaded verification document images so
-// the admin can inspect them before approving/rejecting a landlord request.
 function viewLandlordDocs(userId) {
     const docsString = (window.__landlordRequestDocs && window.__landlordRequestDocs[userId]) || "";
     const docs = docsString ? docsString.split('|||').map(d => d.trim()).filter(d => d !== "") : [];
@@ -220,10 +239,6 @@ async function approveLandlord(id) {
     }
 }
 
-// UPDATED: now prompts the admin for a rejection reason before submitting.
-// That reason is sent to the backend and stored on the user's account, so
-// home.js can show it to them in a notification along with a note that they
-// can fix the issue and re-apply anytime from Settings.
 async function rejectLandlord(id) {
     const { value: reason, isConfirmed } = await Swal.fire({
         title: 'Reject this request?',
@@ -432,6 +447,83 @@ async function deleteReview(id) {
     }
 }
 
+// --- NEW: 6. ADMIN ACCOUNT MANAGEMENT (Settings panel) ---
+async function loadAdmins() {
+    const tbody = document.getElementById('adminsTableBody');
+    try {
+        const res = await fetch(`${API_BASE}/admins`, { headers: adminHeaders() });
+        if (handleAuthError(res)) return;
+        const rows = await res.json();
+
+        if (rows.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">No admin accounts found.</div></td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = rows.map(a => {
+            const isSelf = currentAdmin && String(currentAdmin.id) === String(a.id);
+            const addedDate = a.created_at ? new Date(a.created_at).toLocaleDateString() : '—';
+            return `
+            <tr>
+                <td>${a.full_name}${isSelf ? ' <span class="pill you">You</span>' : ''}</td>
+                <td>${a.email}</td>
+                <td>${addedDate}</td>
+                <td>
+                    <button class="btn btn-edit" onclick='openEditAdmin(${JSON.stringify(a)})'><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-delete" onclick="deleteAdminAccount(${a.id})" ${isSelf ? 'disabled title="You can\'t delete your own account while logged in as it"' : ''}><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `;
+        }).join('');
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">Failed to load admin accounts.</div></td></tr>`;
+    }
+}
+
+function setupAdminAccountModal() {
+    const addBtn = document.getElementById('addAdminBtn');
+    if (!addBtn) return;
+
+    addBtn.onclick = () => {
+        editingAdminId = null;
+        document.getElementById('adminAccountModalTitle').innerText = 'Add Admin';
+        document.getElementById('aaFullName').value = "";
+        document.getElementById('aaEmail').value = "";
+        document.getElementById('aaPassword').value = "";
+        document.getElementById('aaPasswordHint').innerText = 'Required for a new admin.';
+        document.getElementById('adminAccountModal').style.display = 'flex';
+    };
+}
+
+function openEditAdmin(admin) {
+    editingAdminId = admin.id;
+    document.getElementById('adminAccountModalTitle').innerText = 'Edit Admin';
+    document.getElementById('aaFullName').value = admin.full_name || "";
+    document.getElementById('aaEmail').value = admin.email || "";
+    document.getElementById('aaPassword').value = "";
+    document.getElementById('aaPasswordHint').innerText = 'Leave blank to keep the current password.';
+    document.getElementById('adminAccountModal').style.display = 'flex';
+}
+
+async function deleteAdminAccount(id) {
+    const confirm = await Swal.fire({ title: 'Delete this admin account?', text: 'They will immediately lose access to this panel.', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ff5252', confirmButtonText: 'Delete' });
+    if (!confirm.isConfirmed) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/admins/${id}`, { method: 'DELETE', headers: adminHeaders() });
+        if (handleAuthError(res)) return;
+        const result = await res.json().catch(() => ({}));
+        if (res.ok) {
+            Swal.fire('Deleted', 'Admin account removed.', 'success');
+            loadAdmins();
+        } else {
+            Swal.fire('Error', result.message || 'Failed to delete admin account.', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Error', 'Server connection failed.', 'error');
+    }
+}
+
 // --- MODAL HELPERS ---
 function closeModal(id) {
     document.getElementById(id).style.display = 'none';
@@ -488,6 +580,57 @@ function setupModalSaveHandlers() {
             }
         } catch (err) {
             Swal.fire('Error', 'Server connection failed.', 'error');
+        }
+    };
+
+    // NEW: save handler for the Add/Edit Admin modal (handles both create and update)
+    document.getElementById('saveAdminAccountBtn').onclick = async () => {
+        const full_name = document.getElementById('aaFullName').value.trim();
+        const email = document.getElementById('aaEmail').value.trim();
+        const password = document.getElementById('aaPassword').value;
+
+        if (!full_name || !email) {
+            return Swal.fire('Missing Info', 'Full name and email are required.', 'warning');
+        }
+        if (!editingAdminId && !password) {
+            return Swal.fire('Missing Password', 'Password is required when adding a new admin.', 'warning');
+        }
+
+        const saveBtn = document.getElementById('saveAdminAccountBtn');
+        saveBtn.disabled = true;
+        saveBtn.innerText = "Saving...";
+
+        try {
+            let res;
+            if (editingAdminId) {
+                res = await fetch(`${API_BASE}/admins/${editingAdminId}`, {
+                    method: 'PUT',
+                    headers: adminHeaders(),
+                    body: JSON.stringify({ full_name, email, password })
+                });
+            } else {
+                res = await fetch(`${API_BASE}/admins`, {
+                    method: 'POST',
+                    headers: adminHeaders(),
+                    body: JSON.stringify({ full_name, email, password })
+                });
+            }
+
+            if (handleAuthError(res)) return;
+            const result = await res.json().catch(() => ({}));
+
+            if (res.ok) {
+                closeModal('adminAccountModal');
+                Swal.fire('Saved!', result.message || 'Admin account saved.', 'success');
+                loadAdmins();
+            } else {
+                Swal.fire('Error', result.message || 'Failed to save admin account.', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Error', 'Server connection failed.', 'error');
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerText = "Save";
         }
     };
 }
