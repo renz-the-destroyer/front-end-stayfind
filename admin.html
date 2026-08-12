@@ -3,109 +3,202 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StayFind - Admin Panel</title>
+<title>StayFind — Admin Panel</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
-    @import url('https://fonts.googleapis.com/css?family=Montserrat:400,600,800');
-    :root { --primary: #0d47a1; --secondary: #42a5f5; --bg: #f0f4f8; --text: #37474f; --danger: #ff5252; --success: #43a047; --warn: #ffa000; }
-    * { box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
-    body { margin: 0; background: var(--bg); color: var(--text); }
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,900&family=Manrope:wght@400;500;600;700;800&display=swap');
 
-    /* --- LOGIN SCREEN --- */
-    #loginScreen { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-    .login-card { background: #fff; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 380px; text-align: center; }
-    .login-card .brand { font-size: 26px; font-weight: 800; color: var(--primary); margin-bottom: 5px; }
-    .login-card .brand span { color: var(--secondary); }
-    .login-card h2 { font-size: 16px; color: #78909c; font-weight: 600; margin-bottom: 25px; }
-    .login-card input { width: 100%; padding: 12px 15px; margin-bottom: 15px; border: 2px solid #e3f2fd; border-radius: 8px; font-size: 14px; background: #f8fbff; }
-    .login-card input:focus { outline: none; border-color: var(--secondary); }
-    .login-card button { width: 100%; padding: 13px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px; letter-spacing: 0.5px; }
-    .login-card button:hover { background: #0a367a; }
+    :root {
+        --ink: #0b1220;
+        --muted: #5b6b82;
+        --primary: #0d47a1;
+        --primary-deep: #072a5e;
+        --accent: #42a5f5;
+        --amber: #ffc069;
+        --amber-deep: #f59e0b;
+        --paper: #ffffff;
+        --canvas: #f5f7fb;
+        --line: #e6ebf3;
+        --danger: #e5484d;
+        --danger-deep: #c0392f;
+        --success: #1f9d55;
+        --radius-lg: 20px;
+        --radius-md: 14px;
+        --radius-sm: 10px;
+    }
 
-    /* --- DASHBOARD LAYOUT --- */
+    * { box-sizing: border-box; font-family: 'Manrope', sans-serif; }
+    html, body { margin: 0; padding: 0; }
+    body { background: var(--canvas); color: var(--ink); -webkit-font-smoothing: antialiased; }
+    input, select, button, textarea { font-family: 'Manrope', sans-serif; }
+    :focus-visible { outline: 2.5px solid var(--amber-deep); outline-offset: 2px; }
+
+    /* ===================== LOGIN SCREEN ===================== */
+    #loginScreen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .login-card {
+        background: #fff; padding: 44px 40px 40px; border-radius: var(--radius-lg);
+        box-shadow: 0 26px 60px -18px rgba(13,71,161,0.22);
+        width: 100%; max-width: 380px; text-align: center;
+    }
+    .login-card .brand { font-family: 'Fraunces', serif; font-weight: 700; font-size: 1.5rem; color: var(--ink); letter-spacing: -0.02em; margin-bottom: 8px; }
+    .login-card .brand span { color: var(--primary); }
+    .login-card .eyebrow { font-weight: 800; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--amber-deep); margin: 0 0 6px; }
+    .login-card h2 { font-size: 13px; color: var(--muted); font-weight: 600; margin: 0 0 28px; }
+    .login-card .input-wrapper { position: relative; margin-bottom: 14px; }
+    .login-card .input-wrapper i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--accent); font-size: 13px; }
+    .login-card input {
+        width: 100%; padding: 13px 15px 13px 42px; border: 1.5px solid var(--line);
+        border-radius: var(--radius-sm); font-size: 14px; background: var(--canvas); color: var(--ink); outline: none;
+        transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .login-card input::placeholder { color: #9aa7ba; }
+    .login-card input:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 4px rgba(66,165,245,.15); }
+    .login-card button {
+        width: 100%; padding: 14px; margin-top: 8px; background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+        color: #fff; border: none; border-radius: var(--radius-sm); font-weight: 800; font-size: 13px;
+        text-transform: uppercase; letter-spacing: .04em; cursor: pointer;
+        box-shadow: 0 16px 26px -12px rgba(13,71,161,.6); transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .login-card button:hover { transform: translateY(-1px); box-shadow: 0 18px 30px -10px rgba(13,71,161,.65); }
+
+    /* ===================== DASHBOARD LAYOUT ===================== */
     #dashboardScreen { display: none; min-height: 100vh; }
-    .sidebar { width: 230px; background: var(--primary); color: white; position: fixed; top: 0; left: 0; height: 100%; padding: 25px 0; z-index: 100; }
-    .sidebar .brand { font-size: 20px; font-weight: 800; text-align: center; margin-bottom: 4px; }
-    .sidebar .brand span { color: var(--secondary); }
-    /* NEW: shows who's currently logged in, filled in by admin.js after login */
-    .sidebar .admin-identity { text-align: center; font-size: 11px; color: #90caf9; margin-bottom: 26px; padding: 0 15px; overflow-wrap: break-word; }
-    .sidebar nav a { display: flex; align-items: center; gap: 12px; padding: 14px 25px; color: #cfd8dc; text-decoration: none; font-size: 14px; font-weight: 600; cursor: pointer; border-left: 4px solid transparent; }
-    .sidebar nav a:hover { background: rgba(255,255,255,0.06); color: white; }
-    .sidebar nav a.active { background: rgba(255,255,255,0.1); color: white; border-left-color: var(--secondary); }
-    .sidebar nav a .badge { margin-left: auto; background: var(--danger); color: white; font-size: 10px; padding: 2px 7px; border-radius: 10px; }
-    .sidebar .logout { position: absolute; bottom: 20px; width: 100%; }
-    .sidebar .logout a { display: flex; align-items: center; gap: 12px; padding: 14px 25px; color: #cfd8dc; text-decoration: none; font-size: 14px; font-weight: 600; cursor: pointer; }
-    .sidebar .logout a:hover { background: rgba(255,255,255,0.06); color: white; }
 
-    .main { margin-left: 230px; padding: 30px 35px; }
-    .main h1 { margin: 0 0 5px 0; color: var(--primary); }
-    .main .subtitle { color: #90a4ae; font-size: 13px; margin-bottom: 25px; }
+    .sidebar {
+        width: 240px; position: fixed; top: 0; left: 0; height: 100%; z-index: 100;
+        display: flex; flex-direction: column; overflow: hidden;
+        background: linear-gradient(170deg, var(--primary) 0%, var(--primary-deep) 68%, #05204d 100%);
+        color: #fff; padding: 26px 0 20px;
+    }
+    .sidebar::before {
+        content: ""; position: absolute; width: 320px; height: 320px; border-radius: 50%;
+        background: radial-gradient(circle, rgba(255,192,105,.28), transparent 70%);
+        top: -140px; right: -140px; pointer-events: none;
+    }
+    .sidebar .brand { position: relative; z-index: 1; font-family: 'Fraunces', serif; font-size: 19px; font-weight: 700; text-align: center; margin-bottom: 4px; letter-spacing: -0.01em; }
+    .sidebar .brand span { color: var(--amber); }
+    .sidebar .admin-identity { position: relative; z-index: 1; text-align: center; font-size: 11px; color: rgba(255,255,255,.68); margin-bottom: 28px; padding: 0 16px; overflow-wrap: break-word; }
 
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 18px; margin-bottom: 30px; }
-    .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-    .stat-card i { font-size: 20px; color: var(--secondary); margin-bottom: 10px; }
-    .stat-card .num { font-size: 26px; font-weight: 800; color: var(--primary); }
-    .stat-card .label { font-size: 12px; color: #90a4ae; font-weight: 600; text-transform: uppercase; }
+    .sidebar nav { position: relative; z-index: 1; flex: 1; }
+    .sidebar nav a {
+        display: flex; align-items: center; gap: 12px; padding: 12px 24px; margin: 2px 12px;
+        border-radius: 12px; color: rgba(255,255,255,.78); text-decoration: none;
+        font-size: 13.5px; font-weight: 700; cursor: pointer; transition: background .18s ease, color .18s ease;
+    }
+    .sidebar nav a i { width: 18px; text-align: center; font-size: 14px; }
+    .sidebar nav a:hover { background: rgba(255,255,255,.08); color: #fff; }
+    .sidebar nav a.active { background: rgba(255,255,255,.14); color: #fff; box-shadow: inset 3px 0 0 var(--amber); }
+    .sidebar nav a .badge { margin-left: auto; background: var(--danger); color: #fff; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 10px; }
 
+    .sidebar .logout { position: relative; z-index: 1; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.14); margin: 10px 12px 0; }
+    .sidebar .logout a {
+        display: flex; align-items: center; gap: 12px; padding: 12px 12px; color: rgba(255,255,255,.78);
+        text-decoration: none; font-size: 13.5px; font-weight: 700; cursor: pointer; border-radius: 12px; transition: background .18s ease, color .18s ease;
+    }
+    .sidebar .logout a:hover { background: rgba(255,255,255,.08); color: #fff; }
+
+    .main { margin-left: 240px; padding: 40px 44px; }
+    .main h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.8rem; margin: 0 0 6px; color: var(--ink); letter-spacing: -0.01em; }
+    .main .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+
+    /* ===================== STAT CARDS ===================== */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 18px; margin-bottom: 8px; }
+    .stat-card { background: #fff; border-radius: var(--radius-md); padding: 20px; box-shadow: 0 10px 26px -14px rgba(13,71,161,.18); border: 1px solid var(--line); }
+    .stat-card i { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-bottom: 14px; background: #e8f1fd; color: var(--primary); }
+    .stat-card:nth-child(2) i { background: #e6f7ec; color: var(--success); }
+    .stat-card:nth-child(3) i { background: #eaf2ff; color: #2563eb; }
+    .stat-card:nth-child(4) i { background: #fff4e0; color: var(--amber-deep); }
+    .stat-card:nth-child(5) i { background: #f1ecfb; color: #7c5cd1; }
+    .stat-card .num { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 700; color: var(--ink); }
+    .stat-card .label { font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-top: 2px; }
+
+    /* ===================== PANELS ===================== */
     .panel { display: none; }
     .panel.active { display: block; }
 
-    .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 15px; flex-wrap: wrap; }
-    .toolbar input { flex: 1; min-width: 220px; padding: 10px 15px; border-radius: 8px; border: 1px solid #e0e0e0; font-size: 14px; }
-    /* NEW: "Add Admin" button, matches .apply-filters-btn style used in home.html */
-    .btn-primary-small { background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 8px; }
-    .btn-primary-small:hover { background: #0a367a; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 15px; flex-wrap: wrap; }
+    .toolbar-search { position: relative; flex: 1; min-width: 240px; }
+    .toolbar-search i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; }
+    .toolbar input {
+        width: 100%; padding: 11px 15px 11px 40px; border-radius: var(--radius-sm); border: 1.5px solid var(--line);
+        font-size: 13.5px; background: #fff; outline: none; transition: border-color .2s ease, box-shadow .2s ease;
+    }
+    .toolbar input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(66,165,245,.15); }
+    .btn-primary-small {
+        background: linear-gradient(135deg, var(--primary), var(--primary-deep)); color: #fff; border: none;
+        padding: 11px 20px; border-radius: var(--radius-sm); font-weight: 800; cursor: pointer; font-size: 12.5px;
+        display: flex; align-items: center; gap: 8px; box-shadow: 0 14px 24px -12px rgba(13,71,161,.55);
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .btn-primary-small:hover { transform: translateY(-1px); }
 
-    table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-    thead { background: #f5f8fb; }
-    th, td { padding: 12px 15px; text-align: left; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
-    th { color: #607d8b; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+    .table-wrap { background: #fff; border-radius: var(--radius-md); box-shadow: 0 10px 26px -14px rgba(13,71,161,.18); border: 1px solid var(--line); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: #f7f9fc; }
+    th, td { padding: 13px 16px; text-align: left; font-size: 13px; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); text-transform: uppercase; font-size: 10.5px; letter-spacing: .05em; font-weight: 800; }
+    tbody tr { transition: background .15s ease; }
     tbody tr:hover { background: #fafcff; }
+    tbody tr:last-child td { border-bottom: none; }
+    .table-wrap > table { overflow-x: auto; display: block; }
     .table-wrap { overflow-x: auto; }
 
-    .pill { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: capitalize; }
+    /* ===================== PILLS ===================== */
+    .pill { padding: 4px 11px; border-radius: 20px; font-size: 10.5px; font-weight: 800; text-transform: capitalize; letter-spacing: .02em; display: inline-block; }
     .pill.tenant { background: #e3f2fd; color: #1565c0; }
-    .pill.landlord { background: #e8f5e9; color: #2e7d32; }
-    .pill.pending { background: #fff8e1; color: #f57f17; }
-    .pill.approved { background: #e8f5e9; color: #2e7d32; }
-    .pill.rejected { background: #ffebee; color: #c62828; }
-    .pill.none { background: #eceff1; color: #78909c; }
-    /* NEW: "You" badge next to the currently logged-in admin's own row */
-    .pill.you { background: #e3f2fd; color: #1565c0; }
+    .pill.landlord { background: #e6f7ec; color: var(--success); }
+    .pill.pending { background: #fff4e0; color: var(--amber-deep); }
+    .pill.approved { background: #e6f7ec; color: var(--success); }
+    .pill.rejected { background: #fdeaea; color: var(--danger-deep); }
+    .pill.none { background: #eef1f6; color: var(--muted); }
+    .pill.you { background: #e3f2fd; color: #1565c0; margin-left: 6px; }
 
-    .btn { border: none; padding: 7px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; margin-right: 5px; margin-bottom: 5px; }
-    .btn-approve { background: var(--success); color: white; }
-    .btn-reject { background: var(--danger); color: white; }
-    .btn-edit { background: var(--secondary); color: white; }
-    .btn-delete { background: var(--danger); color: white; }
-    .btn-delete:disabled, .btn[disabled] { background: #cfd8dc; cursor: not-allowed; }
+    /* ===================== ACTION BUTTONS ===================== */
+    .btn { border: none; padding: 8px 13px; border-radius: 999px; font-size: 11.5px; font-weight: 800; cursor: pointer; margin-right: 6px; margin-bottom: 5px; transition: transform .12s ease, opacity .12s ease; }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-approve { background: var(--success); color: #fff; }
+    .btn-reject { background: var(--danger); color: #fff; }
+    .btn-edit { background: var(--accent); color: #fff; }
+    .btn-delete { background: var(--danger); color: #fff; }
+    .btn-delete:disabled, .btn[disabled] { background: #d7dce4; color: #97a1af; cursor: not-allowed; transform: none; }
 
-    .empty-state { text-align: center; padding: 40px; color: #b0bec5; }
+    .empty-state { text-align: center; padding: 48px 20px; color: #a9b3c2; }
+    .empty-state i { display: block; margin-bottom: 10px; }
+    .empty-state p { margin: 0; font-size: 13px; font-weight: 600; }
 
-    /* --- MODAL --- */
-    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 2000; align-items: center; justify-content: center; }
-    .modal-box { background: white; padding: 28px; border-radius: 14px; width: 90%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
-    .modal-box h3 { margin-top: 0; color: var(--primary); }
-    .modal-box label { display: block; font-size: 12px; font-weight: 700; color: #607d8b; margin: 12px 0 5px; }
-    .modal-box input, .modal-box select { width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; }
-    .modal-box .field-hint { font-size: 11px; color: #90a4ae; margin-top: 4px; }
-    .modal-actions { display: flex; gap: 10px; margin-top: 22px; }
-    .modal-actions button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
-    .btn-save { background: var(--primary); color: white; }
-    .btn-cancel { background: #eceff1; color: #455a64; }
+    /* ===================== MODALS ===================== */
+    .modal { display: none; position: fixed; inset: 0; background: rgba(5,10,20,.68); backdrop-filter: blur(2px); z-index: 2000; align-items: center; justify-content: center; padding: 20px; }
+    .modal-box { background: #fff; padding: 30px; border-radius: var(--radius-lg); width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; box-shadow: 0 30px 70px rgba(0,0,0,.35); }
+    .modal-box h3 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.25rem; margin: 0 0 4px; color: var(--ink); }
+    .modal-box label { display: block; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 14px 0 6px; }
+    .modal-box input, .modal-box select {
+        width: 100%; padding: 11px 13px; border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+        font-size: 13.5px; background: var(--canvas); outline: none; transition: border-color .2s ease, box-shadow .2s ease;
+    }
+    .modal-box input:focus, .modal-box select:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 4px rgba(66,165,245,.15); }
+    .modal-box .field-hint { font-size: 10.5px; color: var(--muted); margin-top: 5px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+    .modal-actions button { flex: 1; padding: 12px; border: none; border-radius: var(--radius-sm); font-weight: 800; font-size: 12.5px; cursor: pointer; transition: transform .12s ease; }
+    .modal-actions button:hover { transform: translateY(-1px); }
+    .btn-save { background: linear-gradient(135deg, var(--primary), var(--primary-deep)); color: #fff; box-shadow: 0 14px 24px -12px rgba(13,71,161,.55); }
+    .btn-cancel { background: #eef1f6; color: var(--muted); }
 
-    /* document viewer modal */
-    .doc-preview { width: 100%; border-radius: 8px; border: 1px solid #e0e0e0; cursor: zoom-in; display: block; }
-    .doc-preview-label { font-size: 12px; font-weight: 700; color: #607d8b; margin-bottom: 6px; display: block; }
+    .doc-preview { width: 100%; border-radius: var(--radius-sm); border: 1px solid var(--line); cursor: zoom-in; display: block; }
+    .doc-preview-label { font-size: 11.5px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 7px; display: block; }
 
     @media (max-width: 768px) {
-        .sidebar { width: 70px; }
+        .sidebar { width: 68px; }
         .sidebar .brand, .sidebar .admin-identity, .sidebar nav a span, .sidebar .logout span { display: none; }
-        .sidebar nav a { justify-content: center; padding: 14px 0; }
-        .sidebar nav a .badge { position: absolute; margin-left: 0; top: 6px; right: 10px; }
+        .sidebar nav a { justify-content: center; padding: 14px 0; margin: 2px 8px; }
+        .sidebar nav a .badge { position: absolute; margin-left: 0; top: 6px; right: 6px; }
         .sidebar .logout a { justify-content: center; padding: 14px 0; }
-        .main { margin-left: 70px; padding: 20px; }
+        .main { margin-left: 68px; padding: 26px 20px; }
+        .modal-box { padding: 24px 20px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        * { animation: none !important; transition: none !important; }
     }
 </style>
 </head>
@@ -115,9 +208,16 @@
     <div id="loginScreen">
         <div class="login-card">
             <div class="brand">Stay<span>Find</span></div>
-            <h2>Admin Panel Login</h2>
-            <input type="email" id="adminEmail" placeholder="Admin Email">
-            <input type="password" id="adminPassword" placeholder="Password">
+            <p class="eyebrow">Admin Access</p>
+            <h2>Sign in to manage StayFind</h2>
+            <div class="input-wrapper">
+                <i class="fas fa-envelope"></i>
+                <input type="email" id="adminEmail" placeholder="Admin Email">
+            </div>
+            <div class="input-wrapper">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="adminPassword" placeholder="Password">
+            </div>
             <button id="adminLoginBtn">Sign In</button>
         </div>
     </div>
@@ -126,7 +226,7 @@
     <div id="dashboardScreen">
         <div class="sidebar">
             <div class="brand">Stay<span>Find</span> Admin</div>
-            <!-- NEW: filled in by admin.js after login with the current admin's name/email -->
+            <!-- Filled in by admin.js after login with the current admin's name/email -->
             <div class="admin-identity" id="adminIdentity"></div>
             <nav>
                 <a data-panel="overview" class="active"><i class="fas fa-chart-pie"></i> <span>Overview</span></a>
@@ -134,7 +234,6 @@
                 <a data-panel="users"><i class="fas fa-users"></i> <span>Users</span></a>
                 <a data-panel="listings"><i class="fas fa-home"></i> <span>Listings</span></a>
                 <a data-panel="reviews"><i class="fas fa-comments"></i> <span>Reviews</span></a>
-                <!-- NEW: Settings panel, holds Admin Account Management -->
                 <a data-panel="settings"><i class="fas fa-cog"></i> <span>Settings</span></a>
             </nav>
             <div class="logout">
@@ -168,7 +267,10 @@
                 <h1>Manage Users</h1>
                 <div class="subtitle">Full CRUD over every registered account</div>
                 <div class="toolbar">
-                    <input type="text" id="userSearch" placeholder="Search by name or email...">
+                    <div class="toolbar-search">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <input type="text" id="userSearch" placeholder="Search by name or email...">
+                    </div>
                 </div>
                 <div class="table-wrap">
                     <table>
@@ -183,7 +285,10 @@
                 <h1>Manage Listings</h1>
                 <div class="subtitle">Every property posted on the platform</div>
                 <div class="toolbar">
-                    <input type="text" id="listingSearch" placeholder="Search by title or location...">
+                    <div class="toolbar-search">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <input type="text" id="listingSearch" placeholder="Search by title or location...">
+                    </div>
                 </div>
                 <div class="table-wrap">
                     <table>
@@ -205,7 +310,7 @@
                 </div>
             </div>
 
-            <!-- NEW: SETTINGS (Admin Account Management) -->
+            <!-- SETTINGS (Admin Account Management) -->
             <div class="panel" id="panel-settings">
                 <h1>Settings</h1>
                 <div class="subtitle">Manage who has access to this admin panel</div>
@@ -289,14 +394,14 @@
     <div class="modal" id="viewDocsModal">
         <div class="modal-box" style="max-width: 600px;">
             <h3>Landlord Verification Documents</h3>
-            <div id="docsModalBody" style="display:flex; flex-direction:column; gap:20px;"></div>
+            <div id="docsModalBody" style="display:flex; flex-direction:column; gap:20px; margin-top:18px;"></div>
             <div class="modal-actions">
                 <button class="btn-cancel" onclick="closeModal('viewDocsModal')" style="flex:1;">Close</button>
             </div>
         </div>
     </div>
 
-    <!-- NEW: ADD / EDIT ADMIN MODAL -->
+    <!-- ADD / EDIT ADMIN MODAL -->
     <div class="modal" id="adminAccountModal">
         <div class="modal-box">
             <h3 id="adminAccountModalTitle">Add Admin</h3>
