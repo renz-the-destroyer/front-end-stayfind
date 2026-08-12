@@ -3,90 +3,254 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StayFind - Complete Your Profile</title>
+    <title>StayFind — Set Up Your Profile</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css?family=Montserrat:400,600,800');
-        :root { --primary: #0d47a1; --secondary: #42a5f5; --bg: #f0f4f8; --text: #37474f; }
-        * { box-sizing: border-box; transition: all 0.2s ease-in-out; }
-        body { background-color: var(--bg); display: flex; justify-content: center; align-items: center; font-family: 'Montserrat', sans-serif; min-height: 100vh; margin: 0; color: var(--text); }
-        #loader { position: fixed; inset: 0; background: white; display: flex; justify-content: center; align-items: center; z-index: 9999; }
-        .dashboard-card { background: #fff; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); width: 100%; max-width: 450px; padding: 40px; text-align: center; margin: 20px; }
-        .brand { font-size: 24px; font-weight: 800; color: var(--primary); margin-bottom: 5px; }
-        .brand span { color: var(--secondary); }
-        h2 { font-size: 20px; margin-bottom: 20px; color: var(--primary); }
-        .form-group { text-align: left; margin-bottom: 18px; position: relative; }
-        label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #90a4ae; margin-left: 5px; }
-        .input-wrapper { position: relative; display: flex; align-items: center; }
-        .input-wrapper i { position: absolute; left: 15px; color: var(--secondary); font-size: 14px; }
-        input { width: 100%; padding: 12px 15px 12px 40px; background: #f8fbff; border: 2px solid #e3f2fd; border-radius: 8px; font-family: inherit; font-size: 14px; }
-        input:focus { border-color: var(--secondary); outline: none; background: #fff; }
-        .role-container { display: flex; gap: 10px; margin-top: 8px; }
-        .role-box { flex: 1; padding: 15px; border: 2px solid #e3f2fd; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; display: flex; flex-direction: column; gap: 5px; align-items: center; background: #fff; }
-        .role-box i { font-size: 20px; }
-        .role-box.active { border-color: var(--primary); background: #e3f2fd; color: var(--primary); }
-        .save-btn { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 30px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-top: 25px; cursor: pointer; box-shadow: 0 4px 12px rgba(13, 71, 161, 0.2); }
-        .save-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(13, 71, 161, 0.3); }
-        .logout-link { display: block; margin-top: 20px; font-size: 12px; color: #90a4ae; text-decoration: none; cursor: pointer; }
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,900&family=Manrope:wght@400;500;600;700;800&display=swap');
 
-        /* NEW: Landlord document upload section */
-        #landlordDocsSection { text-align: left; background: #f8fbff; border: 1px solid #e3f2fd; border-radius: 10px; padding: 15px; margin-top: 10px; margin-bottom: 10px; }
-        #landlordDocsSection .doc-label { font-size: 11px; font-weight: 700; color: #37474f; text-transform: none; margin: 10px 0 5px; display: block; }
-        #landlordDocsSection input[type="file"] { padding: 8px 10px; font-size: 12px; margin-bottom: 5px; }
-        #landlordDocsSection .doc-hint { font-size: 10px; color: #90a4ae; margin: 0 0 10px 0; }
+        :root {
+            --ink: #0b1220;
+            --muted: #57657c;
+            --primary: #0d47a1;
+            --primary-deep: #072a5e;
+            --accent: #42a5f5;
+            --amber: #ffc069;
+            --amber-deep: #f59e0b;
+            --paper: #ffffff;
+            --canvas: #f5f7fb;
+            --line: #e3e8f2;
+            --radius-lg: 22px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
+        }
+
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; }
+        body {
+            font-family: 'Manrope', sans-serif;
+            color: var(--ink);
+            background: var(--canvas);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            -webkit-font-smoothing: antialiased;
+        }
+        input, button, textarea, select { font-family: 'Manrope', sans-serif; }
+
+        :focus-visible {
+            outline: 2.5px solid var(--amber-deep);
+            outline-offset: 2px;
+        }
+
+        .swal2-container { z-index: 15000 !important; }
+
+        /* ===================== LOADER ===================== */
+        #loader {
+            position: fixed; inset: 0; z-index: 9999;
+            background: #ffffff;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+        }
+        #loader i { font-size: 30px; color: var(--primary); }
+        #loader span { font-size: 13px; color: var(--muted); font-weight: 600; }
+
+        /* ===================== CARD ===================== */
+        .setup-card {
+            width: 100%; max-width: 460px;
+            background: var(--paper);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 26px 60px -18px rgba(13,71,161,0.22);
+            padding: 44px 40px 40px;
+            text-align: center;
+        }
+
+        .brand-mark {
+            font-family: 'Fraunces', serif;
+            font-weight: 700;
+            font-size: 1.4rem;
+            letter-spacing: -0.02em;
+            color: var(--ink);
+            margin-bottom: 22px;
+        }
+        .brand-mark span { color: var(--primary); }
+
+        .eyebrow {
+            font-weight: 800; font-size: 10.5px; letter-spacing: 0.14em;
+            text-transform: uppercase; color: var(--amber-deep); margin: 0 0 10px;
+        }
+        .card-title {
+            font-family: 'Fraunces', serif;
+            font-weight: 600; font-size: 1.7rem;
+            letter-spacing: -0.01em; margin: 0 0 8px; color: var(--ink);
+        }
+        .card-sub {
+            font-size: 13px; color: var(--muted); line-height: 1.55;
+            margin: 0 0 30px;
+        }
+
+        form { text-align: left; }
+
+        .field-label {
+            display: block; font-size: 11px; font-weight: 800;
+            text-transform: uppercase; letter-spacing: 0.06em;
+            color: var(--muted); margin: 0 0 6px;
+        }
+        .field-group { margin-bottom: 18px; }
+
+        .input-wrapper { position: relative; display: flex; align-items: center; }
+        .input-wrapper i {
+            position: absolute; left: 15px; color: var(--accent); font-size: 14px;
+        }
+        .input-wrapper input {
+            width: 100%; padding: 13px 15px 13px 42px;
+            border: 1.5px solid var(--line); background: var(--canvas);
+            border-radius: var(--radius-sm); font-size: 14px; color: var(--ink);
+            outline: none; transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+        .input-wrapper input::placeholder { color: #9aa7ba; }
+        .input-wrapper input:focus {
+            border-color: var(--accent); background: #fff;
+            box-shadow: 0 0 0 4px rgba(66,165,245,0.15);
+        }
+
+        /* ===================== ROLE SELECTOR ===================== */
+        .role-grid { display: flex; gap: 12px; margin: 6px 0 20px; }
+        .role-box {
+            flex: 1; min-width: 0;
+            border: 1.5px solid var(--line); background: #fff;
+            border-radius: var(--radius-md);
+            padding: 16px 12px; text-align: center; cursor: pointer;
+            transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+        }
+        .role-box:hover { transform: translateY(-2px); }
+        .role-icon {
+            width: 38px; height: 38px; border-radius: 50%;
+            background: var(--canvas); color: var(--muted);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 10px; font-size: 15px;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+        .role-label { display: block; font-weight: 800; font-size: 13.5px; color: var(--ink); margin-bottom: 3px; }
+        .role-desc { display: block; font-size: 10.5px; color: var(--muted); line-height: 1.4; }
+
+        .role-box.active { border-color: var(--primary); background: #eef5ff; }
+        .role-box.active .role-icon { background: var(--primary); color: #fff; }
+        .role-box.active .role-label { color: var(--primary); }
+
+        /* ===================== LANDLORD DOCS PANEL ===================== */
+        .docs-panel {
+            text-align: left; background: #f8fbff;
+            border: 1px solid #e3f2fd; border-radius: var(--radius-md);
+            padding: 16px; margin: 0 0 22px;
+        }
+        .docs-eyebrow {
+            display: flex; align-items: center; gap: 8px;
+            font-weight: 800; font-size: 12px; color: var(--primary); margin: 0 0 6px;
+        }
+        .docs-hint { font-size: 11px; color: var(--muted); line-height: 1.5; margin: 0 0 14px; }
+        .doc-label {
+            display: block; font-size: 11px; font-weight: 700; color: var(--ink);
+            margin: 0 0 5px;
+        }
+        .docs-panel input[type="file"] {
+            width: 100%; padding: 9px 11px; margin-bottom: 14px;
+            border: 1.5px dashed #c9dcf7; background: #fff;
+            border-radius: var(--radius-sm); font-size: 11.5px; color: var(--muted);
+            cursor: pointer; transition: border-color 0.2s ease;
+        }
+        .docs-panel input[type="file"]:hover { border-color: var(--accent); }
+        .docs-panel input[type="file"]:last-of-type { margin-bottom: 2px; }
+
+        /* ===================== BUTTON / FOOTER ===================== */
+        .btn-primary {
+            width: 100%; margin-top: 4px; padding: 14px;
+            border: none; border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+            color: #fff; font-weight: 800; font-size: 13.5px;
+            letter-spacing: 0.02em; text-transform: uppercase; cursor: pointer;
+            box-shadow: 0 16px 26px -12px rgba(13,71,161,0.6);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 18px 30px -10px rgba(13,71,161,0.65); }
+        .btn-primary:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+
+        .logout-link {
+            display: block; margin-top: 22px; font-size: 12px;
+            color: var(--muted); text-decoration: none; cursor: pointer; text-align: center;
+        }
+        .logout-link:hover { color: var(--ink); text-decoration: underline; }
+
+        @media (max-width: 480px) {
+            .setup-card { padding: 36px 24px 32px; }
+            .role-desc { display: none; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; transition: none !important; }
+        }
     </style>
 </head>
 <body>
 
-    <div id="loader"><i class="fas fa-circle-notch fa-spin fa-2x" style="color: var(--primary)"></i></div>
+    <div id="loader">
+        <i class="fas fa-circle-notch fa-spin"></i>
+        <span>Loading your profile…</span>
+    </div>
 
-    <div class="dashboard-card">
-        <div class="brand">Stay<span>Find</span></div>
-        <h2>Setup Your Profile</h2>
-        
-        <form id="profileForm">
-            <div class="form-group">
-                <label>Full Name</label>
+    <div class="setup-card">
+        <div class="brand-mark">Stay<span>Find</span></div>
+        <p class="eyebrow">Almost there</p>
+        <h1 class="card-title">Set up your profile</h1>
+        <p class="card-sub">Tell us a bit about yourself so we can personalize StayFind for you.</p>
+
+        <form id="profileForm" novalidate>
+            <div class="field-group">
+                <label class="field-label" for="fullName">Full name</label>
                 <div class="input-wrapper">
                     <i class="fas fa-user"></i>
                     <input type="text" id="fullName" placeholder="Juan Dela Cruz" required>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>Current Address</label>
+            <div class="field-group">
+                <label class="field-label" for="address">Current address</label>
                 <div class="input-wrapper">
                     <i class="fas fa-map-marker-alt"></i>
                     <input type="text" id="address" placeholder="City, Province" required>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>Mobile Number</label>
+            <div class="field-group">
+                <label class="field-label" for="contact">Mobile number</label>
                 <div class="input-wrapper">
                     <i class="fas fa-phone"></i>
                     <input type="tel" id="contact" placeholder="09123456789" pattern="[0-9]{11}" required title="Please enter 11-digit mobile number">
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>Identify as</label>
-                <div class="role-container">
+            <div class="field-group">
+                <label class="field-label">Identify as</label>
+                <div class="role-grid">
                     <div class="role-box" id="roleTenant">
-                        <i class="fas fa-user-tag"></i> Tenant
+                        <span class="role-icon"><i class="fas fa-user-tag"></i></span>
+                        <span class="role-label">Tenant</span>
+                        <span class="role-desc">Looking for a place to rent</span>
                     </div>
                     <div class="role-box" id="roleLandlord">
-                        <i class="fas fa-house-user"></i> Landlord
+                        <span class="role-icon"><i class="fas fa-house-chimney"></i></span>
+                        <span class="role-label">Landlord</span>
+                        <span class="role-desc">Listing a property to rent out</span>
                     </div>
                 </div>
             </div>
 
-            <!-- NEW: Shown only when "Landlord" is selected. Required before
-                 the landlord request can be submitted for admin review. -->
-            <div class="form-group" id="landlordDocsSection" style="display:none;">
-                <label style="text-transform:none; font-size:12px; color:#0d47a1;"><i class="fas fa-file-shield"></i> Landlord Verification Documents (required)</label>
-                <p class="doc-hint">Upload clear photos. An admin will review these before your landlord account is approved.</p>
+            <!-- Shown only when "Landlord" is selected. Required before the
+                 landlord request can be submitted for admin review. -->
+            <div class="docs-panel" id="landlordDocsSection" style="display:none;">
+                <p class="docs-eyebrow"><i class="fas fa-file-shield"></i> Landlord verification documents</p>
+                <p class="docs-hint">Upload clear photos. An admin will review these before your landlord account is approved.</p>
 
                 <label class="doc-label">Proof of Property Ownership (TCT or Tax Declaration)</label>
                 <input type="file" id="docOwnership" accept="image/*">
@@ -98,7 +262,7 @@
                 <input type="file" id="docBir" accept="image/*">
             </div>
 
-            <button type="submit" class="save-btn" id="saveBtn">Complete Setup</button>
+            <button type="submit" class="btn-primary" id="saveBtn">Complete Setup</button>
         </form>
 
         <a class="logout-link" id="logoutBtn">Logout and exit</a>
