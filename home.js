@@ -7,6 +7,10 @@ const listingsGrid = document.getElementById('listingsGrid');
 // Global variable to track selected stars
 let selectedRating = 0;
 
+// NEW: Tracks a snapshot of the Post/Edit Listing form so we can warn the user
+// before they lose unsaved changes (Cancel button, clicking outside, closing the tab).
+let originalFormSnapshot = null;
+
 // NEW: Persistent list of File objects picked for "Post a Listing" / "Edit
 // Listing". A native <input type="file"> REPLACES its entire FileList every
 // time the picker is opened again - so choosing one photo, then opening
@@ -337,34 +341,200 @@ function setupFiltersToggle() {
     };
 }
 
-// --- NEW: SMART SEARCH UI INJECTION ---
+// --- REDESIGNED: SMART SEARCH UI INJECTION ---
+// Builds the floating "Smart Finder" launcher + panel. The IDs
+// (smartSearchBtn, smartSearchBox, smartInput, executeSmartSearch) and the
+// show/hide-via-style.display mechanism are kept the same so
+// processSmartSearch() below still works without any changes to its wiring.
 function injectSmartSearchUI() {
+    // Inject the widget's CSS once (keyframes/hover states need a real
+    // stylesheet - inline style attributes can't do animations or :hover).
+    if (!document.getElementById('smartSearchStyles')) {
+        const styleTag = document.createElement('style');
+        styleTag.id = 'smartSearchStyles';
+        styleTag.textContent = `
+            .ss-launcher {
+                position: fixed; bottom: 20px; right: 20px; z-index: 999;
+                display: flex; align-items: center; gap: 10px;
+                padding: 14px 22px 14px 18px; border-radius: 999px; border: none;
+                background: linear-gradient(135deg, #0d47a1, #1e88e5); color: #fff;
+                font-family: 'Plus Jakarta Sans', 'Montserrat', sans-serif;
+                font-weight: 700; font-size: 14px; cursor: pointer;
+                box-shadow: 0 10px 30px rgba(13,71,161,0.4);
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+            }
+            .ss-launcher:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(13,71,161,0.5); }
+            .ss-launcher:active { transform: scale(0.96); }
+            .ss-launcher i { font-size: 16px; }
+            .ss-launcher-pulse {
+                position: absolute; inset: 0; border-radius: 999px;
+                border: 2px solid rgba(66,165,245,0.6);
+                animation: ss-pulse 2.2s ease-out infinite; pointer-events: none;
+            }
+            @keyframes ss-pulse {
+                0% { transform: scale(1); opacity: 0.8; }
+                100% { transform: scale(1.35); opacity: 0; }
+            }
+            .ss-panel {
+                display: none; position: fixed; bottom: 90px; right: 20px; z-index: 1000;
+                width: 340px; max-width: calc(100vw - 40px);
+                background: #ffffff; border-radius: 22px; overflow: hidden;
+                box-shadow: 0 24px 60px rgba(16,24,40,0.22);
+                border: 1px solid rgba(13,71,161,0.08);
+                font-family: 'Plus Jakarta Sans', 'Montserrat', sans-serif;
+                opacity: 0; transform: translateY(16px) scale(0.97);
+                transition: opacity 0.25s ease, transform 0.25s ease;
+                flex-direction: column;
+            }
+            .ss-panel.open { display: flex; opacity: 1; transform: translateY(0) scale(1); }
+            .ss-panel-header {
+                background: linear-gradient(135deg, #0d47a1, #1565c0 55%, #1e88e5);
+                padding: 20px 20px 22px; display: flex; align-items: flex-start;
+                justify-content: space-between; position: relative; overflow: hidden;
+            }
+            .ss-panel-header::after {
+                content: ""; position: absolute; width: 140px; height: 140px;
+                background: rgba(255,255,255,0.08); border-radius: 50%; top: -60px; right: -40px;
+            }
+            .ss-panel-eyebrow {
+                display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+                text-transform: uppercase; color: rgba(255,255,255,0.75); margin-bottom: 4px;
+            }
+            .ss-panel-title { margin: 0; color: #fff; font-size: 19px; font-weight: 800; letter-spacing: -0.3px; }
+            .ss-close-btn {
+                background: rgba(255,255,255,0.16); border: none; color: #fff;
+                width: 30px; height: 30px; border-radius: 9px; cursor: pointer; font-size: 13px;
+                flex-shrink: 0; position: relative; z-index: 2; transition: background 0.15s;
+            }
+            .ss-close-btn:hover { background: rgba(255,255,255,0.3); }
+            .ss-panel-body { padding: 18px 20px 20px; }
+            .ss-panel-intro { margin: 0 0 14px; font-size: 12.5px; color: #64748b; line-height: 1.5; }
+            .ss-chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+            .ss-chip {
+                display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px;
+                border-radius: 999px; border: 1px solid #e3f2fd; background: #f8fbff;
+                color: #0d47a1; font-size: 11.5px; font-weight: 600; cursor: pointer;
+                font-family: inherit; transition: background 0.15s, transform 0.15s, border-color 0.15s;
+            }
+            .ss-chip i { font-size: 10px; color: #42a5f5; }
+            .ss-chip:hover { background: #e3f2fd; border-color: #42a5f5; transform: translateY(-1px); }
+            .ss-chip:active { transform: scale(0.96); }
+            .ss-input-row { position: relative; margin-bottom: 12px; }
+            .ss-input-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 13px; }
+            .ss-input {
+                width: 100%; padding: 12px 14px 12px 38px; border-radius: 12px;
+                border: 1.5px solid #e5e9f0; background: #fbfcfe; font-size: 13.5px;
+                font-family: inherit; outline: none; box-sizing: border-box;
+                transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+            }
+            .ss-input:focus { border-color: #42a5f5; box-shadow: 0 0 0 4px rgba(66,165,245,0.14); background: #fff; }
+            .ss-submit-btn {
+                width: 100%; padding: 13px; border: none; border-radius: 13px;
+                background: linear-gradient(135deg, #0d47a1, #1565c0); color: #fff;
+                font-weight: 700; font-size: 13.5px; cursor: pointer;
+                box-shadow: 0 10px 22px rgba(13,71,161,0.28);
+                transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+                display: flex; align-items: center; justify-content: center; gap: 8px;
+                font-family: inherit;
+            }
+            .ss-submit-btn:hover { transform: translateY(-1px); box-shadow: 0 14px 28px rgba(13,71,161,0.35); }
+            .ss-submit-btn:disabled { opacity: 0.75; cursor: not-allowed; transform: none; }
+            .ss-dot {
+                width: 6px; height: 6px; border-radius: 50%; background: #fff;
+                display: inline-block; margin: 0 2px; animation: ss-bounce 1.2s infinite ease-in-out;
+            }
+            .ss-dot:nth-child(2) { animation-delay: 0.15s; }
+            .ss-dot:nth-child(3) { animation-delay: 0.3s; }
+            @keyframes ss-bounce {
+                0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+                40% { transform: scale(1); opacity: 1; }
+            }
+            @media (max-width: 480px) {
+                .ss-panel { width: 100%; right: 0; bottom: 0; border-radius: 22px 22px 0 0; max-width: 100vw; }
+                .ss-launcher-label { display: none; }
+                .ss-launcher { padding: 14px; }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .ss-launcher-pulse, .ss-dot { animation: none; }
+                .ss-panel { transition: none; }
+            }
+        `;
+        document.head.appendChild(styleTag);
+    }
+
     const btn = document.createElement('button');
     btn.id = "smartSearchBtn";
-    btn.innerHTML = '<i class="fas fa-robot"></i> Smart Search';
-    btn.style = "position:fixed; bottom:20px; right:20px; z-index:999; padding:12px 20px; border-radius:30px; border:none; background:#007bff; color:white; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.2); font-weight:bold;";
+    btn.className = "ss-launcher";
+    btn.setAttribute('aria-label', 'Open Smart Search');
+    btn.innerHTML = `
+        <span class="ss-launcher-pulse"></span>
+        <i class="fas fa-wand-magic-sparkles"></i>
+        <span class="ss-launcher-label">Smart Search</span>
+    `;
     document.body.appendChild(btn);
 
     const chatbox = document.createElement('div');
     chatbox.id = "smartSearchBox";
-    chatbox.style = "display:none; position:fixed; bottom:80px; right:20px; z-index:999; width:300px; background:white; border-radius:15px; box-shadow:0 5px 25px rgba(0,0,0,0.3); overflow:hidden; border:1px solid #ddd; font-family:sans-serif;";
+    chatbox.className = "ss-panel";
     chatbox.innerHTML = `
-        <div style="background:#007bff; color:white; padding:15px; font-weight:bold; display:flex; justify-content:space-between;">
-            <span>Smart Finder</span>
-            <i class="fas fa-times" style="cursor:pointer;" onclick="document.getElementById('smartSearchBox').style.display='none'"></i>
+        <div class="ss-panel-header">
+            <div>
+                <span class="ss-panel-eyebrow">AI-Assisted</span>
+                <h3 class="ss-panel-title">Smart Finder</h3>
+            </div>
+            <button type="button" id="smartSearchCloseBtn" class="ss-close-btn" aria-label="Close"><i class="fas fa-xmark"></i></button>
         </div>
-        <div style="padding:15px;">
-            <p style="font-size:12px; color:#666; margin-bottom:10px;">Type what you are looking for (e.g., "Bahay malapit sa palengke" or "Room under 5000")</p>
-            <input type="text" id="smartInput" placeholder="Ask me anything..." style="width:100%; padding:10px; border:1px solid #ccc; border-radius:5px; outline:none;">
-            <button id="executeSmartSearch" style="width:100%; margin-top:10px; padding:10px; background:#28a745; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Find Stays</button>
+        <div class="ss-panel-body">
+            <p class="ss-panel-intro">Search naturally, in English or Tagalog — try a shortcut below or type your own.</p>
+            <div class="ss-chip-row" id="smartChipRow">
+                <button type="button" class="ss-chip" data-query="house malapit sa UP"><i class="fas fa-house"></i>House near UP</button>
+                <button type="button" class="ss-chip" data-query="apartment na may wifi"><i class="fas fa-wifi"></i>Has wifi</button>
+                <button type="button" class="ss-chip" data-query="room under 5000"><i class="fas fa-peso-sign"></i>Under ₱5,000</button>
+                <button type="button" class="ss-chip" data-query="may parking"><i class="fas fa-square-parking"></i>Parking</button>
+            </div>
+            <div class="ss-input-row">
+                <i class="fas fa-magnifying-glass ss-input-icon"></i>
+                <input type="text" id="smartInput" class="ss-input" placeholder="e.g. bahay malapit sa palengke...">
+            </div>
+            <button type="button" id="executeSmartSearch" class="ss-submit-btn">
+                <span class="ss-submit-label"><i class="fas fa-wand-magic-sparkles"></i> Find Stays</span>
+            </button>
         </div>
     `;
     document.body.appendChild(chatbox);
 
-    btn.onclick = () => {
-        chatbox.style.display = chatbox.style.display === 'none' ? 'block' : 'none';
+    // Animated open/close. Still driven by style.display (block <-> none)
+    // underneath, so processSmartSearch()'s existing line that sets
+    // smartSearchBox.style.display = 'none' on a successful search keeps
+    // working exactly as before - no changes needed there for the open/close
+    // mechanism itself.
+    function openPanel() {
+        chatbox.style.display = 'flex';
+        requestAnimationFrame(() => chatbox.classList.add('open'));
         document.getElementById('smartInput').focus();
+    }
+    function closePanel() {
+        chatbox.classList.remove('open');
+        setTimeout(() => {
+            if (!chatbox.classList.contains('open')) chatbox.style.display = 'none';
+        }, 220);
+    }
+
+    btn.onclick = () => {
+        const isOpen = chatbox.classList.contains('open');
+        if (isOpen) closePanel(); else openPanel();
     };
+    document.getElementById('smartSearchCloseBtn').onclick = closePanel;
+
+    // NEW: Suggestion chips - tapping one fills the input and runs the
+    // search immediately, doubling as a quick demo of what Smart Search
+    // actually understands (property type, amenities, price).
+    document.querySelectorAll('.ss-chip').forEach(chip => {
+        chip.onclick = () => {
+            document.getElementById('smartInput').value = chip.getAttribute('data-query');
+            processSmartSearch();
+        };
+    });
 
     document.getElementById('executeSmartSearch').onclick = processSmartSearch;
     document.getElementById('smartInput').addEventListener('keypress', (e) => {
@@ -378,8 +548,12 @@ async function processSmartSearch() {
     if (!rawQuery) return;
 
     const searchBtn = document.getElementById('executeSmartSearch');
+    // NEW: swap in an animated "thinking" dots indicator instead of just
+    // changing button text, and remember the original markup so it can be
+    // restored exactly afterward.
+    const originalBtnContent = searchBtn.innerHTML;
     searchBtn.disabled = true;
-    searchBtn.innerText = "Searching...";
+    searchBtn.innerHTML = '<span class="ss-dot"></span><span class="ss-dot"></span><span class="ss-dot"></span>';
 
     try {
         const response = await fetch(`${API_BASE}/smart-search`, {
@@ -399,7 +573,9 @@ async function processSmartSearch() {
         let results = data.results || [];
 
         if (results.length > 0) {
-            document.getElementById('smartSearchBox').style.display = 'none';
+            const smartSearchBoxEl = document.getElementById('smartSearchBox');
+            smartSearchBoxEl.classList.remove('open'); // NEW: keep panel state consistent for next time it's opened
+            smartSearchBoxEl.style.display = 'none';
             renderListings(results); 
             
             Swal.fire({ 
@@ -423,7 +599,7 @@ async function processSmartSearch() {
         Swal.fire('Error', 'Something went wrong with the smart search.', 'error');
     } finally {
         searchBtn.disabled = false;
-        searchBtn.innerText = "Find Stays";
+        searchBtn.innerHTML = originalBtnContent; // NEW: restore the original icon+label markup
         document.getElementById('smartInput').value = "";
     }
 }
@@ -647,6 +823,11 @@ function openEditModal(item) {
     // into Edit mode.
     const imageInputEl = document.getElementById('postImages');
     const previewDivEl = document.getElementById('imagePreview');
+    // NEW: optional label text swap - only activates if you've added
+    // id="postImagesLabel" to the <label> above the photo input in
+    // home.html. Safe no-op if that id isn't present.
+    const imagesLabelEl = document.getElementById('postImagesLabel');
+    if (imagesLabelEl) imagesLabelEl.innerText = "Current Photos (choose new files only if you want to replace them)";
     // NEW: clear any pending multi-photo selection left over from a previous
     // "Post a Listing" or Edit session before showing this listing's current
     // photos - keeps the accumulating-selection behavior (see
@@ -668,6 +849,9 @@ function openEditModal(item) {
                 ).join('');
         }
     }
+
+    // NEW: capture a snapshot of the form so we can warn about unsaved changes later
+    originalFormSnapshot = getCurrentFormSnapshot();
 
     submitBtn.onclick = async () => {
         submitBtn.disabled = true;
@@ -718,6 +902,7 @@ function openEditModal(item) {
             });
 
             if (response.ok) {
+                clearUnsavedFlag(); // NEW: prevent the unsaved-changes warning from firing during reload
                 Swal.fire({ title: 'Updated!', text: 'Your listing has been updated.', icon: 'success' }).then(() => location.reload());
             } else {
                 // FIX: this branch used to show a hardcoded generic message and
@@ -1124,9 +1309,14 @@ function setupPostListingLogic() {
         selectedListingFiles = [];
         if(previewDiv) previewDiv.innerHTML = "";
         if(imageInput) imageInput.value = "";
+        // NEW: reset the photo label back to normal (openEditModal changes its
+        // wording) - safe no-op if you haven't added id="postImagesLabel" yet.
+        const imagesLabelEl = document.getElementById('postImagesLabel');
+        if (imagesLabelEl) imagesLabelEl.innerText = "Listing Photos (Select Multiple)";
 
         submitPostBtn.onclick = addNewListingAction; 
         postModal.style.display = 'block';
+        originalFormSnapshot = getCurrentFormSnapshot(); // NEW: snapshot for unsaved-changes tracking
     }
 
     postBtn.onclick = openPostModalForNewListing;
@@ -1186,6 +1376,7 @@ function setupPostListingLogic() {
             });
 
             if (response.ok) {
+                clearUnsavedFlag(); // NEW: prevent the unsaved-changes warning from firing during reload
                 Swal.fire({ title: 'Success!', text: 'Listing published.', icon: 'success', target: '#postModal' }).then(() => location.reload());
             } else {
                 const errResult = await response.json().catch(() => ({ message: "Submission Failed" }));
@@ -1292,7 +1483,13 @@ function setupBookmarkToggles() {
 // --- 14. MODAL & CLOSING UTILITIES ---
 window.onclick = (event) => {
     if (event.target.classList.contains('modal')) {
-        event.target.style.display = "none";
+        // NEW: If the click is on the postModal's dark background, run the
+        // unsaved-changes check first instead of closing it immediately.
+        if (event.target.id === 'postModal') {
+            closePostModalSafely();
+        } else {
+            event.target.style.display = "none";
+        }
     }
 };
 
@@ -1300,3 +1497,70 @@ function closeDetails() {
     const modal = document.getElementById('detailsModal');
     if (modal) modal.style.display = 'none';
 }
+
+// --- 15. UNSAVED CHANGES PROTECTION (NEW) ---
+
+// Snapshot of the Post/Edit Listing form's text fields, taken right after the modal opens.
+// Used to detect if the user changed anything before trying to close the modal.
+function getCurrentFormSnapshot() {
+    return JSON.stringify({
+        title: document.getElementById('postTitle')?.value || "",
+        category: document.getElementById('postCategory')?.value || "",
+        price: document.getElementById('postPrice')?.value || "",
+        location: document.getElementById('postLocation')?.value || "",
+        rooms: document.getElementById('postRooms')?.value || "",
+        size: document.getElementById('postSize')?.value || "",
+        amenities: document.getElementById('postAmenities')?.value || ""
+    });
+}
+
+// Returns true if any field changed OR the user selected new/pending photos since the modal opened.
+function isPostFormDirty() {
+    if (originalFormSnapshot === null) return false; // modal isn't currently being tracked
+    const currentSnapshot = getCurrentFormSnapshot();
+    const fieldsChanged = currentSnapshot !== originalFormSnapshot;
+    // NEW: also counts as dirty if photos are pending in the shared
+    // selectedListingFiles array (this file's actual source of truth for
+    // pending uploads, since the <input> itself gets cleared after every pick).
+    const newPhotosSelected = selectedListingFiles.length > 0;
+    return fieldsChanged || newPhotosSelected;
+}
+
+// Call this right after a successful publish/update so no stale warning fires during reload.
+function clearUnsavedFlag() {
+    originalFormSnapshot = null;
+}
+
+// Safely closes the Post/Edit Listing modal - warns the user first if they have unsaved changes.
+function closePostModalSafely() {
+    if (isPostFormDirty()) {
+        Swal.fire({
+            title: 'Unsaved Changes',
+            text: 'You have unsaved changes. Are you sure you want to discard them?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Discard Changes',
+            cancelButtonText: 'Keep Editing',
+            confirmButtonColor: '#ff5252',
+            target: '#postModal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                clearUnsavedFlag();
+                document.getElementById('postModal').style.display = 'none';
+            }
+        });
+    } else {
+        clearUnsavedFlag();
+        document.getElementById('postModal').style.display = 'none';
+    }
+}
+
+// Warn on browser tab close / refresh / navigation while the Post/Edit Listing modal is open and dirty.
+window.addEventListener('beforeunload', function (e) {
+    const postModal = document.getElementById('postModal');
+    if (postModal && postModal.style.display === 'block' && isPostFormDirty()) {
+        e.preventDefault();
+        e.returnValue = ''; // required for browsers to show the native confirmation prompt
+        return '';
+    }
+});
