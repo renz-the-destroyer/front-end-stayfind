@@ -134,15 +134,14 @@
     .btn-primary-small:hover { transform: translateY(-1px); }
 
     .table-wrap { background: #fff; border-radius: var(--radius-md); box-shadow: 0 10px 26px -14px rgba(13,71,161,.18); border: 1px solid var(--line); overflow: hidden; }
-    table { width: 100%; border-collapse: collapse; }
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; min-width: 600px; border-collapse: collapse; }
     thead { background: #f7f9fc; }
     th, td { padding: 13px 16px; text-align: left; font-size: 13px; border-bottom: 1px solid var(--line); }
     th { color: var(--muted); text-transform: uppercase; font-size: 10.5px; letter-spacing: .05em; font-weight: 800; }
     tbody tr { transition: background .15s ease; }
     tbody tr:hover { background: #fafcff; }
     tbody tr:last-child td { border-bottom: none; }
-    .table-wrap > table { overflow-x: auto; display: block; }
-    .table-wrap { overflow-x: auto; }
 
     /* ===================== PILLS ===================== */
     .pill { padding: 4px 11px; border-radius: 20px; font-size: 10.5px; font-weight: 800; text-transform: capitalize; letter-spacing: .02em; display: inline-block; }
@@ -155,13 +154,17 @@
     .pill.you { background: #e3f2fd; color: #1565c0; margin-left: 6px; }
 
     /* ===================== ACTION BUTTONS ===================== */
-    .btn { border: none; padding: 8px 13px; border-radius: 999px; font-size: 11.5px; font-weight: 800; cursor: pointer; margin-right: 6px; margin-bottom: 5px; transition: transform .12s ease, opacity .12s ease; }
+    .btn { border: none; padding: 8px 13px; border-radius: var(--radius-sm); font-size: 11.5px; font-weight: 800; cursor: pointer; margin-right: 6px; margin-bottom: 5px; transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease; }
     .btn:hover { transform: translateY(-1px); }
-    .btn-approve { background: var(--success); color: #fff; }
-    .btn-reject { background: var(--danger); color: #fff; }
-    .btn-edit { background: var(--accent); color: #fff; }
-    .btn-delete { background: var(--danger); color: #fff; }
-    .btn-delete:disabled, .btn[disabled] { background: #d7dce4; color: #97a1af; cursor: not-allowed; transform: none; }
+    .btn-approve { background: var(--success); color: #fff; box-shadow: 0 8px 16px -8px rgba(31,157,85,.55); }
+    .btn-approve:hover { box-shadow: 0 10px 20px -8px rgba(31,157,85,.65); }
+    .btn-reject { background: var(--danger); color: #fff; box-shadow: 0 8px 16px -8px rgba(229,72,77,.5); }
+    .btn-reject:hover { box-shadow: 0 10px 20px -8px rgba(229,72,77,.6); }
+    .btn-edit { background: var(--accent); color: #fff; box-shadow: 0 8px 16px -8px rgba(66,165,245,.5); }
+    .btn-edit:hover { box-shadow: 0 10px 20px -8px rgba(66,165,245,.6); }
+    .btn-delete { background: var(--danger); color: #fff; box-shadow: 0 8px 16px -8px rgba(229,72,77,.5); }
+    .btn-delete:hover { box-shadow: 0 10px 20px -8px rgba(229,72,77,.6); }
+    .btn-delete:disabled, .btn[disabled] { background: #d7dce4; color: #97a1af; cursor: not-allowed; transform: none; box-shadow: none; }
 
     .empty-state { text-align: center; padding: 48px 20px; color: #a9b3c2; }
     .empty-state i { display: block; margin-bottom: 10px; }
@@ -193,7 +196,12 @@
         .sidebar nav a { justify-content: center; padding: 14px 0; margin: 2px 8px; }
         .sidebar nav a .badge { position: absolute; margin-left: 0; top: 6px; right: 6px; }
         .sidebar .logout a { justify-content: center; padding: 14px 0; }
-        .main { margin-left: 68px; padding: 26px 20px; }
+        .main { margin-left: 68px; padding: 26px 16px; }
+        .main h1 { font-size: 1.4rem; }
+        .stats-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+        .toolbar { flex-direction: column; align-items: stretch; }
+        .btn-primary-small { justify-content: center; }
+        th, td { padding: 11px 13px; font-size: 12.5px; }
         .modal-box { padding: 24px 20px; }
     }
 
@@ -255,10 +263,12 @@
                 <h1>Landlord Requests</h1>
                 <div class="subtitle">Review submitted documents, then approve or reject each request</div>
                 <div class="table-wrap">
-                    <table>
-                        <thead><tr><th>Name</th><th>Email</th><th>Contact</th><th>Address</th><th>Action</th></tr></thead>
-                        <tbody id="requestsTableBody"></tbody>
-                    </table>
+                    <div class="table-scroll">
+                        <table>
+                            <thead><tr><th>Name</th><th>Email</th><th>Contact</th><th>Address</th><th>Action</th></tr></thead>
+                            <tbody id="requestsTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -273,10 +283,12 @@
                     </div>
                 </div>
                 <div class="table-wrap">
-                    <table>
-                        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Landlord Status</th><th>Contact</th><th>Actions</th></tr></thead>
-                        <tbody id="usersTableBody"></tbody>
-                    </table>
+                    <div class="table-scroll">
+                        <table>
+                            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Landlord Status</th><th>Contact</th><th>Actions</th></tr></thead>
+                            <tbody id="usersTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -291,10 +303,12 @@
                     </div>
                 </div>
                 <div class="table-wrap">
-                    <table>
-                        <thead><tr><th>Title</th><th>Landlord</th><th>Price</th><th>Location</th><th>Actions</th></tr></thead>
-                        <tbody id="listingsTableBody"></tbody>
-                    </table>
+                    <div class="table-scroll">
+                        <table>
+                            <thead><tr><th>Title</th><th>Landlord</th><th>Price</th><th>Location</th><th>Actions</th></tr></thead>
+                            <tbody id="listingsTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -303,10 +317,12 @@
                 <h1>Manage Reviews</h1>
                 <div class="subtitle">Moderate comments and ratings</div>
                 <div class="table-wrap">
-                    <table>
-                        <thead><tr><th>Listing</th><th>User</th><th>Rating</th><th>Comment</th><th>Action</th></tr></thead>
-                        <tbody id="reviewsTableBody"></tbody>
-                    </table>
+                    <div class="table-scroll">
+                        <table>
+                            <thead><tr><th>Listing</th><th>User</th><th>Rating</th><th>Comment</th><th>Action</th></tr></thead>
+                            <tbody id="reviewsTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -319,10 +335,12 @@
                     <button class="btn-primary-small" id="addAdminBtn"><i class="fas fa-plus"></i> Add Admin</button>
                 </div>
                 <div class="table-wrap">
-                    <table>
-                        <thead><tr><th>Name</th><th>Email</th><th>Added</th><th>Actions</th></tr></thead>
-                        <tbody id="adminsTableBody"></tbody>
-                    </table>
+                    <div class="table-scroll">
+                        <table>
+                            <thead><tr><th>Name</th><th>Email</th><th>Added</th><th>Actions</th></tr></thead>
+                            <tbody id="adminsTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
