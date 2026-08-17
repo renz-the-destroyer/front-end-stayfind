@@ -408,6 +408,8 @@
         .quick-actions h4 { margin: 0 0 10px 0; font-size: 13px; color: var(--ink-soft); font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
         .browse-all-btn { width: 100%; background: #fff; border: 2px solid var(--accent); color: var(--accent); padding: 10px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; }
         .browse-all-btn:hover { background: var(--accent); color: #fff; }
+        /* NEW: highlighted state for whichever Availability filter button is currently active */
+        .browse-all-btn.availability-active { background: var(--accent); color: #fff; }
 
         /* ============ LISTINGS GRID (centered, capped width, more breathing room) ============ */
         .container {
@@ -431,6 +433,15 @@
             background: rgba(13,71,161,0.88); color: #fff; font-size: 11px; font-weight: 700;
             padding: 5px 13px; border-radius: 20px; backdrop-filter: blur(4px); letter-spacing: 0.2px;
         }
+
+        /* NEW: Availability badge (Available / Occupied) shown on every listing card */
+        .status-badge {
+            position: absolute; top: 46px; left: 14px; z-index: 10;
+            color: #fff; font-size: 10.5px; font-weight: 700;
+            padding: 4px 12px; border-radius: 20px; backdrop-filter: blur(4px); letter-spacing: 0.2px;
+        }
+        .status-badge.available { background: rgba(46,125,50,0.9); }
+        .status-badge.occupied { background: rgba(255,82,82,0.9); }
 
         .save-btn {
             position: absolute; top: 14px; right: 14px; background: rgba(255,255,255,0.92); border-radius: 50%;
@@ -615,6 +626,13 @@
             <label>Amenities</label>
             <input type="text" id="postAmenities" placeholder="e.g. WiFi, Aircon, Parking">
 
+            <!-- NEW: Availability status for this listing -->
+            <label>Availability</label>
+            <select id="postStatus">
+                <option value="available">Available</option>
+                <option value="occupied">Occupied</option>
+            </select>
+
             <label>Listing Photos (Select Multiple)</label>
             <input type="file" id="postImages" accept="image/*" multiple style="border:none; padding:5px 0;">
             <div id="imagePreview" style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 20px;"></div>
@@ -717,6 +735,9 @@
                 <div class="quick-actions">
                     <h4>Quick actions</h4>
                     <button class="browse-all-btn" onclick="resetFilters()">Clear Filters</button>
+                    <!-- NEW: Availability filter buttons -->
+                    <button class="browse-all-btn" id="availablePropertyBtn" style="margin-top:10px;">Available Property</button>
+                    <button class="browse-all-btn" id="occupiedPropertyBtn" style="margin-top:10px;">Occupied Property</button>
                 </div>
             </div>
         </div>
