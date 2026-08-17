@@ -7,6 +7,10 @@ const listingsGrid = document.getElementById('listingsGrid');
 // Global variable to track selected stars
 let selectedRating = 0;
 
+// NEW: Tracks which Available/Occupied filter is currently active, so it
+// can be cleared cleanly when switching to Browse/Saved and vice versa.
+let currentAvailabilityFilter = null; // 'available' | 'occupied' | null
+
 // NEW: Tracks a snapshot of the Post/Edit Listing form so we can warn the user
 // before they lose unsaved changes (Cancel button, clicking outside, closing the tab).
 let originalFormSnapshot = null;
@@ -259,6 +263,7 @@ window.onload = () => {
     setupStarRatingLogic(); // Initialize star click listeners
     setupSideDrawer(); // NEW: hamburger-triggered side navigation
     setupFiltersToggle(); // NEW: collapsible filter panel on mobile
+    setupAvailabilityFilterButtons(); // NEW: Available Property / Occupied Property buttons
 
     // NEW: check for a landlord approval/rejection outcome to notify the user about
     checkLandlordStatusUpdate();
@@ -339,6 +344,78 @@ function setupFiltersToggle() {
         if (icon) icon.className = isOpen ? 'fas fa-chevron-up' : 'fas fa-filter';
         if (label) label.innerText = isOpen ? 'Hide Filters' : 'Filters';
     };
+}
+
+// --- NEW: AVAILABLE PROPERTY / OCCUPIED PROPERTY FILTER BUTTONS ---
+// Lets a tenant (or a landlord looking at their own listings) narrow the
+// grid down to only 'available' or only 'occupied' listings. Tapping the
+// same button twice clears the filter. Works on whatever is currently
+// rendered in the grid (same pattern used by the existing "Saved" toggle),
+// so it plays nicely with search/price/room filters already applied.
+function setupAvailabilityFilterButtons() {
+    const availableBtn = document.getElementById('availablePropertyBtn');
+    const occupiedBtn = document.getElementById('occupiedPropertyBtn');
+    if (!availableBtn || !occupiedBtn) return;
+
+    availableBtn.onclick = () => applyAvailabilityFilter('available', availableBtn, occupiedBtn);
+    occupiedBtn.onclick = () => applyAvailabilityFilter('occupied', occupiedBtn, availableBtn);
+}
+
+function clearAvailabilityFilterState() {
+    currentAvailabilityFilter = null;
+    const availableBtn = document.getElementById('availablePropertyBtn');
+    const occupiedBtn = document.getElementById('occupiedPropertyBtn');
+    if (availableBtn) availableBtn.classList.remove('availability-active');
+    if (occupiedBtn) occupiedBtn.classList.remove('availability-active');
+    const noStatusMsg = document.getElementById('no-status-msg');
+    if (noStatusMsg) noStatusMsg.remove();
+}
+
+function applyAvailabilityFilter(status, clickedBtn, otherBtn) {
+    const cards = document.querySelectorAll('.listing-card');
+    const isReapplyingSame = currentAvailabilityFilter === status;
+
+    // Clear any "Saved" view state so the two filters don't fight each other
+    const savedMsg = document.getElementById('no-saved-msg');
+    if (savedMsg) savedMsg.remove();
+    const noStatusMsg = document.getElementById('no-status-msg');
+    if (noStatusMsg) noStatusMsg.remove();
+    const viewAllBtn = document.getElementById('viewAllBtn');
+    const viewSavedBtn = document.getElementById('viewSavedBtn');
+    if (viewSavedBtn) viewSavedBtn.classList.remove('nav-active');
+
+    if (isReapplyingSame) {
+        // Tapping the same button again clears the filter and shows everything
+        currentAvailabilityFilter = null;
+        clickedBtn.classList.remove('availability-active');
+        cards.forEach(card => { card.style.display = "block"; });
+        if (viewAllBtn) viewAllBtn.classList.add('nav-active');
+        return;
+    }
+
+    currentAvailabilityFilter = status;
+    clickedBtn.classList.add('availability-active');
+    otherBtn.classList.remove('availability-active');
+    if (viewAllBtn) viewAllBtn.classList.remove('nav-active');
+
+    let found = 0;
+    cards.forEach(card => {
+        const cardStatus = card.getAttribute('data-status') || 'available';
+        if (cardStatus === status) {
+            card.style.display = "block";
+            found++;
+        } else {
+            card.style.display = "none";
+        }
+    });
+
+    if (found === 0) {
+        const label = status === 'available' ? 'available' : 'occupied';
+        listingsGrid.insertAdjacentHTML(
+            'beforeend',
+            `<div id="no-status-msg">${emptyStateHTML('fa-house-circle-xmark', `No ${label} properties`, `There are currently no ${label} listings to show.`)}</div>`
+        );
+    }
 }
 
 // --- REDESIGNED: SMART SEARCH UI INJECTION ---
@@ -636,7 +713,8 @@ function renderSkeletonCards(count = 8) {
 // --- 2. FETCH LISTINGS FROM MYSQL ---
 async function loadListings() {
     if (!listingsGrid) return;
-    
+
+    clearAvailabilityFilterState(); // NEW: reset the availability filter whenever the grid is fully reloaded
     renderSkeletonCards(); // NEW: shimmer placeholders instead of a bare "Loading..." line
     
     try {
@@ -695,12 +773,19 @@ async function renderListings(items) {
         // UPDATED: now uses the shared buildCarouselHTML() helper defined near the
         // top of this file (also used by the details modal below).
         let carouselHTML = buildCarouselHTML(item.images, item.id);
+
+        // NEW: Availability badge (Available / Occupied), driven by the new
+        // `status` column on listings. Defaults to 'available' for any
+        // existing rows created before this column existed.
+        const statusValue = (item.status || 'available').toLowerCase() === 'occupied' ? 'occupied' : 'available';
+        const statusBadgeHTML = `<div class="status-badge ${statusValue}">${statusValue === 'occupied' ? 'Occupied' : 'Available'}</div>`;
         
         const card = document.createElement('div');
         card.className = 'listing-card';
         card.setAttribute('data-id', item.id);
         card.setAttribute('data-price', item.price || 0);
         card.setAttribute('data-rooms', item.rooms || 0);
+        card.setAttribute('data-status', statusValue); // NEW: used by the Available/Occupied filter buttons
         // NEW: stagger the fade-in-up animation slightly per card (capped so a
         // long list doesn't leave later cards waiting too long to appear).
         card.style.animationDelay = `${Math.min(idx, 10) * 0.05}s`;
@@ -717,6 +802,7 @@ async function renderListings(items) {
         card.innerHTML = `
             ${saveButtonHTML}
             <div class="category-badge">${item.category || 'Apartment'}</div>
+            ${statusBadgeHTML}
             ${carouselHTML}
             <div class="listing-info">
                 <div class="price-row">
@@ -816,6 +902,8 @@ function openEditModal(item) {
     document.getElementById('postSize').value = item.size;
     if(document.getElementById('postAmenities')) document.getElementById('postAmenities').value = item.amenities || "";
     if(document.getElementById('postCategory')) document.getElementById('postCategory').value = item.category || "Apartment";
+    // NEW: pre-fill the Availability dropdown with this listing's current status
+    if(document.getElementById('postStatus')) document.getElementById('postStatus').value = (item.status === 'occupied') ? 'occupied' : 'available';
 
     // NEW: reset the file input and preview the listing's existing photos so
     // the landlord can see what's currently posted, and so any leftover file
@@ -887,6 +975,8 @@ function openEditModal(item) {
             rooms: parseInt(document.getElementById('postRooms').value) || 0,
             size: parseFloat(document.getElementById('postSize').value) || 0,
             amenities: document.getElementById('postAmenities')?.value || "",
+            // NEW: send the chosen Availability status along with the rest of the update
+            status: document.getElementById('postStatus')?.value || 'available',
             // FIX: only overwrite photos when the landlord actually picked new
             // ones - otherwise send null so the backend's COALESCE(...) in
             // server.js keeps the existing photos untouched.
@@ -1103,13 +1193,16 @@ function filterListings() {
         const locationText = card.querySelector('.location').innerText.toLowerCase();
         const price = parseInt(card.getAttribute('data-price'));
         const rooms = parseInt(card.getAttribute('data-rooms'));
+        const cardStatus = card.getAttribute('data-status') || 'available';
 
         const matchesMainSearch = titleText.includes(searchTerm) || locationText.includes(searchTerm);
         const matchesPrice = isNaN(maxPrice) || price <= maxPrice;
         const matchesRooms = minRooms === "all" || rooms >= parseInt(minRooms);
         const matchesSpecificLoc = locationText.includes(locFilter);
+        // NEW: also respect whatever Available/Occupied filter is currently active
+        const matchesAvailability = !currentAvailabilityFilter || cardStatus === currentAvailabilityFilter;
 
-        card.style.display = (matchesMainSearch && matchesPrice && matchesRooms && matchesSpecificLoc) ? "block" : "none";
+        card.style.display = (matchesMainSearch && matchesPrice && matchesRooms && matchesSpecificLoc && matchesAvailability) ? "block" : "none";
     });
 }
 
@@ -1118,6 +1211,7 @@ function resetFilters() {
     document.getElementById('maxPrice').value = "Infinity";
     document.getElementById('roomFilter').value = "all";
     document.getElementById('locFilter').value = "";
+    clearAvailabilityFilterState(); // NEW: also clear the Available/Occupied toggle
     
     const viewAllBtn = document.getElementById('viewAllBtn');
     const viewSavedBtn = document.getElementById('viewSavedBtn');
@@ -1303,6 +1397,8 @@ function setupPostListingLogic() {
         document.getElementById('postRooms').value = "";
         document.getElementById('postSize').value = "";
         if(document.getElementById('postAmenities')) document.getElementById('postAmenities').value = "";
+        // NEW: new listings always start as "Available"
+        if(document.getElementById('postStatus')) document.getElementById('postStatus').value = "available";
         // NEW: clear the persistent multi-photo selection whenever a fresh
         // "Post a Listing" session starts, so nothing carries over from a
         // previous attempt or from Edit mode.
@@ -1355,6 +1451,8 @@ function setupPostListingLogic() {
             rooms: parseInt(document.getElementById('postRooms').value) || 0,
             size: parseFloat(document.getElementById('postSize').value) || 0,
             amenities: document.getElementById('postAmenities')?.value || "",
+            // NEW: send the chosen Availability status ('available' by default)
+            status: document.getElementById('postStatus')?.value || 'available',
             // FIX: join with '|||' instead of ',' so multi-image uploads don't get
             // corrupted when split back apart in renderListings().
             images: base64Images.join('|||'), 
@@ -1446,6 +1544,7 @@ function setupBookmarkToggles() {
     if (!viewAllBtn || !viewSavedBtn) return;
 
     viewSavedBtn.onclick = () => {
+        clearAvailabilityFilterState(); // NEW: keep the Available/Occupied toggle from conflicting with Saved view
         const savedIds = JSON.parse(localStorage.getItem('bookmarks')) || [];
         const allCards = document.querySelectorAll('.listing-card');
         
@@ -1472,6 +1571,7 @@ function setupBookmarkToggles() {
     };
 
     viewAllBtn.onclick = () => {
+        clearAvailabilityFilterState(); // NEW
         viewAllBtn.classList.add('nav-active');
         viewSavedBtn.classList.remove('nav-active');
         const msg = document.getElementById('no-saved-msg');
@@ -1510,7 +1610,8 @@ function getCurrentFormSnapshot() {
         location: document.getElementById('postLocation')?.value || "",
         rooms: document.getElementById('postRooms')?.value || "",
         size: document.getElementById('postSize')?.value || "",
-        amenities: document.getElementById('postAmenities')?.value || ""
+        amenities: document.getElementById('postAmenities')?.value || "",
+        status: document.getElementById('postStatus')?.value || "" // NEW: track availability changes too
     });
 }
 
