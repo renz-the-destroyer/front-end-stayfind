@@ -104,18 +104,28 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
         return Swal.fire('Wait!', 'Please select if you are a Tenant or Landlord', 'warning');
     }
 
-    // NEW: Require all 3 verification documents before allowing a landlord
-    // request to be submitted at all. This is a frontend convenience check —
-    // the backend also enforces this, so this can't be bypassed even if
-    // someone calls the API directly.
-    let docOwnershipFile = null, docPermitsFile = null, docBirFile = null;
+    // UPDATED: Require all 4 verification items before allowing a landlord
+    // request to be submitted at all — the 3 original documents PLUS:
+    //   - docSelfie: a selfie holding a valid government ID
+    //   - docOwnerName: the name typed as printed on the Proof of Ownership
+    //     document, used by the admin panel for a name cross-check against
+    //     the user's registered full_name.
+    // This is a frontend convenience check — the backend also enforces this,
+    // so this can't be bypassed even if someone calls the API directly.
+    let docOwnershipFile = null, docPermitsFile = null, docBirFile = null, docSelfieFile = null;
+    let docOwnerName = "";
     if (userRole === 'landlord') {
         docOwnershipFile = document.getElementById('docOwnership').files[0];
         docPermitsFile = document.getElementById('docPermits').files[0];
         docBirFile = document.getElementById('docBir').files[0];
+        docSelfieFile = document.getElementById('docSelfie').files[0]; // NEW
+        docOwnerName = document.getElementById('docOwnerName').value.trim(); // NEW
 
-        if (!docOwnershipFile || !docPermitsFile || !docBirFile) {
-            return Swal.fire('Missing Documents', 'Please upload all 3 required documents: Proof of Ownership, Local Permits, and BIR Registration.', 'warning');
+        if (!docOwnershipFile || !docPermitsFile || !docBirFile || !docSelfieFile) {
+            return Swal.fire('Missing Documents', 'Please upload all 4 required items: Proof of Ownership, Local Permits, BIR Registration, and a Selfie with valid ID.', 'warning');
+        }
+        if (!docOwnerName) {
+            return Swal.fire('Missing Info', 'Please type the name shown on your Proof of Ownership document.', 'warning');
         }
     }
 
@@ -123,7 +133,9 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
-    // NEW: compress and attach the 3 landlord documents (if applicable)
+    // UPDATED: compress and attach all 4 landlord documents (if applicable).
+    // Order matters here — it must match the labels array used by
+    // admin.js's viewLandlordDocs(): Ownership, Permits, BIR, Selfie.
     let landlordDocuments = null;
     if (userRole === 'landlord') {
         try {
@@ -131,7 +143,8 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
             const compressed = await Promise.all([
                 compressImageFile(docOwnershipFile),
                 compressImageFile(docPermitsFile),
-                compressImageFile(docBirFile)
+                compressImageFile(docBirFile),
+                compressImageFile(docSelfieFile) // NEW
             ]);
             landlordDocuments = compressed.join('|||');
         } catch (e) {
@@ -149,7 +162,10 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
         role: userRole,
         email: currentUser.email,
         // NEW: only included when requesting landlord status
-        landlord_documents: landlordDocuments
+        landlord_documents: landlordDocuments,
+        // NEW: the applicant's self-typed "name on document", used by the
+        // admin panel's name cross-check against the registered full_name
+        landlord_doc_name: userRole === 'landlord' ? docOwnerName : null
     };
 
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
