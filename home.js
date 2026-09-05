@@ -792,6 +792,9 @@ async function renderListings(items) {
         // Stashing it here (lowercased, same as the other filter fields)
         // is what filterListings() below now checks against.
         card.setAttribute('data-amenities', (item.amenities || '').toLowerCase());
+        // NEW: lets the search bar match property type too (e.g. searching
+        // "bedspace" should find a listing whose category is "Bedspace").
+        card.setAttribute('data-category', (item.category || '').toLowerCase());
         // NEW: stagger the fade-in-up animation slightly per card (capped so a
         // long list doesn't leave later cards waiting too long to appear).
         card.style.animationDelay = `${Math.min(idx, 10) * 0.05}s`;
@@ -1184,8 +1187,21 @@ if (logoutLink) {
 }
 
 // --- 10. FILTERING & SEARCH ---
+
+// NEW: strips ALL whitespace (and lowercases) before comparing search text.
+// Without this, typing "bedspace" would never match a listing whose
+// category/title text is stored as "Bed space" (with a space) - the extra
+// space breaks a plain substring match even though they mean the same
+// thing. Running both the typed search term AND the listing's text through
+// this same normalizer fixes it in both directions: "bedspace" now matches
+// "Bed space", and "bed space" now matches "Bedspace" too.
+function normalizeForSearch(str) {
+    return (str || '').toString().toLowerCase().replace(/\s+/g, '');
+}
+
 function filterListings() {
     const searchTerm = document.getElementById('searchLoc').value.toLowerCase();
+    const normalizedSearchTerm = normalizeForSearch(searchTerm); // NEW: space-stripped version used for fuzzy matching
     const maxPriceValue = document.getElementById('maxPrice').value;
     const maxPrice = maxPriceValue === "Infinity" ? Infinity : parseInt(maxPriceValue);
     
@@ -1202,12 +1218,21 @@ function filterListings() {
         // previously this value didn't exist anywhere and "wifi"/"aircon"/etc.
         // searches always came up empty no matter what a listing had.
         const amenitiesText = card.getAttribute('data-amenities') || '';
+        // NEW: property category/type (e.g. "bedspace"), also now searchable.
+        const categoryText = card.getAttribute('data-category') || '';
         const price = parseInt(card.getAttribute('data-price'));
         const rooms = parseInt(card.getAttribute('data-rooms'));
         const cardStatus = card.getAttribute('data-status') || 'available';
 
-        // UPDATED: matchesMainSearch now also checks amenitiesText.
-        const matchesMainSearch = titleText.includes(searchTerm) || locationText.includes(searchTerm) || amenitiesText.includes(searchTerm);
+        // UPDATED: every field is now compared using the space-stripped
+        // normalized form (normalizeForSearch), and category was added to
+        // the fields checked - so "bedspace" now matches a category/title
+        // stored as "Bed space", and vice versa.
+        const matchesMainSearch =
+            normalizeForSearch(titleText).includes(normalizedSearchTerm) ||
+            normalizeForSearch(locationText).includes(normalizedSearchTerm) ||
+            normalizeForSearch(amenitiesText).includes(normalizedSearchTerm) ||
+            normalizeForSearch(categoryText).includes(normalizedSearchTerm);
         const matchesPrice = isNaN(maxPrice) || price <= maxPrice;
         const matchesRooms = minRooms === "all" || rooms >= parseInt(minRooms);
         const matchesSpecificLoc = locationText.includes(locFilter);
