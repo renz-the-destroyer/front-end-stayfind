@@ -163,6 +163,20 @@
         .docs-panel input[type="file"]:hover { border-color: var(--accent); }
         .docs-panel input[type="file"]:last-of-type { margin-bottom: 2px; }
 
+        /* NEW: text input for the "name as printed on your document" field,
+           styled to match the dashed file-input look used elsewhere in this
+           panel so it doesn't feel like an unrelated form control. */
+        .docs-panel input[type="text"] {
+            width: 100%; padding: 9px 11px; margin-bottom: 6px;
+            border: 1.5px dashed #c9dcf7; background: #fff;
+            border-radius: var(--radius-sm); font-size: 12.5px; color: var(--ink);
+            outline: none; transition: border-color 0.2s ease;
+        }
+        .docs-panel input[type="text"]:focus { border-color: var(--accent); }
+        .docs-panel .doc-subhint {
+            font-size: 10px; color: #90a4ae; line-height: 1.4; margin: 0 0 14px;
+        }
+
         /* ===================== BUTTON / FOOTER ===================== */
         .btn-primary {
             width: 100%; margin-top: 4px; padding: 14px;
@@ -247,19 +261,32 @@
             </div>
 
             <!-- Shown only when "Landlord" is selected. Required before the
-                 landlord request can be submitted for admin review. -->
+                 landlord request can be submitted for admin review.
+                 UPDATED: now collects 4 items (was 3) — the 3 original
+                 documents, PLUS a typed "name on document" field (for the
+                 admin-side name cross-check) and a selfie-with-ID photo. -->
             <div class="docs-panel" id="landlordDocsSection" style="display:none;">
                 <p class="docs-eyebrow"><i class="fas fa-file-shield"></i> Landlord verification documents</p>
-                <p class="docs-hint">Upload clear photos. An admin will review these before your landlord account is approved.</p>
+                <p class="docs-hint">Upload clear photos and fill in the details below. An admin will review these before your landlord account is approved.</p>
 
                 <label class="doc-label">Proof of Property Ownership (TCT or Tax Declaration)</label>
                 <input type="file" id="docOwnership" accept="image/*">
+
+                <!-- NEW: name cross-check field -->
+                <label class="doc-label">Full name as printed on your Proof of Ownership doc</label>
+                <input type="text" id="docOwnerName" placeholder="e.g. Juan Dela Cruz">
+                <p class="doc-subhint">This gets compared to your registered name to help the admin spot mismatches.</p>
 
                 <label class="doc-label">Local Permits (Barangay Clearance + Mayor's/Business Permit)</label>
                 <input type="file" id="docPermits" accept="image/*">
 
                 <label class="doc-label">BIR Registration (Form 1901/1903)</label>
                 <input type="file" id="docBir" accept="image/*">
+
+                <!-- NEW: selfie-with-ID upload -->
+                <label class="doc-label">Selfie holding a valid government ID</label>
+                <input type="file" id="docSelfie" accept="image/*">
+                <p class="doc-subhint" style="margin-bottom:2px;">Make sure your face and the ID details are both clearly visible.</p>
             </div>
 
             <button type="submit" class="btn-primary" id="saveBtn">Complete Setup</button>
