@@ -786,6 +786,12 @@ async function renderListings(items) {
         card.setAttribute('data-price', item.price || 0);
         card.setAttribute('data-rooms', item.rooms || 0);
         card.setAttribute('data-status', statusValue); // NEW: used by the Available/Occupied filter buttons
+        // FIX: the search bar's placeholder promises "title, location, or
+        // amenities" but amenities text was never stored anywhere on the
+        // card, so searching "wifi" (or any amenity) could never match.
+        // Stashing it here (lowercased, same as the other filter fields)
+        // is what filterListings() below now checks against.
+        card.setAttribute('data-amenities', (item.amenities || '').toLowerCase());
         // NEW: stagger the fade-in-up animation slightly per card (capped so a
         // long list doesn't leave later cards waiting too long to appear).
         card.style.animationDelay = `${Math.min(idx, 10) * 0.05}s`;
@@ -1191,11 +1197,17 @@ function filterListings() {
     cards.forEach(card => {
         const titleText = card.querySelector('.title-text').innerText.toLowerCase();
         const locationText = card.querySelector('.location').innerText.toLowerCase();
+        // FIX: amenities are now stored on the card as data-amenities (see
+        // renderListings above) so the search bar can actually match them -
+        // previously this value didn't exist anywhere and "wifi"/"aircon"/etc.
+        // searches always came up empty no matter what a listing had.
+        const amenitiesText = card.getAttribute('data-amenities') || '';
         const price = parseInt(card.getAttribute('data-price'));
         const rooms = parseInt(card.getAttribute('data-rooms'));
         const cardStatus = card.getAttribute('data-status') || 'available';
 
-        const matchesMainSearch = titleText.includes(searchTerm) || locationText.includes(searchTerm);
+        // UPDATED: matchesMainSearch now also checks amenitiesText.
+        const matchesMainSearch = titleText.includes(searchTerm) || locationText.includes(searchTerm) || amenitiesText.includes(searchTerm);
         const matchesPrice = isNaN(maxPrice) || price <= maxPrice;
         const matchesRooms = minRooms === "all" || rooms >= parseInt(minRooms);
         const matchesSpecificLoc = locationText.includes(locFilter);
