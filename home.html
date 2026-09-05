@@ -569,21 +569,34 @@
 
             <p style="font-size: 11px; color: #43a047; margin-top: -15px; margin-bottom: 15px;">* Account role can be changed anytime.</p>
 
-            <!-- NEW: Shown only when "Landlord" is selected AND the user is
+            <!-- Shown only when "Landlord" is selected AND the user is
                  not already an approved landlord. Required to submit a
-                 landlord request. -->
+                 landlord request.
+                 UPDATED: now collects 4 items (was 3) — the 3 original
+                 documents, PLUS a typed "name on document" field (for the
+                 admin-side name cross-check) and a selfie-with-ID photo. -->
             <div id="settingsLandlordDocsSection" style="display:none; background:#f8fbff; border:1px solid #e3f2fd; border-radius:14px; padding:14px; margin-bottom:20px;">
                 <p style="font-size:11px; color:#0d47a1; font-weight:bold; margin:0 0 8px 0;"><i class="fas fa-file-shield"></i> Landlord Verification Documents (required)</p>
-                <p style="font-size:10px; color:#90a4ae; margin:0 0 10px 0;">Upload clear photos. An admin will review these before your landlord account is approved.</p>
+                <p style="font-size:10px; color:#90a4ae; margin:0 0 10px 0;">Upload clear photos and fill in the details below. An admin will review these before your landlord account is approved.</p>
 
                 <label style="font-size:11px; text-transform:none;">Proof of Property Ownership (TCT or Tax Declaration)</label>
                 <input type="file" id="settingsDocOwnership" accept="image/*" style="margin-bottom:12px; padding:8px; font-size:12px;">
+
+                <!-- NEW: name cross-check field -->
+                <label style="font-size:11px; text-transform:none;">Full name as printed on your Proof of Ownership doc</label>
+                <input type="text" id="settingsDocOwnerName" placeholder="e.g. Juan Dela Cruz" style="width:100%; margin-bottom:4px; padding:8px; font-size:12px; border:1px solid #e3f2fd; border-radius:8px;">
+                <p style="font-size:10px; color:#90a4ae; margin:0 0 12px 0;">This gets compared to your registered name to help the admin spot mismatches.</p>
 
                 <label style="font-size:11px; text-transform:none;">Local Permits (Barangay Clearance + Mayor's/Business Permit)</label>
                 <input type="file" id="settingsDocPermits" accept="image/*" style="margin-bottom:12px; padding:8px; font-size:12px;">
 
                 <label style="font-size:11px; text-transform:none;">BIR Registration (Form 1901/1903)</label>
-                <input type="file" id="settingsDocBir" accept="image/*" style="margin-bottom:5px; padding:8px; font-size:12px;">
+                <input type="file" id="settingsDocBir" accept="image/*" style="margin-bottom:12px; padding:8px; font-size:12px;">
+
+                <!-- NEW: selfie-with-ID upload -->
+                <label style="font-size:11px; text-transform:none;">Selfie holding a valid government ID</label>
+                <input type="file" id="settingsDocSelfie" accept="image/*" style="margin-bottom:5px; padding:8px; font-size:12px;">
+                <p style="font-size:10px; color:#90a4ae; margin:0;">Make sure your face and the ID details are both clearly visible.</p>
             </div>
 
             <button id="saveSettingsBtn" class="btn-primary-block">Save Changes</button>
