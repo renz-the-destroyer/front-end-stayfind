@@ -1227,6 +1227,9 @@ if(document.getElementById('roomFilter')) document.getElementById('roomFilter').
 if(document.getElementById('locFilter')) document.getElementById('locFilter').addEventListener('input', filterListings);
 
 // --- 11. PROFILE SETTINGS ---
+// UPDATED: now also handles the 4th verification item (selfie with ID) and
+// the landlord_doc_name field (name typed as printed on the ownership doc,
+// used by the admin panel's name cross-check).
 function setupSettingsLogic() {
     const settingsBtn = document.getElementById('settingsBtn');
     const modal = document.getElementById('settingsModal');
@@ -1259,11 +1262,13 @@ function setupSettingsLogic() {
         document.getElementById('editAddress').value = currentUser.address || "";
         document.getElementById('editContact').value = currentUser.contact || "";
         document.getElementById('editRole').value = currentUser.role || "tenant";
-        // NEW: reset file inputs and re-evaluate whether the doc section
-        // should show, every time the modal is opened
+        // NEW: reset file/text inputs and re-evaluate whether the doc
+        // section should show, every time the modal is opened
         if (document.getElementById('settingsDocOwnership')) document.getElementById('settingsDocOwnership').value = "";
         if (document.getElementById('settingsDocPermits')) document.getElementById('settingsDocPermits').value = "";
         if (document.getElementById('settingsDocBir')) document.getElementById('settingsDocBir').value = "";
+        if (document.getElementById('settingsDocSelfie')) document.getElementById('settingsDocSelfie').value = ""; // NEW
+        if (document.getElementById('settingsDocOwnerName')) document.getElementById('settingsDocOwnerName').value = ""; // NEW
         toggleDocsSection();
         modal.style.display = 'block';
     };
@@ -1273,24 +1278,32 @@ function setupSettingsLogic() {
         const alreadyApproved = currentUser.landlord_status === 'approved';
         const isNewLandlordRequest = (chosenRole === 'landlord' && !alreadyApproved);
 
-        // NEW: require all 3 documents when submitting a fresh landlord request
-        let docOwnershipFile = null, docPermitsFile = null, docBirFile = null;
+        // UPDATED: require all 4 verification items + owner name when
+        // submitting a fresh landlord request
+        let docOwnershipFile = null, docPermitsFile = null, docBirFile = null, docSelfieFile = null;
+        let docOwnerName = "";
         if (isNewLandlordRequest) {
             docOwnershipFile = document.getElementById('settingsDocOwnership').files[0];
             docPermitsFile = document.getElementById('settingsDocPermits').files[0];
             docBirFile = document.getElementById('settingsDocBir').files[0];
+            docSelfieFile = document.getElementById('settingsDocSelfie').files[0]; // NEW
+            docOwnerName = document.getElementById('settingsDocOwnerName').value.trim(); // NEW
 
-            if (!docOwnershipFile || !docPermitsFile || !docBirFile) {
-                return Swal.fire({ title: 'Missing Documents', text: 'Please upload all 3 required documents: Proof of Ownership, Local Permits, and BIR Registration.', icon: 'warning', target: '#settingsModal' });
+            if (!docOwnershipFile || !docPermitsFile || !docBirFile || !docSelfieFile) {
+                return Swal.fire({ title: 'Missing Documents', text: 'Please upload all 4 required items: Proof of Ownership, Local Permits, BIR Registration, and a Selfie with valid ID.', icon: 'warning', target: '#settingsModal' });
+            }
+            if (!docOwnerName) {
+                return Swal.fire({ title: 'Missing Info', text: 'Please type the name shown on your Proof of Ownership document.', icon: 'warning', target: '#settingsModal' });
             }
         }
 
         saveBtn.disabled = true;
         saveBtn.innerText = "Updating...";
 
-        // NEW: compress and attach the 3 landlord documents (if applicable),
-        // reusing the shared compressImageFile() helper defined near the top
-        // of this file.
+        // UPDATED: compress and attach all 4 landlord documents (if
+        // applicable), reusing the shared compressImageFile() helper defined
+        // near the top of this file. Order must match the labels array used
+        // by admin.js's viewLandlordDocs(): Ownership, Permits, BIR, Selfie.
         let landlordDocuments = null;
         if (isNewLandlordRequest) {
             try {
@@ -1298,7 +1311,8 @@ function setupSettingsLogic() {
                 const compressed = await Promise.all([
                     compressImageFile(docOwnershipFile),
                     compressImageFile(docPermitsFile),
-                    compressImageFile(docBirFile)
+                    compressImageFile(docBirFile),
+                    compressImageFile(docSelfieFile) // NEW
                 ]);
                 landlordDocuments = compressed.join('|||');
             } catch (e) {
@@ -1316,7 +1330,10 @@ function setupSettingsLogic() {
             role: chosenRole,
             email: currentUser.email,
             // NEW: only populated when submitting a fresh landlord request
-            landlord_documents: landlordDocuments
+            landlord_documents: landlordDocuments,
+            // NEW: the applicant's self-typed "name on document", used by the
+            // admin panel's name cross-check against the registered full_name
+            landlord_doc_name: isNewLandlordRequest ? docOwnerName : null
         };
 
         saveBtn.innerText = "Updating...";
@@ -1334,6 +1351,7 @@ function setupSettingsLogic() {
                 // NEW: trust the server's real role/landlord_status, same as dashboard.js
                 const newUserObj = { ...currentUser, ...updatedData, role: result.role || updatedData.role, landlord_status: result.landlord_status };
                 delete newUserObj.landlord_documents; // don't keep base64 blobs in localStorage
+                delete newUserObj.landlord_doc_name; // NEW: no need to keep this locally either
                 localStorage.setItem('user', JSON.stringify(newUserObj));
 
                 Swal.fire({
