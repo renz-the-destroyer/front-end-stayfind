@@ -205,6 +205,13 @@
     .doc-preview { width: 100%; border-radius: var(--radius-sm); border: 1px solid var(--line); cursor: zoom-in; display: block; }
     .doc-preview-label { font-size: 11.5px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 7px; display: block; }
 
+    /* NEW: reject modal's reason picker (template dropdown + optional
+       custom textarea). Reuses SweetAlert2's own .swal2-select /
+       .swal2-textarea classes for consistent styling since this markup is
+       injected via Swal.fire's `html` option, not this page's own DOM. */
+    .swal2-select { padding: 10px 12px !important; font-size: 13.5px !important; border-radius: 10px !important; border: 1.5px solid var(--line) !important; }
+    .swal2-textarea { min-height: 80px !important; font-size: 13.5px !important; border-radius: 10px !important; }
+
     @media (max-width: 900px) {
         .sidebar { width: 68px; }
         .sidebar .brand, .sidebar .admin-identity, .sidebar nav a span, .sidebar .logout span { display: none; }
@@ -242,12 +249,16 @@
         td[colspan]::before { content: none; }
 
         /* Per-table column labels (order matches each table's <thead> above) */
+        /* UPDATED: Landlord Requests now has 6 columns (was 5) — a new
+           "Name Match" column was inserted before the Action column, so
+           every nth-child index from 5 onward shifted by one. */
         #requestsTableBody td:nth-child(1)::before { content: "Name"; }
         #requestsTableBody td:nth-child(2)::before { content: "Email"; }
         #requestsTableBody td:nth-child(3)::before { content: "Contact"; }
         #requestsTableBody td:nth-child(4)::before { content: "Address"; }
-        #requestsTableBody td:nth-child(5) { display: block; text-align: left; padding-top: 12px; }
-        #requestsTableBody td:nth-child(5)::before { content: "Action"; display: block; margin-bottom: 8px; }
+        #requestsTableBody td:nth-child(5)::before { content: "Name Match"; }
+        #requestsTableBody td:nth-child(6) { display: block; text-align: left; padding-top: 12px; }
+        #requestsTableBody td:nth-child(6)::before { content: "Action"; display: block; margin-bottom: 8px; }
 
         #usersTableBody td:nth-child(1)::before { content: "Name"; }
         #usersTableBody td:nth-child(2)::before { content: "Email"; }
@@ -350,13 +361,17 @@
             </div>
 
             <!-- LANDLORD REQUESTS -->
+            <!-- UPDATED: added a "Name Match" column between Address and
+                 Action. admin.js compares each applicant's registered
+                 full_name against the landlord_doc_name they typed, and
+                 renders a Match / Mismatch / No name given pill here. -->
             <div class="panel" id="panel-requests">
                 <h1>Landlord Requests</h1>
                 <div class="subtitle">Review submitted documents, then approve or reject each request</div>
                 <div class="table-wrap">
                     <div class="table-scroll">
                         <table>
-                            <thead><tr><th>Name</th><th>Email</th><th>Contact</th><th>Address</th><th>Action</th></tr></thead>
+                            <thead><tr><th>Name</th><th>Email</th><th>Contact</th><th>Address</th><th>Name Match</th><th>Action</th></tr></thead>
                             <tbody id="requestsTableBody"></tbody>
                         </table>
                     </div>
