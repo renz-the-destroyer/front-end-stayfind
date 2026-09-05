@@ -16,6 +16,20 @@ function adminHeaders() {
     return { 'Content-Type': 'application/json', 'x-admin-key': adminKey };
 }
 
+// NEW: Simple normalized-string name-match helper. Compares a user's
+// registered full_name against the landlord_doc_name they typed as "printed
+// on their Proof of Ownership document". This is plain text comparison only
+// (no OCR, no reading the actual document image) — it exists to help the
+// admin spot an obvious red flag quickly; the admin should still open "View
+// Docs" and eyeball the actual document before approving or rejecting.
+function nameMatchStatus(registeredName, docName) {
+    if (!docName) return { label: 'No name given', cls: 'none' };
+    const norm = s => (s || '').toLowerCase().trim().replace(/\s+/g, ' ');
+    return norm(registeredName) === norm(docName)
+        ? { label: 'Match', cls: 'approved' }
+        : { label: 'Mismatch', cls: 'rejected' };
+}
+
 // --- INIT ---
 window.onload = () => {
     if (adminKey) {
@@ -156,6 +170,10 @@ async function loadStats() {
 }
 
 // --- 2. LANDLORD REQUESTS ---
+// UPDATED: each row now includes a "Name Match" pill (Match / Mismatch / No
+// name given), computed client-side from the user's registered full_name vs.
+// the landlord_doc_name they typed. Empty-state colspan bumped from 5 to 6
+// to match the new column count.
 async function loadLandlordRequests() {
     const tbody = document.getElementById('requestsTableBody');
     try {
@@ -172,7 +190,7 @@ async function loadLandlordRequests() {
         }
 
         if (rows.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><i class="fas fa-check-circle" style="font-size:24px;"></i><p>No pending landlord requests.</p></div></td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fas fa-check-circle" style="font-size:24px;"></i><p>No pending landlord requests.</p></div></td></tr>`;
             return;
         }
 
@@ -180,12 +198,14 @@ async function loadLandlordRequests() {
 
         tbody.innerHTML = rows.map(u => {
             window.__landlordRequestDocs[u.id] = u.landlord_documents || "";
+            const match = nameMatchStatus(u.full_name, u.landlord_doc_name); // NEW
             return `
             <tr>
                 <td>${u.full_name}</td>
                 <td>${u.email}</td>
                 <td>${u.contact || '—'}</td>
                 <td>${u.address || '—'}</td>
+                <td><span class="pill ${match.cls}">${match.label}</span></td>
                 <td>
                     <button class="btn btn-edit" onclick="viewLandlordDocs(${u.id})"><i class="fas fa-file-image"></i> View Docs</button>
                     <button class="btn btn-approve" onclick="approveLandlord(${u.id})"><i class="fas fa-check"></i> Approve</button>
@@ -195,14 +215,22 @@ async function loadLandlordRequests() {
         `;
         }).join('');
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">Failed to load requests.</div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">Failed to load requests.</div></td></tr>`;
     }
 }
 
+// UPDATED: labels array now includes the 4th document (Selfie Holding Valid
+// ID), matching the order the frontend compresses+joins documents in:
+// Ownership, Permits, BIR, Selfie.
 function viewLandlordDocs(userId) {
     const docsString = (window.__landlordRequestDocs && window.__landlordRequestDocs[userId]) || "";
     const docs = docsString ? docsString.split('|||').map(d => d.trim()).filter(d => d !== "") : [];
-    const labels = ["Proof of Property Ownership (TCT / Tax Declaration)", "Local Permits (Barangay Clearance + Mayor's/Business Permit)", "BIR Registration (Form 1901/1903)"];
+    const labels = [
+        "Proof of Property Ownership (TCT / Tax Declaration)",
+        "Local Permits (Barangay Clearance + Mayor's/Business Permit)",
+        "BIR Registration (Form 1901/1903)",
+        "Selfie Holding Valid ID"
+    ];
 
     const body = document.getElementById('docsModalBody');
     if (docs.length === 0) {
@@ -239,18 +267,55 @@ async function approveLandlord(id) {
     }
 }
 
+// UPDATED: rejection reasons are now picked from a template dropdown instead
+// of a free-text-only box, so wording stays consistent across admins. An
+// "Other" option still allows a fully custom reason when none of the
+// templates fit. The backend endpoint and its `reason` field are unchanged —
+// this only changes how that string gets built on the frontend.
 async function rejectLandlord(id) {
-    const { value: reason, isConfirmed } = await Swal.fire({
+    const templates = [
+        "The Proof of Ownership document was blurry or unreadable.",
+        "The name on the document doesn't match your registered name.",
+        "The Local Permits (Barangay/Mayor's) appear expired or invalid.",
+        "The BIR Registration document is missing or unreadable.",
+        "The selfie doesn't clearly show your face together with the ID.",
+        "Other (write below)"
+    ];
+    const OTHER_INDEX = templates.length - 1;
+
+    const { value: formValues, isConfirmed } = await Swal.fire({
         title: 'Reject this request?',
-        html: `<p style="font-size:13px;color:#78909c;margin-bottom:10px; text-align:left;">Let the applicant know why, so they can fix it and try again.</p>`,
-        input: 'textarea',
-        inputPlaceholder: "e.g. The Proof of Ownership document was blurry, or wasn't under your name.",
+        html: `
+            <p style="font-size:13px;color:#78909c;margin-bottom:10px; text-align:left;">Pick a reason, or choose "Other" to write your own.</p>
+            <select id="rejectTemplateSelect" class="swal2-select" style="width:100%; margin-bottom:10px;">
+                ${templates.map((t, i) => `<option value="${i}">${t}</option>`).join('')}
+            </select>
+            <textarea id="rejectCustomReason" class="swal2-textarea" placeholder="Write a custom reason..." style="display:none; width:100%;"></textarea>
+        `,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Reject & Notify',
         confirmButtonColor: '#ff5252',
-        inputValidator: (value) => {
-            if (!value || value.trim() === "") return 'Please provide a reason so the applicant knows what to fix.';
+        didOpen: () => {
+            const select = document.getElementById('rejectTemplateSelect');
+            const textarea = document.getElementById('rejectCustomReason');
+            const toggleCustom = () => {
+                const isOther = select.value === String(OTHER_INDEX);
+                textarea.style.display = isOther ? 'block' : 'none';
+            };
+            select.addEventListener('change', toggleCustom);
+            toggleCustom();
+        },
+        preConfirm: () => {
+            const select = document.getElementById('rejectTemplateSelect');
+            const textarea = document.getElementById('rejectCustomReason');
+            const isOther = select.value === String(OTHER_INDEX);
+            const reason = isOther ? textarea.value.trim() : templates[select.value];
+            if (!reason) {
+                Swal.showValidationMessage('Please write a reason.');
+                return false;
+            }
+            return reason;
         }
     });
 
@@ -260,7 +325,7 @@ async function rejectLandlord(id) {
         const res = await fetch(`${API_BASE}/landlord-requests/${id}/reject`, {
             method: 'POST',
             headers: adminHeaders(),
-            body: JSON.stringify({ reason })
+            body: JSON.stringify({ reason: formValues })
         });
         if (handleAuthError(res)) return;
         if (res.ok) {
