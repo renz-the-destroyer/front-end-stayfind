@@ -388,7 +388,15 @@
 
         #advancedFiltersBody { margin-top: 22px; }
 
-        .filter-layout-wrapper { display: flex; flex-wrap: wrap; gap: 22px; }
+        /* UPDATED: added align-items: flex-start. Without this, the row
+           defaults to "stretch", so once Quick Actions grew a 3rd button
+           (Available/Occupied Property) it became taller than the filter
+           fields next to it - and because .advanced-filters bottom-aligns
+           its own children, that extra height showed up as a big empty gap
+           ABOVE the Price/Rooms/Location fields instead of below them.
+           Top-aligning the row keeps both columns starting at the same
+           line, which removes that gap. */
+        .filter-layout-wrapper { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
         .advanced-filters { flex: 3; display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; }
         .filter-item { flex: 1; min-width: 150px; }
         .filter-item label { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.3px; }
@@ -469,13 +477,32 @@
         .skeleton-line { height: 14px; }
 
         /* Empty / error states */
-        .empty-state { grid-column: 1 / -1; text-align: center; padding: 70px 20px; color: var(--ink-soft); }
+        /* UPDATED: bumped up the icon/heading/paragraph sizes and padding so
+           this reads as an intentional, prominent state instead of a small
+           afterthought lost in a large empty grid area. The icon now uses
+           the site's own accent-soft/primary tokens (already used elsewhere,
+           e.g. .drawer-avatar / .landlord-info-box) instead of flat grey, so
+           it feels branded rather than like a placeholder. */
+        .empty-state { grid-column: 1 / -1; text-align: center; padding: 90px 20px 100px; color: var(--ink-soft); }
         .empty-state-icon {
-            width: 64px; height: 64px; border-radius: 50%; background: #eef2f7; color: #94a3b8;
-            display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 18px;
+            width: 96px; height: 96px; border-radius: 50%; background: var(--accent-soft); color: var(--primary);
+            display: flex; align-items: center; justify-content: center; font-size: 36px; margin: 0 auto 24px;
+            box-shadow: 0 12px 30px -12px rgba(13,71,161,0.25);
         }
-        .empty-state h3 { color: #334155; font-size: 16px; margin: 0 0 6px; }
-        .empty-state p { font-size: 13px; margin: 0 auto; max-width: 320px; }
+        .empty-state h3 { color: #263449; font-size: 21px; font-weight: 800; margin: 0 0 8px; letter-spacing: -0.2px; }
+        .empty-state p { font-size: 14.5px; margin: 0 auto; max-width: 380px; line-height: 1.6; }
+        /* NEW: optional call-to-action button inside certain empty states
+           (e.g. "Nothing saved yet" -> Browse Listings, or the landlord
+           "haven't posted anything yet" -> Post a Listing). Only appears
+           when emptyStateHTML() in home.js is called with a 4th argument -
+           existing 3-argument calls render exactly as before. */
+        .empty-state-cta {
+            margin-top: 22px; border: none; padding: 13px 26px; border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: #fff; font-weight: 700; font-size: 13.5px; cursor: pointer;
+            box-shadow: 0 10px 24px rgba(13,71,161,0.28); transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .empty-state-cta:hover { transform: translateY(-1px); box-shadow: 0 14px 30px rgba(13,71,161,0.35); }
 
         /* ============ RESPONSIVE ============ */
         @media (max-width: 768px) {
