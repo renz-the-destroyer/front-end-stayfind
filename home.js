@@ -685,12 +685,18 @@ async function processSmartSearch() {
 // Small presentational helpers used by loadListings() and the "Saved" view
 // so every empty/loading/error state looks consistent instead of a plain
 // line of text.
-function emptyStateHTML(icon, title, subtitle) {
+// UPDATED: accepts an optional 4th argument, ctaHTML - a small snippet of
+// button markup (e.g. `<button class="empty-state-cta" onclick="...">Browse
+// Listings</button>`) rendered under the subtitle. Existing 3-argument calls
+// elsewhere in this file are unaffected - ctaHTML defaults to "" so nothing
+// extra renders unless a caller explicitly passes it.
+function emptyStateHTML(icon, title, subtitle, ctaHTML = "") {
     return `
         <div class="empty-state">
             <div class="empty-state-icon"><i class="fas ${icon}"></i></div>
             <h3>${title}</h3>
             <p>${subtitle}</p>
+            ${ctaHTML}
         </div>
     `;
 }
@@ -734,8 +740,16 @@ async function loadListings() {
             })
             : data;
 
+        // UPDATED: added a "Post a Listing" call-to-action button to this
+        // empty state, opening the exact same modal as the Post button/FAB
+        // (an empty screen should always give the person something to do).
         if (dataToShow.length === 0 && currentUser.role === 'landlord') {
-            listingsGrid.innerHTML = emptyStateHTML('fa-clipboard-list', "You haven't posted anything yet", 'Tap the + button to publish your first listing.');
+            listingsGrid.innerHTML = emptyStateHTML(
+                'fa-clipboard-list',
+                "You haven't posted anything yet",
+                'Tap the button below to publish your first listing.',
+                `<button class="empty-state-cta" onclick="document.getElementById('postBtn').click()">Post a Listing</button>`
+            );
             return;
         }
 
@@ -1617,11 +1631,20 @@ function setupBookmarkToggles() {
             }
         });
         
+        // UPDATED: added a "Browse Listings" call-to-action button so this
+        // empty state gives the person something to do next, instead of
+        // just sitting there as dead space (see .empty-state-cta in
+        // home.html for the styling).
         if (found === 0) {
             const msgText = (currentUser.role === 'landlord') 
                 ? "You haven't saved any of your own listings yet." 
                 : "You haven't saved any listings yet.";
-            listingsGrid.innerHTML = `<div id="no-saved-msg">${emptyStateHTML('fa-heart-crack', 'Nothing saved yet', msgText)}</div>`;
+            listingsGrid.innerHTML = `<div id="no-saved-msg">${emptyStateHTML(
+                'fa-heart-crack',
+                'Nothing saved yet',
+                msgText,
+                `<button class="empty-state-cta" onclick="document.getElementById('viewAllBtn').click()">Browse Listings</button>`
+            )}</div>`;
         }
     };
 
