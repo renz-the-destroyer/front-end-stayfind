@@ -388,16 +388,14 @@
 
         #advancedFiltersBody { margin-top: 22px; }
 
-        /* UPDATED: added align-items: flex-start. Without this, the row
-           defaults to "stretch", so once Quick Actions grew a 3rd button
-           (Available/Occupied Property) it became taller than the filter
-           fields next to it - and because .advanced-filters bottom-aligns
-           its own children, that extra height showed up as a big empty gap
-           ABOVE the Price/Rooms/Location fields instead of below them.
-           Top-aligning the row keeps both columns starting at the same
-           line, which removes that gap. */
+        /* LEGACY: filter-layout-wrapper/.quick-actions were the old
+           two-column layout (Price/Rooms/Location next to a boxed "Quick
+           actions" panel) that caused the messy spacing described above.
+           That markup is gone now (see .advanced-filters + .clear-filters-link
+           and .quick-filter-group below) - these rules are kept but unused,
+           left in place rather than deleted. */
         .filter-layout-wrapper { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
-        .advanced-filters { flex: 3; display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; }
+        .advanced-filters { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; }
         .filter-item { flex: 1; min-width: 150px; }
         .filter-item label { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.3px; }
         .filter-item select, .filter-item input {
@@ -412,6 +410,19 @@
         }
         .apply-filters-btn:hover { background: var(--primary-light); }
 
+        /* NEW: replaces the old boxed "Clear Filters" button - a small
+           text link sitting right at the end of the filter row instead. */
+        .clear-filters-link {
+            display: inline-flex; align-items: center; gap: 7px;
+            background: none; border: none; color: var(--ink-soft);
+            font-size: 12.5px; font-weight: 700; cursor: pointer;
+            padding: 12px 6px; white-space: nowrap;
+            transition: color 0.15s;
+        }
+        .clear-filters-link:hover { color: var(--danger); }
+
+        /* LEGACY: kept but no longer referenced in the markup (see
+           .clear-filters-link and .availability-pill above/below instead). */
         .quick-actions { flex: 1; min-width: 200px; background: #fbfcfe; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 16px; }
         .quick-actions h4 { margin: 0 0 10px 0; font-size: 13px; color: var(--ink-soft); font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
         .browse-all-btn { width: 100%; background: #fff; border: 2px solid var(--accent); color: var(--accent); padding: 10px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; }
@@ -471,8 +482,13 @@
         /* Matched-text highlighting, used both in the grid and the dropdown */
         .search-highlight { background: rgba(255,193,7,0.4); border-radius: 3px; padding: 0 1px; }
 
-        /* One-tap category pills */
-        .category-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+        /* UPDATED: category pills + availability pills are now grouped
+           together in one column (see .quick-filter-group), replacing the
+           old boxed "Quick actions" panel that used to sit awkwardly next
+           to the Price/Rooms/Location row. */
+        .quick-filter-group { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+
+        .category-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 0; }
         .category-pill {
             border: 1.5px solid var(--border); background: #fbfcfe; color: var(--ink-soft);
             padding: 8px 16px; border-radius: 999px; font-size: 12.5px; font-weight: 700; cursor: pointer;
@@ -480,6 +496,17 @@
         }
         .category-pill:hover { border-color: var(--accent); color: var(--primary); }
         .category-pill.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+        /* NEW: availability pills - same visual language as category
+           pills, replacing the old bordered "Quick actions" box. */
+        .availability-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+        .availability-pill {
+            border: 1.5px solid var(--border); background: #fbfcfe; color: var(--ink-soft);
+            padding: 8px 16px; border-radius: 999px; font-size: 12.5px; font-weight: 700; cursor: pointer;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .availability-pill:hover { border-color: var(--accent); color: var(--primary); }
+        .availability-pill.availability-active { background: var(--primary); border-color: var(--primary); color: #fff; }
 
         /* Live result count + Smart Search bridge row */
         .search-meta-row {
@@ -596,6 +623,8 @@
             .search-box-wrapper { flex-direction: row; }
             .search-btn { padding: 10px 16px; font-size: 14px; }
             .category-pill { padding: 7px 14px; font-size: 12px; } /* NEW: slightly tighter pills on phones */
+            .availability-pill { padding: 7px 14px; font-size: 12px; } /* NEW: matches category pills on phones */
+            .clear-filters-link { justify-content: center; padding: 10px; } /* NEW: centers when stacked full-width */
             .post-fab { display: flex; }
         }
 
@@ -820,13 +849,28 @@
             <div class="search-suggestions" id="searchSuggestions"></div>
         </div>
 
-        <!-- NEW: one-tap category quick filters -->
-        <div class="category-pills" id="categoryPills">
-            <button type="button" class="category-pill active" data-category="">All</button>
-            <button type="button" class="category-pill" data-category="apartment">Apartment</button>
-            <button type="button" class="category-pill" data-category="house">House</button>
-            <button type="button" class="category-pill" data-category="condo">Condo</button>
-            <button type="button" class="category-pill" data-category="bedspace">Bedspace</button>
+        <!-- UPDATED: category pills + availability pills grouped together
+             (used to be a separate boxed "Quick actions" panel sitting
+             next to the Price/Rooms/Location row - that mismatch in height
+             was what caused the messy extra spacing). Both rows now share
+             the same pill visual language. -->
+        <div class="quick-filter-group">
+            <div class="category-pills" id="categoryPills">
+                <button type="button" class="category-pill active" data-category="">All</button>
+                <button type="button" class="category-pill" data-category="apartment">Apartment</button>
+                <button type="button" class="category-pill" data-category="house">House</button>
+                <button type="button" class="category-pill" data-category="condo">Condo</button>
+                <button type="button" class="category-pill" data-category="bedspace">Bedspace</button>
+            </div>
+
+            <!-- UPDATED: replaces the old bordered "Quick actions" box. Same
+                 IDs (availablePropertyBtn/occupiedPropertyBtn) are kept so
+                 nothing else needs to change. -->
+            <div class="availability-pills" id="availabilityPills">
+                <button type="button" class="availability-pill active" id="anyStatusBtn" data-availability="">Any Status</button>
+                <button type="button" class="availability-pill" id="availablePropertyBtn" data-availability="available">Available</button>
+                <button type="button" class="availability-pill" id="occupiedPropertyBtn" data-availability="occupied">Occupied</button>
+            </div>
         </div>
 
         <!-- NEW: live result count + Smart Search bridge, only shown once a search/filter is active -->
@@ -836,43 +880,40 @@
             <i class="fas fa-filter"></i> <span id="filtersToggleLabel">Filters</span>
         </button>
 
+        <!-- UPDATED: Price/Rooms/Location/Apply is now a single row (the
+             old two-column filter-layout-wrapper + quick-actions sidebar
+             is gone). "Clear all" is now a small text link at the end of
+             this same row instead of a big standalone button. -->
         <div id="advancedFiltersBody">
-            <div class="filter-layout-wrapper">
-                <div class="advanced-filters">
-                    <div class="filter-item">
-                        <label>Price Range (₱)</label>
-                        <select id="maxPrice" onchange="filterListings()">
-                            <option value="Infinity">Any Price</option>
-                            <option value="5000">Under ₱5,000</option>
-                            <option value="10000">Under ₱10,000</option>
-                            <option value="20000">Under ₱20,000</option>
-                        </select>
-                    </div>
-                    <div class="filter-item">
-                        <label>Rooms</label>
-                        <select id="roomFilter" onchange="filterListings()">
-                            <option value="all">Any</option>
-                            <option value="1">1+ Room</option>
-                            <option value="2">2+ Rooms</option>
-                            <option value="3">3+ Rooms</option>
-                        </select>
-                    </div>
-                    <div class="filter-item">
-                        <label>Location</label>
-                        <input type="text" id="locFilter" placeholder="e.g., Los Baños" oninput="filterListings()">
-                    </div>
-                    <button class="apply-filters-btn" onclick="filterListings()">
-                        <i class="fas fa-filter"></i> Apply Filters
-                    </button>
+            <div class="advanced-filters">
+                <div class="filter-item">
+                    <label>Price Range (₱)</label>
+                    <select id="maxPrice" onchange="filterListings()">
+                        <option value="Infinity">Any Price</option>
+                        <option value="5000">Under ₱5,000</option>
+                        <option value="10000">Under ₱10,000</option>
+                        <option value="20000">Under ₱20,000</option>
+                    </select>
                 </div>
-
-                <div class="quick-actions">
-                    <h4>Quick actions</h4>
-                    <button class="browse-all-btn" onclick="resetFilters()">Clear Filters</button>
-                    <!-- NEW: Availability filter buttons -->
-                    <button class="browse-all-btn" id="availablePropertyBtn" style="margin-top:10px;">Available Property</button>
-                    <button class="browse-all-btn" id="occupiedPropertyBtn" style="margin-top:10px;">Occupied Property</button>
+                <div class="filter-item">
+                    <label>Rooms</label>
+                    <select id="roomFilter" onchange="filterListings()">
+                        <option value="all">Any</option>
+                        <option value="1">1+ Room</option>
+                        <option value="2">2+ Rooms</option>
+                        <option value="3">3+ Rooms</option>
+                    </select>
                 </div>
+                <div class="filter-item">
+                    <label>Location</label>
+                    <input type="text" id="locFilter" placeholder="e.g., Los Baños" oninput="filterListings()">
+                </div>
+                <button class="apply-filters-btn" onclick="filterListings()">
+                    <i class="fas fa-filter"></i> Apply Filters
+                </button>
+                <button type="button" class="clear-filters-link" onclick="resetFilters()">
+                    <i class="fas fa-rotate-left"></i> Clear all
+                </button>
             </div>
         </div>
     </div>
