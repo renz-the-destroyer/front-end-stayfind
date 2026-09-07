@@ -362,31 +362,49 @@ function setupFiltersToggle() {
     };
 }
 
-// --- NEW: AVAILABLE PROPERTY / OCCUPIED PROPERTY FILTER BUTTONS ---
-// Lets a tenant (or a landlord looking at their own listings) narrow the
-// grid down to only 'available' or only 'occupied' listings. Tapping the
-// same button twice clears the filter. Works on whatever is currently
-// rendered in the grid (same pattern used by the existing "Saved" toggle),
-// so it plays nicely with search/price/room filters already applied.
+// --- UPDATED: AVAILABLE / OCCUPIED PILLS (Any Status / Available / Occupied) ---
+// Used to be two standalone buttons directly manipulating card.style.display
+// (see the legacy applyAvailabilityFilter() below), which meant this filter
+// could silently ignore whatever was typed in the search box or picked in
+// the category pills. Now it's a 3-pill row (Any Status/Available/Occupied)
+// that just sets currentAvailabilityFilter and runs it through the same
+// filterListings() combined-matching logic everything else uses - the same
+// pattern as setupCategoryPills() below.
 function setupAvailabilityFilterButtons() {
-    const availableBtn = document.getElementById('availablePropertyBtn');
-    const occupiedBtn = document.getElementById('occupiedPropertyBtn');
-    if (!availableBtn || !occupiedBtn) return;
+    const pillsContainer = document.getElementById('availabilityPills');
+    if (!pillsContainer) return;
 
-    availableBtn.onclick = () => applyAvailabilityFilter('available', availableBtn, occupiedBtn);
-    occupiedBtn.onclick = () => applyAvailabilityFilter('occupied', occupiedBtn, availableBtn);
+    pillsContainer.querySelectorAll('.availability-pill').forEach(pill => {
+        pill.onclick = () => {
+            pillsContainer.querySelectorAll('.availability-pill').forEach(p => p.classList.remove('availability-active'));
+            pill.classList.add('availability-active');
+            currentAvailabilityFilter = pill.getAttribute('data-availability') || null;
+            const noStatusMsg = document.getElementById('no-status-msg');
+            if (noStatusMsg) noStatusMsg.remove();
+            filterListings();
+        };
+    });
 }
 
 function clearAvailabilityFilterState() {
     currentAvailabilityFilter = null;
-    const availableBtn = document.getElementById('availablePropertyBtn');
-    const occupiedBtn = document.getElementById('occupiedPropertyBtn');
-    if (availableBtn) availableBtn.classList.remove('availability-active');
-    if (occupiedBtn) occupiedBtn.classList.remove('availability-active');
+    // UPDATED: also re-activates the "Any Status" pill so the UI stays in
+    // sync whenever this gets reset from elsewhere (loadListings, resetFilters,
+    // switching to Saved/Browse).
+    const pillsContainer = document.getElementById('availabilityPills');
+    if (pillsContainer) {
+        pillsContainer.querySelectorAll('.availability-pill').forEach(p => p.classList.remove('availability-active'));
+        const anyPill = document.getElementById('anyStatusBtn');
+        if (anyPill) anyPill.classList.add('availability-active');
+    }
     const noStatusMsg = document.getElementById('no-status-msg');
     if (noStatusMsg) noStatusMsg.remove();
 }
 
+// LEGACY: no longer wired up (setupAvailabilityFilterButtons() above now
+// handles clicks directly through filterListings() instead). Left in place
+// rather than deleted, per project convention - see similar notes on
+// updateListing()/smartSearch() in controllers/userController.js.
 function applyAvailabilityFilter(status, clickedBtn, otherBtn) {
     const cards = document.querySelectorAll('.listing-card');
     const isReapplyingSame = currentAvailabilityFilter === status;
