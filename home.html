@@ -419,6 +419,81 @@
         /* NEW: highlighted state for whichever Availability filter button is currently active */
         .browse-all-btn.availability-active { background: var(--accent); color: #fff; }
 
+        /* ============ NEW: SEARCH BAR ENHANCEMENTS ============ */
+        .search-bar-anchor { position: relative; }
+
+        /* Clear (x) button inside the search input, only shown once there's text */
+        .search-clear-btn {
+            display: none;
+            align-items: center;
+            color: #b0bcc9;
+            cursor: pointer;
+            padding: 0 12px;
+            font-size: 15px;
+            transition: color 0.15s;
+        }
+        .search-clear-btn:hover { color: var(--danger); }
+
+        /* Autocomplete / recent-searches dropdown */
+        .search-suggestions {
+            display: none;
+            position: absolute;
+            top: 100%; left: 0; right: 0;
+            margin-top: 8px;
+            background: #fff;
+            border: 1.5px solid var(--border);
+            border-radius: 14px;
+            box-shadow: var(--shadow-md);
+            overflow-y: auto;
+            max-height: 320px;
+            z-index: 20;
+        }
+        .search-suggestions.open { display: block; }
+        .search-suggestions-section-label {
+            padding: 10px 16px 6px;
+            font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;
+            color: var(--muted);
+        }
+        .search-suggestion-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 11px 16px; cursor: pointer; font-size: 13.5px; color: var(--ink);
+            transition: background 0.12s;
+        }
+        .search-suggestion-item:hover, .search-suggestion-item.highlighted { background: #f4f8fd; }
+        .search-suggestion-item i { color: var(--muted); width: 16px; text-align: center; flex-shrink: 0; }
+        .search-suggestion-item .suggestion-sub { color: var(--muted); font-size: 11.5px; margin-left: auto; flex-shrink: 0; }
+        .search-suggestion-clear-recent {
+            padding: 9px 16px; font-size: 11.5px; color: var(--accent); font-weight: 700; cursor: pointer;
+            text-align: right; border-top: 1px dashed var(--border);
+        }
+        .search-suggestion-clear-recent:hover { color: var(--primary); }
+
+        /* Matched-text highlighting, used both in the grid and the dropdown */
+        .search-highlight { background: rgba(255,193,7,0.4); border-radius: 3px; padding: 0 1px; }
+
+        /* One-tap category pills */
+        .category-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+        .category-pill {
+            border: 1.5px solid var(--border); background: #fbfcfe; color: var(--ink-soft);
+            padding: 8px 16px; border-radius: 999px; font-size: 12.5px; font-weight: 700; cursor: pointer;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .category-pill:hover { border-color: var(--accent); color: var(--primary); }
+        .category-pill.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+        /* Live result count + Smart Search bridge row */
+        .search-meta-row {
+            display: none;
+            align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+            margin-top: 10px; font-size: 12.5px; color: var(--ink-soft);
+        }
+        #resultCountText strong { color: var(--ink); }
+        .smart-search-hint-link {
+            display: inline-flex; align-items: center; gap: 5px;
+            color: var(--primary); font-weight: 700; cursor: pointer;
+        }
+        .smart-search-hint-link:hover { text-decoration: underline; }
+
         /* ============ LISTINGS GRID (centered, capped width, more breathing room) ============ */
         .container {
             padding: 0 5% 70px;
@@ -520,6 +595,7 @@
             .container { grid-template-columns: 1fr; padding: 0 5% 100px; gap: 20px; }
             .search-box-wrapper { flex-direction: row; }
             .search-btn { padding: 10px 16px; font-size: 14px; }
+            .category-pill { padding: 7px 14px; font-size: 12px; } /* NEW: slightly tighter pills on phones */
             .post-fab { display: flex; }
         }
 
@@ -732,11 +808,29 @@
     </div>
 
     <div class="filter-container">
-        <form onsubmit="event.preventDefault(); filterListings();" class="search-box-wrapper">
-            <i class="fas fa-search search-icon"></i>
-            <input type="text" id="searchLoc" placeholder="Search by title, location, or amenities..." autocomplete="off">
-            <button type="submit" class="search-btn">Search</button>
-        </form>
+        <div class="search-bar-anchor">
+            <form onsubmit="event.preventDefault(); filterListings();" class="search-box-wrapper" id="searchBoxWrapper">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="searchLoc" placeholder="Search by title, location, or amenities..." autocomplete="off">
+                <i class="fas fa-circle-xmark search-clear-btn" id="searchClearBtn" title="Clear search"></i>
+                <button type="submit" class="search-btn">Search</button>
+            </form>
+
+            <!-- NEW: autocomplete / recent-searches dropdown, anchored to the search bar -->
+            <div class="search-suggestions" id="searchSuggestions"></div>
+        </div>
+
+        <!-- NEW: one-tap category quick filters -->
+        <div class="category-pills" id="categoryPills">
+            <button type="button" class="category-pill active" data-category="">All</button>
+            <button type="button" class="category-pill" data-category="apartment">Apartment</button>
+            <button type="button" class="category-pill" data-category="house">House</button>
+            <button type="button" class="category-pill" data-category="condo">Condo</button>
+            <button type="button" class="category-pill" data-category="bedspace">Bedspace</button>
+        </div>
+
+        <!-- NEW: live result count + Smart Search bridge, only shown once a search/filter is active -->
+        <div class="search-meta-row" id="searchMetaRow"></div>
 
         <button type="button" id="filtersToggleBtn" class="filters-toggle-btn" aria-expanded="false">
             <i class="fas fa-filter"></i> <span id="filtersToggleLabel">Filters</span>
