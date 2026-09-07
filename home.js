@@ -11,6 +11,20 @@ let selectedRating = 0;
 // can be cleared cleanly when switching to Browse/Saved and vice versa.
 let currentAvailabilityFilter = null; // 'available' | 'occupied' | null
 
+// NEW: Tracks which category pill (Apartment/House/Condo/Bedspace) is
+// currently active. "" means "All" - no category restriction.
+let currentCategoryFilter = "";
+
+// NEW: Cache of whatever listings dataset is currently loaded/visible.
+// Powers the search bar's autocomplete suggestions without needing an
+// extra network request - it's refreshed every time loadListings() or a
+// Smart Search finishes, so suggestions always reflect what's on screen.
+let allListingsCache = [];
+
+// NEW: Which suggestion row is currently keyboard-highlighted in the
+// search bar's autocomplete dropdown (-1 = none highlighted).
+let suggestionHighlightIndex = -1;
+
 // NEW: Tracks a snapshot of the Post/Edit Listing form so we can warn the user
 // before they lose unsaved changes (Cancel button, clicking outside, closing the tab).
 let originalFormSnapshot = null;
@@ -264,6 +278,8 @@ window.onload = () => {
     setupSideDrawer(); // NEW: hamburger-triggered side navigation
     setupFiltersToggle(); // NEW: collapsible filter panel on mobile
     setupAvailabilityFilterButtons(); // NEW: Available Property / Occupied Property buttons
+    setupCategoryPills(); // NEW: one-tap Apartment/House/Condo/Bedspace quick filters
+    setupSearchBarEnhancements(); // NEW: autocomplete, recent searches, clear button, live count
 
     // NEW: check for a landlord approval/rejection outcome to notify the user about
     checkLandlordStatusUpdate();
@@ -653,6 +669,7 @@ async function processSmartSearch() {
             const smartSearchBoxEl = document.getElementById('smartSearchBox');
             smartSearchBoxEl.classList.remove('open'); // NEW: keep panel state consistent for next time it's opened
             smartSearchBoxEl.style.display = 'none';
+            allListingsCache = results; // NEW: keep the search bar's autocomplete in sync with these results
             renderListings(results); 
             
             Swal.fire({ 
@@ -721,6 +738,7 @@ async function loadListings() {
     if (!listingsGrid) return;
 
     clearAvailabilityFilterState(); // NEW: reset the availability filter whenever the grid is fully reloaded
+    clearCategoryFilterState(); // NEW: reset the category pills whenever the grid is fully reloaded
     renderSkeletonCards(); // NEW: shimmer placeholders instead of a bare "Loading..." line
     
     try {
@@ -739,6 +757,8 @@ async function loadListings() {
                 return itemOwner === currentId;
             })
             : data;
+
+        allListingsCache = dataToShow; // NEW: keep the search bar's autocomplete in sync with what's shown
 
         // UPDATED: added a "Post a Listing" call-to-action button to this
         // empty state, opening the exact same modal as the Post button/FAB
@@ -809,6 +829,12 @@ async function renderListings(items) {
         // NEW: lets the search bar match property type too (e.g. searching
         // "bedspace" should find a listing whose category is "Bedspace").
         card.setAttribute('data-category', (item.category || '').toLowerCase());
+        // NEW: pristine (un-lowercased, unmodified) title/location strings
+        // kept on the card so filterListings() can safely re-render
+        // highlighted search matches on every keystroke without ever
+        // corrupting the underlying text (see highlightMatch()).
+        card.setAttribute('data-title-raw', item.title || 'Cozy Room');
+        card.setAttribute('data-location-raw', item.location || 'Unknown');
         // NEW: stagger the fade-in-up animation slightly per card (capped so a
         // long list doesn't leave later cards waiting too long to appear).
         card.style.animationDelay = `${Math.min(idx, 10) * 0.05}s`;
@@ -835,7 +861,7 @@ async function renderListings(items) {
                 <div class="landlord-name">
                     <i class="fas fa-user-tie"></i> ${item.landlord_name || 'Owner'}
                 </div>
-                <div class="location"><i class="fas fa-map-marker-alt"></i> ${item.location || 'Unknown'}</div>
+                <div class="location"><i class="fas fa-map-marker-alt"></i> <span class="location-text">${item.location || 'Unknown'}</span></div>
                 <div class="details">
                     <span><i class="fas fa-bed"></i> ${item.rooms || 0} Rooms</span>
                     <span><i class="fas fa-expand"></i> ${item.size || 0} sqm</span>
@@ -1213,6 +1239,39 @@ function normalizeForSearch(str) {
     return (str || '').toString().toLowerCase().replace(/\s+/g, '');
 }
 
+// NEW: escapes a raw string for safe insertion into innerHTML, so titles
+// or locations containing < or & can't break the page's markup.
+function escapeHtml(str) {
+    return (str || '').toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+// NEW: same as escapeHtml, but also escapes quotes - used when a string is
+// going inside an HTML attribute (e.g. data-value="...") rather than
+// between tags.
+function escapeHtmlAttr(str) {
+    return escapeHtml(str).replace(/"/g, '&quot;');
+}
+
+// NEW: escapes regex special characters in a user-typed string so it can
+// be safely dropped into a `new RegExp(...)` call below.
+function escapeRegExp(str) {
+    return (str || '').toString().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// NEW: wraps the first case-insensitive match of `rawTerm` inside `rawText`
+// with a <mark> tag, so search matches can be visibly highlighted in the
+// grid and in the autocomplete dropdown. Returns the text unchanged if
+// there's no term to match, so it's always safe to call.
+function highlightMatch(rawText, rawTerm) {
+    const term = (rawTerm || '').trim();
+    if (!term) return rawText;
+    const re = new RegExp(`(${escapeRegExp(term)})`, 'ig');
+    return rawText.replace(re, '<mark class="search-highlight">$1</mark>');
+}
+
 function filterListings() {
     const searchTerm = document.getElementById('searchLoc').value.toLowerCase();
     const normalizedSearchTerm = normalizeForSearch(searchTerm); // NEW: space-stripped version used for fuzzy matching
@@ -1223,10 +1282,18 @@ function filterListings() {
     const locFilter = document.getElementById('locFilter').value.toLowerCase();
 
     const cards = document.querySelectorAll('.listing-card');
+    let visibleCount = 0; // NEW: powers the live "X of Y stays shown" counter
 
     cards.forEach(card => {
-        const titleText = card.querySelector('.title-text').innerText.toLowerCase();
-        const locationText = card.querySelector('.location').innerText.toLowerCase();
+        // UPDATED: read from the pristine data-title-raw/data-location-raw
+        // attributes (set in renderListings) instead of the rendered DOM
+        // text, since that text now gets rewritten with <mark> highlight
+        // tags below - reading it back on the next keystroke would have
+        // slowly corrupted it.
+        const titleRaw = card.getAttribute('data-title-raw') || '';
+        const locationRaw = card.getAttribute('data-location-raw') || '';
+        const titleText = titleRaw.toLowerCase();
+        const locationText = locationRaw.toLowerCase();
         // FIX: amenities are now stored on the card as data-amenities (see
         // renderListings above) so the search bar can actually match them -
         // previously this value didn't exist anywhere and "wifi"/"aircon"/etc.
@@ -1252,9 +1319,314 @@ function filterListings() {
         const matchesSpecificLoc = locationText.includes(locFilter);
         // NEW: also respect whatever Available/Occupied filter is currently active
         const matchesAvailability = !currentAvailabilityFilter || cardStatus === currentAvailabilityFilter;
+        // NEW: also respect whatever category pill (Apartment/House/etc.) is active
+        const matchesCategoryPill = !currentCategoryFilter || categoryText === currentCategoryFilter;
 
-        card.style.display = (matchesMainSearch && matchesPrice && matchesRooms && matchesSpecificLoc && matchesAvailability) ? "block" : "none";
+        const isVisible = matchesMainSearch && matchesPrice && matchesRooms && matchesSpecificLoc && matchesAvailability && matchesCategoryPill;
+        card.style.display = isVisible ? "block" : "none";
+        if (isVisible) visibleCount++;
+
+        // NEW: live-highlight whatever part of the title/location matches
+        // the typed search term. Calling highlightMatch() with an empty
+        // term just returns the plain text back, so this also correctly
+        // clears old highlights the moment the search box is emptied.
+        const titleEl = card.querySelector('.title-text');
+        const locationTextEl = card.querySelector('.location-text');
+        if (titleEl) titleEl.innerHTML = highlightMatch(escapeHtml(titleRaw), searchTerm);
+        if (locationTextEl) locationTextEl.innerHTML = highlightMatch(escapeHtml(locationRaw), searchTerm);
     });
+
+    // NEW: drive the live result counter + Smart Search bridge under the
+    // search bar. Only shown once something is actually being filtered, so
+    // a fresh unfiltered grid doesn't get a redundant "42 of 42 shown" line.
+    const hasActiveSearch = searchTerm.trim() !== "" || currentCategoryFilter !== "" || !!currentAvailabilityFilter ||
+        locFilter.trim() !== "" || minRooms !== "all" || maxPriceValue !== "Infinity";
+    updateSearchMetaRow(searchTerm, visibleCount, cards.length, hasActiveSearch);
+}
+
+// NEW: heuristic for "this looks like a typed sentence, not a keyword" -
+// used to offer a one-click bridge into the Smart Search AI widget instead
+// of making people notice its separate floating button on their own.
+function looksLikeNaturalLanguageQuery(term) {
+    const words = term.trim().split(/\s+/).filter(Boolean);
+    if (words.length < 3) return false; // short keyword-style queries don't need it
+    const connectorWords = [
+        'malapit', 'sa', 'na', 'may', 'meron', 'gusto', 'kong',
+        'under', 'near', 'with', 'around', 'less', 'than', 'below', 'over', 'above',
+        'pababa', 'pataas'
+    ];
+    const lower = term.toLowerCase();
+    return connectorWords.some(w => lower.includes(w));
+}
+
+// NEW: opens the existing floating Smart Search panel with the given text
+// pre-filled, mirroring what injectSmartSearchUI()'s internal openPanel()
+// does. Only tenants have the Smart Search widget at all, so this quietly
+// no-ops for landlords (the hint link is never shown to them either - see
+// updateSearchMetaRow).
+function openSmartSearchWithQuery(term) {
+    const smartBox = document.getElementById('smartSearchBox');
+    const smartInput = document.getElementById('smartInput');
+    if (!smartBox || !smartInput) return;
+    smartInput.value = term;
+    smartBox.style.display = 'flex';
+    requestAnimationFrame(() => smartBox.classList.add('open'));
+    smartInput.focus();
+    closeSearchSuggestions();
+}
+
+// NEW: renders the "X of Y stays shown" counter and, when the typed query
+// reads like a sentence, a "Try Smart Search for this" link.
+function updateSearchMetaRow(searchTerm, visibleCount, totalCount, hasActiveSearch) {
+    const metaRow = document.getElementById('searchMetaRow');
+    if (!metaRow) return;
+
+    if (!hasActiveSearch) {
+        metaRow.innerHTML = "";
+        metaRow.style.display = "none";
+        return;
+    }
+
+    let html = `<span id="resultCountText"><strong>${visibleCount}</strong> of ${totalCount} ${totalCount === 1 ? 'stay' : 'stays'} shown</span>`;
+
+    const smartBoxExists = document.getElementById('smartSearchBox');
+    if (smartBoxExists && looksLikeNaturalLanguageQuery(searchTerm)) {
+        html += `<span class="smart-search-hint-link" id="smartSearchHintLink"><i class="fas fa-wand-magic-sparkles"></i> Try Smart Search for this</span>`;
+    }
+
+    metaRow.innerHTML = html;
+    metaRow.style.display = "flex";
+
+    const hintLink = document.getElementById('smartSearchHintLink');
+    if (hintLink) {
+        hintLink.onclick = () => openSmartSearchWithQuery(document.getElementById('searchLoc').value);
+    }
+}
+
+// --- NEW: RECENT SEARCHES (localStorage, most-recent-first, max 5) ---
+function getRecentSearches() {
+    try {
+        return JSON.parse(localStorage.getItem('recentSearches')) || [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveRecentSearch(term) {
+    const clean = (term || '').trim();
+    if (!clean) return;
+    let recent = getRecentSearches().filter(t => t.toLowerCase() !== clean.toLowerCase());
+    recent.unshift(clean);
+    recent = recent.slice(0, 5);
+    localStorage.setItem('recentSearches', JSON.stringify(recent));
+}
+
+function clearRecentSearches() {
+    localStorage.removeItem('recentSearches');
+}
+
+// --- NEW: AUTOCOMPLETE SUGGESTIONS (built from allListingsCache, no extra network call) ---
+function buildAutocompleteSuggestions(rawTerm) {
+    const term = normalizeForSearch(rawTerm);
+    if (!term) return [];
+
+    const seen = new Set();
+    const suggestions = [];
+
+    allListingsCache.forEach(item => {
+        const title = (item.title || '').trim();
+        if (title && normalizeForSearch(title).includes(term) && !seen.has('t:' + title.toLowerCase())) {
+            seen.add('t:' + title.toLowerCase());
+            suggestions.push({ icon: 'fa-house', label: title, sub: item.location || '' });
+        }
+    });
+
+    allListingsCache.forEach(item => {
+        const loc = (item.location || '').trim();
+        if (loc && normalizeForSearch(loc).includes(term) && !seen.has('l:' + loc.toLowerCase())) {
+            seen.add('l:' + loc.toLowerCase());
+            suggestions.push({ icon: 'fa-location-dot', label: loc, sub: 'Location' });
+        }
+    });
+
+    ['Apartment', 'House', 'Condo', 'Bedspace'].forEach(cat => {
+        if (normalizeForSearch(cat).includes(term) && !seen.has('c:' + cat.toLowerCase())) {
+            seen.add('c:' + cat.toLowerCase());
+            suggestions.push({ icon: 'fa-tag', label: cat, sub: 'Category' });
+        }
+    });
+
+    return suggestions.slice(0, 6);
+}
+
+// NEW: (re)paints the autocomplete/recent-searches dropdown based on the
+// search box's current value. Called on focus and on every keystroke.
+function renderSearchSuggestions() {
+    const box = document.getElementById('searchSuggestions');
+    const input = document.getElementById('searchLoc');
+    if (!box || !input) return;
+
+    const rawTerm = input.value;
+    let html = '';
+
+    if (!rawTerm.trim()) {
+        const recent = getRecentSearches();
+        if (recent.length > 0) {
+            html += `<div class="search-suggestions-section-label">Recent Searches</div>`;
+            recent.forEach(term => {
+                html += `<div class="search-suggestion-item" data-value="${escapeHtmlAttr(term)}">
+                    <i class="fas fa-clock-rotate-left"></i> ${escapeHtml(term)}
+                </div>`;
+            });
+            html += `<div class="search-suggestion-clear-recent" id="clearRecentSearchesBtn">Clear recent searches</div>`;
+        }
+    } else {
+        const matches = buildAutocompleteSuggestions(rawTerm);
+        if (matches.length > 0) {
+            html += `<div class="search-suggestions-section-label">Suggestions</div>`;
+            matches.forEach(m => {
+                html += `<div class="search-suggestion-item" data-value="${escapeHtmlAttr(m.label)}">
+                    <i class="fas ${m.icon}"></i> ${highlightMatch(escapeHtml(m.label), rawTerm)}
+                    ${m.sub ? `<span class="suggestion-sub">${escapeHtml(m.sub)}</span>` : ''}
+                </div>`;
+            });
+        }
+    }
+
+    box.innerHTML = html;
+    box.classList.toggle('open', html !== '');
+    suggestionHighlightIndex = -1;
+}
+
+function updateSuggestionHighlight(items) {
+    items.forEach((el, i) => el.classList.toggle('highlighted', i === suggestionHighlightIndex));
+}
+
+function closeSearchSuggestions() {
+    const box = document.getElementById('searchSuggestions');
+    if (box) box.classList.remove('open');
+    suggestionHighlightIndex = -1;
+}
+
+// NEW: shows/hides the little (x) clear icon inside the search box based
+// on whether there's any text to clear.
+function updateClearButtonVisibility() {
+    const input = document.getElementById('searchLoc');
+    const clearBtn = document.getElementById('searchClearBtn');
+    if (!input || !clearBtn) return;
+    clearBtn.style.display = input.value.trim() ? 'flex' : 'none';
+}
+
+// NEW: wires up every search-bar enhancement - autocomplete, keyboard
+// navigation, recent searches, the clear button, and closing the dropdown
+// on outside clicks. Called once from window.onload.
+function setupSearchBarEnhancements() {
+    const input = document.getElementById('searchLoc');
+    const clearBtn = document.getElementById('searchClearBtn');
+    const suggestionsBox = document.getElementById('searchSuggestions');
+    const wrapper = document.getElementById('searchBoxWrapper');
+    if (!input || !suggestionsBox || !wrapper) return;
+
+    // Live filter + suggestions + clear-button state on every keystroke.
+    // NOTE: this is IN ADDITION to the existing plain
+    // `addEventListener('input', filterListings)` registered further down -
+    // both listeners fire on the same event, so filtering still happens
+    // exactly as before, this just layers the new behavior on top.
+    input.addEventListener('input', () => {
+        updateClearButtonVisibility();
+        renderSearchSuggestions();
+    });
+
+    input.addEventListener('focus', () => {
+        renderSearchSuggestions();
+    });
+
+    input.addEventListener('keydown', (e) => {
+        const items = suggestionsBox.querySelectorAll('.search-suggestion-item');
+        if (!suggestionsBox.classList.contains('open') || items.length === 0) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            suggestionHighlightIndex = Math.min(suggestionHighlightIndex + 1, items.length - 1);
+            updateSuggestionHighlight(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            suggestionHighlightIndex = Math.max(suggestionHighlightIndex - 1, 0);
+            updateSuggestionHighlight(items);
+        } else if (e.key === 'Enter' && suggestionHighlightIndex >= 0 && items[suggestionHighlightIndex]) {
+            e.preventDefault();
+            items[suggestionHighlightIndex].click();
+        } else if (e.key === 'Escape') {
+            closeSearchSuggestions();
+        }
+    });
+
+    // Remember the search once it's actually submitted (Enter or the
+    // Search button) - filterListings() itself still runs via the form's
+    // existing inline onsubmit, this just adds the "remember it" side effect.
+    wrapper.addEventListener('submit', () => {
+        saveRecentSearch(input.value);
+        closeSearchSuggestions();
+    });
+
+    if (clearBtn) {
+        clearBtn.onclick = () => {
+            input.value = "";
+            updateClearButtonVisibility();
+            filterListings();
+            closeSearchSuggestions();
+            input.focus();
+        };
+    }
+
+    suggestionsBox.addEventListener('click', (e) => {
+        if (e.target.closest('#clearRecentSearchesBtn')) {
+            clearRecentSearches();
+            renderSearchSuggestions();
+            return;
+        }
+        const item = e.target.closest('.search-suggestion-item');
+        if (item) {
+            const value = item.getAttribute('data-value') || '';
+            input.value = value;
+            updateClearButtonVisibility();
+            saveRecentSearch(value);
+            closeSearchSuggestions();
+            filterListings();
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!wrapper.contains(e.target) && !suggestionsBox.contains(e.target)) {
+            closeSearchSuggestions();
+        }
+    });
+
+    updateClearButtonVisibility();
+}
+
+// --- NEW: CATEGORY QUICK-FILTER PILLS ---
+function setupCategoryPills() {
+    const pillsContainer = document.getElementById('categoryPills');
+    if (!pillsContainer) return;
+
+    pillsContainer.querySelectorAll('.category-pill').forEach(pill => {
+        pill.onclick = () => {
+            pillsContainer.querySelectorAll('.category-pill').forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            currentCategoryFilter = pill.getAttribute('data-category') || '';
+            filterListings();
+        };
+    });
+}
+
+function clearCategoryFilterState() {
+    currentCategoryFilter = "";
+    const pillsContainer = document.getElementById('categoryPills');
+    if (!pillsContainer) return;
+    pillsContainer.querySelectorAll('.category-pill').forEach(p => p.classList.remove('active'));
+    const allPill = pillsContainer.querySelector('.category-pill[data-category=""]');
+    if (allPill) allPill.classList.add('active');
 }
 
 function resetFilters() {
@@ -1263,6 +1635,9 @@ function resetFilters() {
     document.getElementById('roomFilter').value = "all";
     document.getElementById('locFilter').value = "";
     clearAvailabilityFilterState(); // NEW: also clear the Available/Occupied toggle
+    clearCategoryFilterState(); // NEW: also clear the category pills back to "All"
+    updateClearButtonVisibility(); // NEW: hide the (x) clear icon
+    closeSearchSuggestions(); // NEW: close any open autocomplete dropdown
     
     const viewAllBtn = document.getElementById('viewAllBtn');
     const viewSavedBtn = document.getElementById('viewSavedBtn');
@@ -1614,6 +1989,7 @@ function setupBookmarkToggles() {
 
     viewSavedBtn.onclick = () => {
         clearAvailabilityFilterState(); // NEW: keep the Available/Occupied toggle from conflicting with Saved view
+        clearCategoryFilterState(); // NEW: keep the category pills from conflicting with Saved view
         const savedIds = JSON.parse(localStorage.getItem('bookmarks')) || [];
         const allCards = document.querySelectorAll('.listing-card');
         
@@ -1650,6 +2026,7 @@ function setupBookmarkToggles() {
 
     viewAllBtn.onclick = () => {
         clearAvailabilityFilterState(); // NEW
+        clearCategoryFilterState(); // NEW
         viewAllBtn.classList.add('nav-active');
         viewSavedBtn.classList.remove('nav-active');
         const msg = document.getElementById('no-saved-msg');
