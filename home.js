@@ -25,6 +25,13 @@ let allListingsCache = [];
 // search bar's autocomplete dropdown (-1 = none highlighted).
 let suggestionHighlightIndex = -1;
 
+// NEW: whatever array is currently being shown in the grid (before any
+// client-side sorting), refreshed by loadListings()/processSmartSearch().
+// Powers the Sort dropdown - sorting works on a fresh copy of this each
+// time, so switching back to "Newest" always restores the original order.
+let currentDisplayedItems = [];
+let currentSortOption = 'newest';
+
 // NEW: Tracks a snapshot of the Post/Edit Listing form so we can warn the user
 // before they lose unsaved changes (Cancel button, clicking outside, closing the tab).
 let originalFormSnapshot = null;
@@ -280,6 +287,8 @@ window.onload = () => {
     setupAvailabilityFilterButtons(); // NEW: Available Property / Occupied Property buttons
     setupCategoryPills(); // NEW: one-tap Apartment/House/Condo/Bedspace quick filters
     setupSearchBarEnhancements(); // NEW: autocomplete, recent searches, clear button, live count
+    setupStickySearchBar(); // NEW: compact search bar that slides in once you scroll past the real one
+    setupFooter(); // NEW: footer year + Settings link
 
     // NEW: check for a landlord approval/rejection outcome to notify the user about
     checkLandlordStatusUpdate();
@@ -688,6 +697,7 @@ async function processSmartSearch() {
             smartSearchBoxEl.classList.remove('open'); // NEW: keep panel state consistent for next time it's opened
             smartSearchBoxEl.style.display = 'none';
             allListingsCache = results; // NEW: keep the search bar's autocomplete in sync with these results
+            currentDisplayedItems = results; // NEW: keep the Sort dropdown's source data in sync too
             renderListings(results); 
             
             Swal.fire({ 
@@ -751,6 +761,50 @@ function renderSkeletonCards(count = 8) {
     `).join('');
 }
 
+// --- NEW: RESULTS HEADER ("X Stays Available" + Sort dropdown) ---
+function showResultsHeader() {
+    const header = document.getElementById('resultsHeader');
+    if (header) header.style.display = 'flex';
+}
+
+function hideResultsHeader() {
+    const header = document.getElementById('resultsHeader');
+    if (header) header.style.display = 'none';
+}
+
+function updateResultsHeaderCount(count) {
+    const el = document.getElementById('resultsHeaderCount');
+    if (!el) return;
+    el.innerHTML = `<strong>${count}</strong> ${count === 1 ? 'Stay' : 'Stays'} Available`;
+}
+
+// NEW: sorts a COPY of the given array - never mutates currentDisplayedItems,
+// so switching back to "Newest" always restores the original server order.
+function sortListings(items, sortOption) {
+    const copy = [...items];
+    switch (sortOption) {
+        case 'price_asc': return copy.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
+        case 'price_desc': return copy.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
+        case 'rooms_desc': return copy.sort((a, b) => (Number(b.rooms) || 0) - (Number(a.rooms) || 0));
+        case 'newest':
+        default:
+            // The Browse view's data already comes back ORDER BY created_at
+            // DESC from the server (see getAllListings), so "Newest" just
+            // means "leave it in the order we received it".
+            return copy;
+    }
+}
+
+// NEW: called by the Sort <select> in the results header. Re-renders the
+// grid using whatever's currently loaded (currentDisplayedItems), just in a
+// different order - works for the normal Browse view and Smart Search
+// results, since both keep currentDisplayedItems in sync.
+function applySorting() {
+    const sortSelect = document.getElementById('sortSelect');
+    if (sortSelect) currentSortOption = sortSelect.value;
+    renderListings(sortListings(currentDisplayedItems, currentSortOption));
+}
+
 // --- 2. FETCH LISTINGS FROM MYSQL ---
 async function loadListings() {
     if (!listingsGrid) return;
@@ -764,6 +818,7 @@ async function loadListings() {
         const data = await response.json();
 
         if (!data || data.length === 0) {
+            hideResultsHeader(); // NEW: no point showing "0 Stays Available" above this empty state
             listingsGrid.innerHTML = emptyStateHTML('fa-house-circle-xmark', 'No listings yet', 'Check back soon — new stays are added regularly.');
             return;
         }
@@ -777,11 +832,13 @@ async function loadListings() {
             : data;
 
         allListingsCache = dataToShow; // NEW: keep the search bar's autocomplete in sync with what's shown
+        currentDisplayedItems = dataToShow; // NEW: keep the Sort dropdown's source data in sync too
 
         // UPDATED: added a "Post a Listing" call-to-action button to this
         // empty state, opening the exact same modal as the Post button/FAB
         // (an empty screen should always give the person something to do).
         if (dataToShow.length === 0 && currentUser.role === 'landlord') {
+            hideResultsHeader(); // NEW
             listingsGrid.innerHTML = emptyStateHTML(
                 'fa-clipboard-list',
                 "You haven't posted anything yet",
@@ -794,6 +851,7 @@ async function loadListings() {
         renderListings(dataToShow);
     } catch (error) {
         console.error("Error fetching listings:", error);
+        hideResultsHeader(); // NEW
         listingsGrid.innerHTML = emptyStateHTML('fa-triangle-exclamation', 'Something went wrong', "We couldn't load listings. Check if the backend is live and try again.");
     }
 }
@@ -802,6 +860,12 @@ async function loadListings() {
 async function renderListings(items) {
     listingsGrid.innerHTML = ""; 
     
+    // NEW: keep the "X Stays Available" header in sync with whatever's
+    // actually being rendered, and make sure it's visible again (in case
+    // an earlier empty-state branch had hidden it).
+    updateResultsHeaderCount(items.length);
+    showResultsHeader();
+
     let savedListings = JSON.parse(localStorage.getItem('bookmarks')) || [];
     
     if (currentUser && currentUser.id) {
@@ -830,7 +894,16 @@ async function renderListings(items) {
         // `status` column on listings. Defaults to 'available' for any
         // existing rows created before this column existed.
         const statusValue = (item.status || 'available').toLowerCase() === 'occupied' ? 'occupied' : 'available';
-        const statusBadgeHTML = `<div class="status-badge ${statusValue}">${statusValue === 'occupied' ? 'Occupied' : 'Available'}</div>`;
+        // UPDATED: category badge + status are now one flex row (.card-badges)
+        // instead of two pills stacked on top of each other, and the
+        // category badge is color-coded per property type (see
+        // getCategoryBadgeClass()) so it's scannable while scrolling.
+        const cardBadgesHTML = `
+            <div class="card-badges">
+                <span class="category-badge ${getCategoryBadgeClass(item.category)}">${item.category || 'Apartment'}</span>
+                <span class="status-chip status-chip-${statusValue}"><span class="status-dot"></span>${statusValue === 'occupied' ? 'Occupied' : 'Available'}</span>
+            </div>
+        `;
         
         const card = document.createElement('div');
         card.className = 'listing-card';
@@ -866,10 +939,20 @@ async function renderListings(items) {
             </div>
         ` : "";
 
+        // NEW: landlords get a quick-edit shortcut on their own cards
+        // instead of the (tenant-only) save heart, so they don't have to
+        // open the details modal first just to fix a typo or price.
+        const isOwnerCard = currentUser.role === 'landlord' && item.user_id && String(currentUser.id) === String(item.user_id);
+        const quickEditHTML = isOwnerCard ? `
+            <div class="quick-edit-btn" title="Quick edit">
+                <i class="fas fa-pen"></i>
+            </div>
+        ` : "";
+
         card.innerHTML = `
             ${saveButtonHTML}
-            <div class="category-badge">${item.category || 'Apartment'}</div>
-            ${statusBadgeHTML}
+            ${quickEditHTML}
+            ${cardBadgesHTML}
             ${carouselHTML}
             <div class="listing-info">
                 <div class="price-row">
@@ -886,9 +969,37 @@ async function renderListings(items) {
                 </div>
             </div>
         `;
+
+        // NEW: wire the quick-edit button separately (rather than an inline
+        // onclick with the item serialized into the attribute) so large
+        // fields like base64 images never have to round-trip through HTML.
+        if (isOwnerCard) {
+            const quickEditEl = card.querySelector('.quick-edit-btn');
+            if (quickEditEl) {
+                quickEditEl.onclick = (e) => {
+                    e.stopPropagation();
+                    openEditModal(item);
+                };
+            }
+        }
+
         listingsGrid.appendChild(card);
     });
 }
+
+// NEW: maps a property category to a CSS modifier class so each type gets
+// its own badge color (blue/green/purple/orange) instead of every category
+// looking identical on the grid.
+function getCategoryBadgeClass(category) {
+    const key = (category || '').toLowerCase();
+    if (key === 'apartment') return 'cat-apartment';
+    if (key === 'house') return 'cat-house';
+    if (key === 'condo') return 'cat-condo';
+    if (key === 'bedspace') return 'cat-bedspace';
+    return 'cat-default';
+}
+
+
 
 // --- 4. SHOW FULL DETAILS POPUP ---
 function showFullDetails(item) {
@@ -1360,6 +1471,31 @@ function filterListings() {
     const hasActiveSearch = searchTerm.trim() !== "" || currentCategoryFilter !== "" || !!currentAvailabilityFilter ||
         locFilter.trim() !== "" || minRooms !== "all" || maxPriceValue !== "Infinity";
     updateSearchMetaRow(searchTerm, visibleCount, cards.length, hasActiveSearch);
+
+    // NEW: a proper big empty state (icon + message + Clear Filters button)
+    // when a search/filter combo matches nothing, instead of just leaving
+    // the grid blank with only the small "0 of 42 shown" counter as a clue.
+    updateFilterEmptyState(hasActiveSearch, visibleCount, cards.length);
+}
+
+// NEW: shows/removes the "No matches found" empty state for the search
+// bar + advanced filters combo (separate from the Saved-view and
+// Available/Occupied-pill empty states, which use their own message IDs).
+function updateFilterEmptyState(hasActiveSearch, visibleCount, totalCount) {
+    const existingMsg = document.getElementById('no-filter-results-msg');
+    if (existingMsg) existingMsg.remove();
+
+    if (hasActiveSearch && visibleCount === 0 && totalCount > 0) {
+        listingsGrid.insertAdjacentHTML(
+            'beforeend',
+            `<div id="no-filter-results-msg">${emptyStateHTML(
+                'fa-magnifying-glass-minus',
+                'No matches found',
+                'Try a different keyword or category, or clear your filters to see everything again.',
+                `<button class="empty-state-cta" onclick="resetFilters()">Clear Filters</button>`
+            )}</div>`
+        );
+    }
 }
 
 // NEW: heuristic for "this looks like a typed sentence, not a keyword" -
@@ -1621,6 +1757,51 @@ function setupSearchBarEnhancements() {
     });
 
     updateClearButtonVisibility();
+}
+
+// --- NEW: STICKY (COMPACT) SEARCH BAR ---
+// Slides in once the real search bar has scrolled out of view, and stays
+// two-way in sync with the main #searchLoc input, so typing in either one
+// filters the grid the same way. Deliberately kept simple (no autocomplete
+// dropdown here) - it's meant for quick re-filtering while browsing, not a
+// full replacement for the main search bar.
+function setupStickySearchBar() {
+    const stickyBar = document.getElementById('stickySearchBar');
+    const stickyInput = document.getElementById('stickySearchInput');
+    const filterContainer = document.querySelector('.filter-container');
+    const mainInput = document.getElementById('searchLoc');
+    if (!stickyBar || !stickyInput || !filterContainer || !mainInput) return;
+
+    window.addEventListener('scroll', () => {
+        const triggerPoint = filterContainer.offsetTop + filterContainer.offsetHeight;
+        stickyBar.classList.toggle('visible', window.scrollY > triggerPoint);
+    });
+
+    stickyInput.addEventListener('input', () => {
+        mainInput.value = stickyInput.value;
+        updateClearButtonVisibility();
+        filterListings();
+    });
+
+    // Keep the sticky input mirrored if the person types in the main bar instead
+    mainInput.addEventListener('input', () => {
+        if (document.activeElement !== stickyInput) stickyInput.value = mainInput.value;
+    });
+}
+
+// --- NEW: FOOTER WIRING (current year + Settings link) ---
+function setupFooter() {
+    const yearEl = document.getElementById('footerYear');
+    if (yearEl) yearEl.innerText = new Date().getFullYear();
+
+    const footerSettingsLink = document.getElementById('footerSettingsLink');
+    if (footerSettingsLink) {
+        footerSettingsLink.onclick = (e) => {
+            e.preventDefault();
+            const settingsBtn = document.getElementById('settingsBtn');
+            if (settingsBtn) settingsBtn.click(); // reuses the exact same modal/logic as the drawer's Settings link
+        };
+    }
 }
 
 // --- NEW: CATEGORY QUICK-FILTER PILLS ---
@@ -2025,6 +2206,10 @@ function setupBookmarkToggles() {
             }
         });
         
+        // NEW: keep the "X Stays Available" header in sync with the Saved view too
+        updateResultsHeaderCount(found);
+        if (found === 0) hideResultsHeader(); else showResultsHeader();
+
         // UPDATED: added a "Browse Listings" call-to-action button so this
         // empty state gives the person something to do next, instead of
         // just sitting there as dead space (see .empty-state-cta in
