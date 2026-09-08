@@ -521,6 +521,56 @@
         }
         .smart-search-hint-link:hover { text-decoration: underline; }
 
+        /* NEW: subtle separator between the quick-filter pills above and
+           the price/rooms/location "advanced filters" section below */
+        .filter-divider { border-top: 1px dashed var(--border); margin-top: 18px; }
+
+        /* NEW: "24 Stays Available" + Sort dropdown, between the filter
+           card and the grid so the grid doesn't just start abruptly */
+        .results-header {
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+            max-width: 1400px; margin: 0 auto; padding: 0 5% 18px;
+            font-size: 14px; font-weight: 700; color: var(--ink);
+        }
+        .results-header strong { color: var(--primary); }
+        .sort-control { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--ink-soft); }
+        .sort-control select {
+            border: 1.5px solid var(--border); background: #fff; border-radius: 10px;
+            padding: 7px 12px; font-size: 12.5px; font-weight: 700; color: var(--ink);
+            outline: none; cursor: pointer; transition: border-color 0.2s;
+        }
+        .sort-control select:focus { border-color: var(--accent); }
+
+        /* NEW: compact sticky search bar - hidden until the person scrolls
+           past the real search bar (see setupStickySearchBar() in home.js) */
+        .sticky-search-bar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1050;
+            background: #fff; box-shadow: 0 4px 18px rgba(0,0,0,0.1);
+            padding: 14px 78px;
+            transform: translateY(-100%);
+            transition: transform 0.25s ease;
+        }
+        .sticky-search-bar.visible { transform: translateY(0); }
+        .sticky-search-inner {
+            display: flex; align-items: center; gap: 12px;
+            max-width: 640px; margin: 0 auto;
+            background: var(--bg); border: 1.5px solid var(--border); border-radius: 999px;
+            padding: 10px 18px;
+        }
+        .sticky-search-inner i { color: #9e9e9e; font-size: 13px; }
+        .sticky-search-inner input { border: none; background: transparent; outline: none; width: 100%; font-size: 14px; }
+
+        /* NEW: footer - gives the page a proper closing section */
+        .site-footer { background: #0b1220; color: rgba(255,255,255,0.75); padding: 44px 5% 32px; margin-top: 40px; }
+        .footer-inner { max-width: 1400px; margin: 0 auto; text-align: center; }
+        .footer-brand { font-weight: 800; font-size: 1.3rem; color: #fff; margin-bottom: 8px; }
+        .footer-brand span { color: var(--accent); }
+        .footer-tagline { font-size: 13px; margin: 0 0 18px; color: rgba(255,255,255,0.55); }
+        .footer-links { display: flex; justify-content: center; gap: 22px; margin-bottom: 18px; flex-wrap: wrap; }
+        .footer-links a { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 13px; font-weight: 600; }
+        .footer-links a:hover { color: #fff; text-decoration: underline; }
+        .footer-copy { font-size: 11.5px; color: rgba(255,255,255,0.4); margin: 0; }
+
         /* ============ LISTINGS GRID (centered, capped width, more breathing room) ============ */
         .container {
             padding: 0 5% 70px;
@@ -538,13 +588,42 @@
         }
         .listing-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
 
-        .category-badge {
+        /* UPDATED: category badge + status badge used to be two separate
+           absolutely-positioned pills stacked on top of each other
+           (top:14px then top:46px) - now they share one flex row via
+           .card-badges, and category-badge itself is position:static since
+           its parent handles the positioning. */
+        .card-badges {
             position: absolute; top: 14px; left: 14px; z-index: 10;
-            background: rgba(13,71,161,0.88); color: #fff; font-size: 11px; font-weight: 700;
+            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+            max-width: calc(100% - 60px); /* leaves room for the save/edit button on the right */
+        }
+        .category-badge {
+            color: #fff; font-size: 11px; font-weight: 700;
             padding: 5px 13px; border-radius: 20px; backdrop-filter: blur(4px); letter-spacing: 0.2px;
         }
+        /* NEW: color-coded per property type so it's scannable at a glance
+           while scrolling, instead of every category looking identical. */
+        .category-badge.cat-apartment { background: rgba(13,71,161,0.88); }
+        .category-badge.cat-house { background: rgba(46,125,50,0.88); }
+        .category-badge.cat-condo { background: rgba(123,31,162,0.88); }
+        .category-badge.cat-bedspace { background: rgba(230,126,20,0.88); }
+        .category-badge.cat-default { background: rgba(13,71,161,0.88); }
 
-        /* NEW: Availability badge (Available / Occupied) shown on every listing card */
+        /* UPDATED: status is now a compact dot+label chip sitting in the
+           same row as the category badge, instead of a second full pill
+           stacked underneath it. */
+        .status-chip {
+            display: inline-flex; align-items: center; gap: 6px;
+            color: #fff; font-size: 10.5px; font-weight: 700;
+            padding: 5px 11px 5px 9px; border-radius: 20px; backdrop-filter: blur(4px); letter-spacing: 0.2px;
+        }
+        .status-chip .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #fff; flex-shrink: 0; }
+        .status-chip.status-chip-available { background: rgba(46,125,50,0.85); }
+        .status-chip.status-chip-occupied { background: rgba(255,82,82,0.85); }
+
+        /* LEGACY: superseded by .card-badges/.category-badge/.status-chip
+           above - kept but no longer generated in renderListings(). */
         .status-badge {
             position: absolute; top: 46px; left: 14px; z-index: 10;
             color: #fff; font-size: 10.5px; font-weight: 700;
@@ -558,6 +637,17 @@
             width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
             box-shadow: 0 4px 14px rgba(0,0,0,0.14); cursor: pointer; z-index: 10; transition: 0.2s;
         }
+
+        /* NEW: landlords see this instead of the heart save-btn on their
+           own listing cards - opens the Edit Listing modal directly
+           without needing to open the details modal first. */
+        .quick-edit-btn {
+            position: absolute; top: 14px; right: 14px; background: rgba(255,255,255,0.92); border-radius: 50%;
+            width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.14); cursor: pointer; z-index: 10; transition: 0.2s;
+            color: var(--primary); font-size: 14px;
+        }
+        .quick-edit-btn:hover { transform: scale(1.1); background: var(--primary); color: #fff; }
         .save-btn:hover { transform: scale(1.1); }
         .save-btn i { color: #cbd5e1; font-size: 17px; transition: color 0.2s; }
         .save-btn.active i { color: var(--danger); }
@@ -610,7 +700,10 @@
         @media (max-width: 768px) {
             .hero { padding: 92px 6% 58px; }
             .menu-toggle { top: 16px; left: 16px; width: 44px; height: 44px; font-size: 16px; }
-            .floating-logo { top: 16px; right: 16px; font-size: 1rem; padding: 9px 15px; }
+            /* UPDATED: hidden on mobile - the drawer already carries the
+               StayFind branding once opened, so this floating copy just
+               added extra visual clutter next to the hamburger button. */
+            .floating-logo { display: none; }
             .filter-container { margin: -30px auto 24px; padding: 20px 18px 18px; width: 90%; }
             .filters-toggle-btn { display: flex; }
             #advancedFiltersBody { display: none; margin-top: 0; }
@@ -623,6 +716,9 @@
             .search-box-wrapper { flex-direction: row; }
             .search-btn { padding: 10px 16px; font-size: 14px; }
             .category-pill { padding: 7px 14px; font-size: 12px; } /* NEW: slightly tighter pills on phones */
+            .sticky-search-bar { padding: 12px 60px; } /* NEW: matches the smaller hamburger button on phones */
+            .results-header { padding: 0 5% 14px; font-size: 13px; }
+            .site-footer { padding: 36px 6% 110px; } /* NEW: extra bottom room so the mobile FAB/Smart Search button doesn't sit on top of the footer text */
             .availability-pill { padding: 7px 14px; font-size: 12px; } /* NEW: matches category pills on phones */
             .clear-filters-link { justify-content: center; padding: 10px; } /* NEW: centers when stacked full-width */
             .post-fab { display: flex; }
@@ -876,6 +972,11 @@
         <!-- NEW: live result count + Smart Search bridge, only shown once a search/filter is active -->
         <div class="search-meta-row" id="searchMetaRow"></div>
 
+        <!-- NEW: subtle separator between the "quick filters" section
+             above (search/category/availability) and the "advanced
+             filters" section below (price/rooms/location) -->
+        <div class="filter-divider"></div>
+
         <button type="button" id="filtersToggleBtn" class="filters-toggle-btn" aria-expanded="false">
             <i class="fas fa-filter"></i> <span id="filtersToggleLabel">Filters</span>
         </button>
@@ -918,7 +1019,46 @@
         </div>
     </div>
 
+    <!-- NEW: results header + sort options, sits between the filter card and the grid -->
+    <div class="results-header" id="resultsHeader">
+        <span id="resultsHeaderCount">Loading stays…</span>
+        <div class="sort-control">
+            <label for="sortSelect">Sort by</label>
+            <select id="sortSelect" onchange="applySorting()">
+                <option value="newest">Newest</option>
+                <option value="price_asc">Price: Low to High</option>
+                <option value="price_desc">Price: High to Low</option>
+                <option value="rooms_desc">Most Rooms</option>
+            </select>
+        </div>
+    </div>
+
     <div class="container" id="listingsGrid"></div>
+
+    <!-- NEW: footer so the page has a proper closing section instead of
+         just stopping after the last row of cards -->
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <div class="footer-brand">Stay<span>Find</span></div>
+            <p class="footer-tagline">Helping you find verified rentals across the Philippines.</p>
+            <div class="footer-links">
+                <a id="footerBrowseLink" href="home.html">Browse</a>
+                <a id="footerSettingsLink" href="#">Settings</a>
+                <a href="admin.html">Admin Panel</a>
+            </div>
+            <p class="footer-copy">© <span id="footerYear"></span> StayFind. Made with hart in the Candelaria.</p>
+        </div>
+    </footer>
+
+    <!-- NEW: compact sticky search bar - slides in once the real search
+         bar has scrolled out of view, so searching doesn't require
+         scrolling back to the top. -->
+    <div class="sticky-search-bar" id="stickySearchBar">
+        <div class="sticky-search-inner">
+            <i class="fas fa-search"></i>
+            <input type="text" id="stickySearchInput" placeholder="Search stays..." autocomplete="off">
+        </div>
+    </div>
 
     <script src="home.js"></script>
 </body>
