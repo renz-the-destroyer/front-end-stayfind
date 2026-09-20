@@ -62,8 +62,8 @@ function renderSelectedFilePreviews() {
         const url = URL.createObjectURL(file);
         return `
             <div style="position:relative; width:60px; height:60px;">
-                <img src="${url}" style="width:60px; height:60px; object-fit:cover; border-radius:8px; border:1px solid rgba(255,255,255,0.12);">
-                <span onclick="removeSelectedListingFile(${idx})" title="Remove photo" style="position:absolute; top:-6px; right:-6px; background:#ff5c6c; color:white; width:18px; height:18px; border-radius:50%; font-size:11px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; box-shadow:0 1px 3px rgba(0,0,0,0.5);">&times;</span>
+                <img src="${url}" style="width:60px; height:60px; object-fit:cover; border-radius:5px; border:1px solid #ddd;">
+                <span onclick="removeSelectedListingFile(${idx})" title="Remove photo" style="position:absolute; top:-6px; right:-6px; background:#ff5252; color:white; width:18px; height:18px; border-radius:50%; font-size:11px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; box-shadow:0 1px 3px rgba(0,0,0,0.4);">&times;</span>
             </div>
         `;
     }).join('');
@@ -104,7 +104,7 @@ function buildCarouselHTML(imagesField, carouselKey) {
     return `
         <div class="carousel-container ${isStandalone ? 'carousel-standalone' : ''}" id="carousel-${carouselKey}">
             <div class="carousel-track" style="transform: translateX(0px);">
-                ${imgArray.map(img => `<img src="${img}" class="carousel-img" onerror="this.src='https://via.placeholder.com/400x300?text=No+Image'">`).join('')}
+                ${imgArray.map(img => `<img src="${img}" class="carousel-img" onerror="this.src='https://via.placeholder.com/400x200?text=No+Image'">`).join('')}
             </div>
             ${imgArray.length > 1 ? `
                 <button class="carousel-btn prev-btn" onclick="moveCarousel(event, '${carouselKey}', -1)"><i class="fas fa-chevron-left"></i></button>
@@ -113,13 +113,6 @@ function buildCarouselHTML(imagesField, carouselKey) {
             ` : ''}
         </div>
     `;
-}
-
-// NEW: how many photos a listing actually has, used for the "+N photos"
-// pill on the redesigned card (matches the reference UI's "+28 Images").
-function countListingImages(imagesField) {
-    if (!imagesField || imagesField.trim() === "") return 0;
-    return imagesField.split('|||').map(i => i.trim()).filter(i => i !== "").length;
 }
 
 // NEW: shared image-compression helper. This used to be defined ONLY inside
@@ -196,16 +189,16 @@ async function checkLandlordStatusUpdate() {
 
         if (oldStatus === 'pending' && newStatus === 'approved') {
             Swal.fire({
-                title: 'Landlord access approved 🎉',
-                text: 'Your landlord request has been approved. The Post button is now unlocked so you can start listing your properties.',
+                title: 'Landlord Access Approved! 🎉',
+                text: 'Congratulations! Your landlord request has been approved. The Post button is now unlocked so you can start listing your properties.',
                 icon: 'success',
-                confirmButtonText: 'Great'
+                confirmButtonText: 'Great!'
             });
         } else if (oldStatus === 'pending' && newStatus === 'rejected') {
             Swal.fire({
-                title: 'Landlord request rejected',
-                html: `<p style="text-align:left; font-size:14px; margin:0;">${freshUser.landlord_rejection_reason || 'Your submitted documents did not meet our requirements.'}</p>
-                       <p style="text-align:left; font-size:12px; margin-top:12px; opacity:.7;">You can update your documents and try again anytime from <strong>Settings</strong>.</p>`,
+                title: 'Landlord Request Rejected',
+                html: `<p style="text-align:left; font-size:14px; color:#555; margin:0;">${freshUser.landlord_rejection_reason || 'Your submitted documents did not meet our requirements.'}</p>
+                       <p style="text-align:left; font-size:12px; color:#90a4ae; margin-top:12px;">You can update your documents and try again anytime from <strong>Settings</strong>.</p>`,
                 icon: 'info',
                 confirmButtonText: 'Got it'
             });
@@ -227,7 +220,7 @@ async function checkLandlordStatusUpdate() {
             }
             const postFab = document.getElementById('postFab');
             if (postFab) {
-                postFab.style.display = (currentUser.role === 'landlord') ? 'flex' : 'none';
+                postFab.style.display = (currentUser.role === 'landlord') ? '' : 'none';
             }
         }
     } catch (err) {
@@ -252,11 +245,11 @@ function setupHeroGreeting() {
     heroGreeting.innerText = `${timeGreeting}, ${name} 👋`;
 
     if (currentUser.role === 'landlord') {
-        if (heroEyebrow) heroEyebrow.innerText = "Your listings";
-        if (heroSubtitle) heroSubtitle.innerText = "Here's what's happening with your properties today.";
+        if (heroEyebrow) heroEyebrow.innerText = "Landlord Dashboard";
+        if (heroSubtitle) heroSubtitle.innerText = "Here's what's happening with your listings today.";
     } else {
-        if (heroEyebrow) heroEyebrow.innerText = "Find your next stay";
-        if (heroSubtitle) heroSubtitle.innerText = "Verified places to rent across the Philippines.";
+        if (heroEyebrow) heroEyebrow.innerText = "Find Your Next Stay";
+        if (heroSubtitle) heroSubtitle.innerText = "Discover verified stays across the Philippines.";
     }
 }
 
@@ -285,96 +278,30 @@ window.onload = () => {
 
     setupHeroGreeting(); // NEW: personalized hero header
     loadListings();
-    setupSettingsLogic();
-    setupPostListingLogic();
-    setupBookmarkToggles();
+    setupSettingsLogic(); 
+    setupPostListingLogic(); 
+    setupBookmarkToggles(); 
     setupStarRatingLogic(); // Initialize star click listeners
-    setupSideDrawer(); // NEW: hamburger/avatar-triggered side navigation
-    setupFiltersToggle(); // NEW: collapsible filter panel
-    setupAvailabilityFilterButtons(); // NEW: Any Status / Available / Occupied pills
-    setupAvailabilityToggle(); // NEW: the "Show available stays only" switch in the header
+    setupSideDrawer(); // NEW: hamburger-triggered side navigation
+    setupFiltersToggle(); // NEW: collapsible filter panel on mobile
+    setupAvailabilityFilterButtons(); // NEW: Available Property / Occupied Property buttons
     setupCategoryPills(); // NEW: one-tap Apartment/House/Condo/Bedspace quick filters
     setupSearchBarEnhancements(); // NEW: autocomplete, recent searches, clear button, live count
-    setupStickySearchBar(); // NEW: compact search bar (kept for backwards compatibility)
-    setupBottomNav(); // NEW: Explore / Saved / Profile tab bar
+    setupStickySearchBar(); // NEW: compact search bar that slides in once you scroll past the real one
     setupFooter(); // NEW: footer year + Settings link
 
     // NEW: check for a landlord approval/rejection outcome to notify the user about
     checkLandlordStatusUpdate();
 };
 
-// --- NEW: BOTTOM TAB BAR (Explore / Saved / Profile) ---
-// The tab bar doesn't own any logic of its own - each tab just triggers the
-// existing drawer link (viewAllBtn / viewSavedBtn / settingsBtn), so all the
-// original behavior is reused untouched. This only keeps the highlighted tab
-// in sync, including when navigation happens from inside the drawer instead.
-function setupBottomNav() {
-    const navExplore = document.getElementById('navExplore');
-    const navSaved = document.getElementById('navSaved');
-    const navProfile = document.getElementById('navProfile');
-    const viewAllBtn = document.getElementById('viewAllBtn');
-    const viewSavedBtn = document.getElementById('viewSavedBtn');
-    const settingsBtn = document.getElementById('settingsBtn');
-    if (!navExplore || !navSaved || !navProfile) return;
-
-    if (navExplore) navExplore.onclick = () => { if (viewAllBtn) viewAllBtn.click(); setActiveBottomNav('explore'); };
-    if (navSaved) navSaved.onclick = () => { if (viewSavedBtn) viewSavedBtn.click(); setActiveBottomNav('saved'); };
-    if (navProfile) navProfile.onclick = () => { if (settingsBtn) settingsBtn.click(); };
-
-    // Keep the tab bar in sync when the drawer links are used directly
-    if (viewAllBtn) viewAllBtn.addEventListener('click', () => setActiveBottomNav('explore'));
-    if (viewSavedBtn) viewSavedBtn.addEventListener('click', () => setActiveBottomNav('saved'));
-}
-
-function setActiveBottomNav(key) {
-    const map = { explore: 'navExplore', saved: 'navSaved', profile: 'navProfile' };
-    Object.values(map).forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.remove('nav-current');
-    });
-    const activeEl = document.getElementById(map[key]);
-    if (activeEl) activeEl.classList.add('nav-current');
-}
-
-// --- NEW: "SHOW AVAILABLE STAYS ONLY" SWITCH ---
-// Sits in the header next to the greeting card. It's deliberately a thin
-// wrapper over the existing availability pills so there's still exactly ONE
-// source of truth for this filter (currentAvailabilityFilter) - flipping the
-// switch just clicks the matching pill, which runs filterListings() the
-// normal way.
-function setupAvailabilityToggle() {
-    const toggle = document.getElementById('availableOnlyToggle');
-    if (!toggle) return;
-
-    toggle.addEventListener('change', () => {
-        const availableBtn = document.getElementById('availablePropertyBtn');
-        const anyBtn = document.getElementById('anyStatusBtn');
-        if (toggle.checked) {
-            if (availableBtn) availableBtn.click();
-        } else {
-            if (anyBtn) anyBtn.click();
-        }
-    });
-
-    syncAvailabilityToggle();
-}
-
-// Keeps the switch visually correct when the availability filter is changed
-// from somewhere else (the pills, resetFilters, loadListings, Saved view).
-function syncAvailabilityToggle() {
-    const toggle = document.getElementById('availableOnlyToggle');
-    if (!toggle) return;
-    toggle.checked = (currentAvailabilityFilter === 'available');
-}
-
 // --- NEW: SIDE DRAWER NAVIGATION ---
 // Consolidates what used to be separate top-nav links + a bottom mobile nav
-// bar into a single slide-in panel that works the same way on phone and
-// desktop. All the individual nav items (Browse, Saved, Post, Settings,
-// Admin, Logout) keep their original element IDs, so every existing click
-// handler elsewhere in this file (setupBookmarkToggles, setupSettingsLogic,
-// the logout handler, etc.) keeps working untouched - this only adds the
-// open/close behavior around them.
+// bar into a single hamburger-triggered slide-in panel that works the same
+// way on phone and desktop. All the individual nav items (Browse, Saved,
+// Post, Settings, Admin, Logout) keep their original element IDs, so every
+// existing click handler elsewhere in this file (setupBookmarkToggles,
+// setupSettingsLogic, the logout handler, etc.) keeps working untouched -
+// this only adds the open/close behavior around them.
 function setupSideDrawer() {
     const menuToggleBtn = document.getElementById('menuToggleBtn');
     const closeDrawerBtn = document.getElementById('closeDrawerBtn');
@@ -411,10 +338,9 @@ function setupSideDrawer() {
 
     // Fill in the little identity card at the top of the drawer.
     const drawerUserInfo = document.getElementById('drawerUserInfo');
-    const name = currentUser ? (currentUser.full_name || currentUser.name || "User") : "User";
-    const initial = name.trim().charAt(0).toUpperCase() || "U";
-
     if (drawerUserInfo && currentUser) {
+        const name = currentUser.full_name || currentUser.name || "User";
+        const initial = name.trim().charAt(0).toUpperCase() || "U";
         drawerUserInfo.innerHTML = `
             <div class="drawer-avatar">${initial}</div>
             <div>
@@ -423,16 +349,13 @@ function setupSideDrawer() {
             </div>
         `;
     }
-
-    // NEW: the avatar button in the top search row shows the same initial.
-    const topAvatarInitial = document.getElementById('topAvatarInitial');
-    if (topAvatarInitial) topAvatarInitial.innerText = initial;
 }
 
-// --- NEW: COLLAPSIBLE FILTER PANEL ---
-// The price/rooms/location filters used to always take up vertical space
-// below the search bar even when nobody needed them right now. This tucks
-// them behind a toggle so the page opens clean.
+// --- NEW: COLLAPSIBLE FILTER PANEL (mobile only) ---
+// On phones, the price/rooms/location filters used to always take up
+// vertical space below the search bar even when nobody needed them right
+// now. This tucks them behind a "Filters" toggle so the page opens clean;
+// on desktop the CSS media query keeps them visible as before.
 function setupFiltersToggle() {
     const toggleBtn = document.getElementById('filtersToggleBtn');
     const label = document.getElementById('filtersToggleLabel');
@@ -443,8 +366,8 @@ function setupFiltersToggle() {
         const isOpen = body.classList.toggle('open');
         toggleBtn.setAttribute('aria-expanded', String(isOpen));
         const icon = toggleBtn.querySelector('i');
-        if (icon) icon.className = isOpen ? 'fas fa-chevron-up' : 'fas fa-sliders';
-        if (label) label.innerText = isOpen ? 'Hide filters' : 'Price, rooms & location';
+        if (icon) icon.className = isOpen ? 'fas fa-chevron-up' : 'fas fa-filter';
+        if (label) label.innerText = isOpen ? 'Hide Filters' : 'Filters';
     };
 }
 
@@ -465,7 +388,6 @@ function setupAvailabilityFilterButtons() {
             pillsContainer.querySelectorAll('.availability-pill').forEach(p => p.classList.remove('availability-active'));
             pill.classList.add('availability-active');
             currentAvailabilityFilter = pill.getAttribute('data-availability') || null;
-            syncAvailabilityToggle(); // NEW: keep the header switch in sync
             const noStatusMsg = document.getElementById('no-status-msg');
             if (noStatusMsg) noStatusMsg.remove();
             filterListings();
@@ -484,7 +406,6 @@ function clearAvailabilityFilterState() {
         const anyPill = document.getElementById('anyStatusBtn');
         if (anyPill) anyPill.classList.add('availability-active');
     }
-    syncAvailabilityToggle(); // NEW
     const noStatusMsg = document.getElementById('no-status-msg');
     if (noStatusMsg) noStatusMsg.remove();
 }
@@ -540,13 +461,11 @@ function applyAvailabilityFilter(status, clickedBtn, otherBtn) {
     }
 }
 
-// --- REDESIGNED: SMART SEARCH UI INJECTION (now dark-themed) ---
+// --- REDESIGNED: SMART SEARCH UI INJECTION ---
 // Builds the floating "Smart Finder" launcher + panel. The IDs
 // (smartSearchBtn, smartSearchBox, smartInput, executeSmartSearch) and the
 // show/hide-via-style.display mechanism are kept the same so
 // processSmartSearch() below still works without any changes to its wiring.
-// UPDATED: repositioned to sit above the new bottom tab bar, and recolored
-// to match the dark app shell.
 function injectSmartSearchUI() {
     // Inject the widget's CSS once (keyframes/hover states need a real
     // stylesheet - inline style attributes can't do animations or :hover).
@@ -555,23 +474,21 @@ function injectSmartSearchUI() {
         styleTag.id = 'smartSearchStyles';
         styleTag.textContent = `
             .ss-launcher {
-                position: fixed;
-                bottom: calc(86px + env(safe-area-inset-bottom));
-                right: 20px; z-index: 1150;
+                position: fixed; bottom: 20px; right: 20px; z-index: 999;
                 display: flex; align-items: center; gap: 10px;
-                padding: 13px 20px 13px 17px; border-radius: 999px; border: none;
-                background: linear-gradient(135deg, #4d9bff, #1d6ede); color: #fff;
+                padding: 14px 22px 14px 18px; border-radius: 999px; border: none;
+                background: linear-gradient(135deg, #0d47a1, #1e88e5); color: #fff;
                 font-family: 'Plus Jakarta Sans', 'Montserrat', sans-serif;
-                font-weight: 700; font-size: 13.5px; cursor: pointer;
-                box-shadow: 0 14px 32px rgba(29,110,222,0.5);
+                font-weight: 700; font-size: 14px; cursor: pointer;
+                box-shadow: 0 10px 30px rgba(13,71,161,0.4);
                 transition: transform 0.2s ease, box-shadow 0.2s ease;
             }
-            .ss-launcher:hover { transform: translateY(-2px); box-shadow: 0 18px 38px rgba(29,110,222,0.6); }
+            .ss-launcher:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(13,71,161,0.5); }
             .ss-launcher:active { transform: scale(0.96); }
-            .ss-launcher i { font-size: 15px; }
+            .ss-launcher i { font-size: 16px; }
             .ss-launcher-pulse {
                 position: absolute; inset: 0; border-radius: 999px;
-                border: 2px solid rgba(116,178,255,0.6);
+                border: 2px solid rgba(66,165,245,0.6);
                 animation: ss-pulse 2.2s ease-out infinite; pointer-events: none;
             }
             @keyframes ss-pulse {
@@ -579,12 +496,11 @@ function injectSmartSearchUI() {
                 100% { transform: scale(1.35); opacity: 0; }
             }
             .ss-panel {
-                display: none; position: fixed;
-                bottom: calc(150px + env(safe-area-inset-bottom)); right: 20px; z-index: 1300;
+                display: none; position: fixed; bottom: 90px; right: 20px; z-index: 1000;
                 width: 340px; max-width: calc(100vw - 40px);
-                background: #161e2a; border-radius: 22px; overflow: hidden;
-                box-shadow: 0 30px 70px rgba(0,0,0,0.6);
-                border: 1px solid rgba(255,255,255,0.1);
+                background: #ffffff; border-radius: 22px; overflow: hidden;
+                box-shadow: 0 24px 60px rgba(16,24,40,0.22);
+                border: 1px solid rgba(13,71,161,0.08);
                 font-family: 'Plus Jakarta Sans', 'Montserrat', sans-serif;
                 opacity: 0; transform: translateY(16px) scale(0.97);
                 transition: opacity 0.25s ease, transform 0.25s ease;
@@ -592,8 +508,8 @@ function injectSmartSearchUI() {
             }
             .ss-panel.open { display: flex; opacity: 1; transform: translateY(0) scale(1); }
             .ss-panel-header {
-                background: linear-gradient(135deg, #1d6ede, #4d9bff);
-                padding: 19px 20px 21px; display: flex; align-items: flex-start;
+                background: linear-gradient(135deg, #0d47a1, #1565c0 55%, #1e88e5);
+                padding: 20px 20px 22px; display: flex; align-items: flex-start;
                 justify-content: space-between; position: relative; overflow: hidden;
             }
             .ss-panel-header::after {
@@ -602,47 +518,46 @@ function injectSmartSearchUI() {
             }
             .ss-panel-eyebrow {
                 display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 1px;
-                color: rgba(255,255,255,0.8); margin-bottom: 4px;
+                text-transform: uppercase; color: rgba(255,255,255,0.75); margin-bottom: 4px;
             }
             .ss-panel-title { margin: 0; color: #fff; font-size: 19px; font-weight: 800; letter-spacing: -0.3px; }
             .ss-close-btn {
-                background: rgba(255,255,255,0.18); border: none; color: #fff;
+                background: rgba(255,255,255,0.16); border: none; color: #fff;
                 width: 30px; height: 30px; border-radius: 9px; cursor: pointer; font-size: 13px;
                 flex-shrink: 0; position: relative; z-index: 2; transition: background 0.15s;
             }
             .ss-close-btn:hover { background: rgba(255,255,255,0.3); }
             .ss-panel-body { padding: 18px 20px 20px; }
-            .ss-panel-intro { margin: 0 0 14px; font-size: 12.5px; color: #9babc3; line-height: 1.5; }
+            .ss-panel-intro { margin: 0 0 14px; font-size: 12.5px; color: #64748b; line-height: 1.5; }
             .ss-chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
             .ss-chip {
-                display: inline-flex; align-items: center; gap: 6px; padding: 8px 13px;
-                border-radius: 999px; border: 1px solid rgba(255,255,255,0.09); background: #1e2736;
-                color: #e4ebf5; font-size: 11.5px; font-weight: 600; cursor: pointer;
+                display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px;
+                border-radius: 999px; border: 1px solid #e3f2fd; background: #f8fbff;
+                color: #0d47a1; font-size: 11.5px; font-weight: 600; cursor: pointer;
                 font-family: inherit; transition: background 0.15s, transform 0.15s, border-color 0.15s;
             }
-            .ss-chip i { font-size: 10px; color: #74b2ff; }
-            .ss-chip:hover { background: #263043; border-color: rgba(116,178,255,0.45); transform: translateY(-1px); }
+            .ss-chip i { font-size: 10px; color: #42a5f5; }
+            .ss-chip:hover { background: #e3f2fd; border-color: #42a5f5; transform: translateY(-1px); }
             .ss-chip:active { transform: scale(0.96); }
             .ss-input-row { position: relative; margin-bottom: 12px; }
-            .ss-input-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #6c7a92; font-size: 13px; }
+            .ss-input-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 13px; }
             .ss-input {
-                width: 100%; padding: 13px 14px 13px 38px; border-radius: 12px;
-                border: 1px solid rgba(255,255,255,0.09); background: #1e2736; font-size: 13.5px;
-                font-family: inherit; outline: none; box-sizing: border-box; color: #f1f5fa;
+                width: 100%; padding: 12px 14px 12px 38px; border-radius: 12px;
+                border: 1.5px solid #e5e9f0; background: #fbfcfe; font-size: 13.5px;
+                font-family: inherit; outline: none; box-sizing: border-box;
                 transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
             }
-            .ss-input::placeholder { color: #6c7a92; }
-            .ss-input:focus { border-color: #4d9bff; box-shadow: 0 0 0 4px rgba(77,155,255,0.14); background: #263043; }
+            .ss-input:focus { border-color: #42a5f5; box-shadow: 0 0 0 4px rgba(66,165,245,0.14); background: #fff; }
             .ss-submit-btn {
-                width: 100%; padding: 14px; border: none; border-radius: 13px;
-                background: linear-gradient(135deg, #4d9bff, #1d6ede); color: #fff;
+                width: 100%; padding: 13px; border: none; border-radius: 13px;
+                background: linear-gradient(135deg, #0d47a1, #1565c0); color: #fff;
                 font-weight: 700; font-size: 13.5px; cursor: pointer;
-                box-shadow: 0 12px 24px rgba(29,110,222,0.35);
+                box-shadow: 0 10px 22px rgba(13,71,161,0.28);
                 transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
                 display: flex; align-items: center; justify-content: center; gap: 8px;
                 font-family: inherit;
             }
-            .ss-submit-btn:hover { transform: translateY(-1px); }
+            .ss-submit-btn:hover { transform: translateY(-1px); box-shadow: 0 14px 28px rgba(13,71,161,0.35); }
             .ss-submit-btn:disabled { opacity: 0.75; cursor: not-allowed; transform: none; }
             .ss-dot {
                 width: 6px; height: 6px; border-radius: 50%; background: #fff;
@@ -655,9 +570,9 @@ function injectSmartSearchUI() {
                 40% { transform: scale(1); opacity: 1; }
             }
             @media (max-width: 480px) {
-                .ss-panel { width: calc(100vw - 32px); right: 16px; }
+                .ss-panel { width: 100%; right: 0; bottom: 0; border-radius: 22px 22px 0 0; max-width: 100vw; }
                 .ss-launcher-label { display: none; }
-                .ss-launcher { padding: 15px; }
+                .ss-launcher { padding: 14px; }
             }
             @media (prefers-reduced-motion: reduce) {
                 .ss-launcher-pulse, .ss-dot { animation: none; }
@@ -684,7 +599,7 @@ function injectSmartSearchUI() {
     chatbox.innerHTML = `
         <div class="ss-panel-header">
             <div>
-                <span class="ss-panel-eyebrow">AI-assisted</span>
+                <span class="ss-panel-eyebrow">AI-Assisted</span>
                 <h3 class="ss-panel-title">Smart Finder</h3>
             </div>
             <button type="button" id="smartSearchCloseBtn" class="ss-close-btn" aria-label="Close"><i class="fas fa-xmark"></i></button>
@@ -702,7 +617,7 @@ function injectSmartSearchUI() {
                 <input type="text" id="smartInput" class="ss-input" placeholder="e.g. bahay malapit sa palengke...">
             </div>
             <button type="button" id="executeSmartSearch" class="ss-submit-btn">
-                <span class="ss-submit-label"><i class="fas fa-wand-magic-sparkles"></i> Find stays</span>
+                <span class="ss-submit-label"><i class="fas fa-wand-magic-sparkles"></i> Find Stays</span>
             </button>
         </div>
     `;
@@ -764,16 +679,16 @@ async function processSmartSearch() {
         const response = await fetch(`${API_BASE}/smart-search`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+            body: JSON.stringify({ 
                 message: rawQuery.toLowerCase(),
                 userContext: { role: currentUser.role, id: currentUser.id } // Send role context to backend
-            })
+            }) 
         });
 
         if (!response.ok) throw new Error("Search failed");
 
         const data = await response.json();
-        console.log("🕵️ BACKEND RESPONSE:", data);
+        console.log("🕵️ BACKEND RESPONSE:", data); 
 
         let results = data.results || [];
 
@@ -783,22 +698,22 @@ async function processSmartSearch() {
             smartSearchBoxEl.style.display = 'none';
             allListingsCache = results; // NEW: keep the search bar's autocomplete in sync with these results
             currentDisplayedItems = results; // NEW: keep the Sort dropdown's source data in sync too
-            renderListings(results);
-
-            Swal.fire({
-                title: 'Smart Search',
-                text: `Found ${results.length} matches!`,
-                icon: 'success',
-                toast: true,
-                position: 'top-end',
-                timer: 3000,
-                showConfirmButton: false
+            renderListings(results); 
+            
+            Swal.fire({ 
+                title: 'Smart Search', 
+                text: `Found ${results.length} matches!`, 
+                icon: 'success', 
+                toast: true, 
+                position: 'top-end', 
+                timer: 3000, 
+                showConfirmButton: false 
             });
         } else {
-            Swal.fire({
-                title: 'No matches',
-                text: `We couldn't find exactly "${rawQuery}". Try simpler keywords like "apartment" or "eu".`,
-                icon: 'info'
+            Swal.fire({ 
+                title: 'No matches', 
+                text: `We couldn't find exactly "${rawQuery}". Try simpler keywords like "apartment" or "eu".`, 
+                icon: 'info' 
             });
         }
     } catch (error) {
@@ -831,18 +746,16 @@ function emptyStateHTML(icon, title, subtitle, ctaHTML = "") {
     `;
 }
 
-// UPDATED: skeletons now mirror the new card shape (photo block + an
-// overlapping info panel) instead of the old flat card.
-function renderSkeletonCards(count = 4) {
+function renderSkeletonCards(count = 8) {
     if (!listingsGrid) return;
     listingsGrid.innerHTML = Array.from({ length: count }).map(() => `
         <div class="listing-card skeleton-card">
-            <div class="card-media"><div class="skeleton-block skeleton-image"></div></div>
-            <div class="card-body">
-                <div class="skeleton-block skeleton-line" style="width:40%;"></div>
-                <div class="skeleton-block skeleton-line" style="width:75%; height:18px; margin-top:14px;"></div>
-                <div class="skeleton-block skeleton-line" style="width:55%; margin-top:10px;"></div>
-                <div class="skeleton-block skeleton-line" style="width:85%; margin-top:16px; height:12px;"></div>
+            <div class="skeleton-block skeleton-image"></div>
+            <div class="listing-info">
+                <div class="skeleton-block skeleton-line" style="width:45%;"></div>
+                <div class="skeleton-block skeleton-line" style="width:85%; margin-top:12px;"></div>
+                <div class="skeleton-block skeleton-line" style="width:60%; margin-top:8px;"></div>
+                <div class="skeleton-block skeleton-line" style="width:70%; margin-top:14px; height:12px;"></div>
             </div>
         </div>
     `).join('');
@@ -862,7 +775,7 @@ function hideResultsHeader() {
 function updateResultsHeaderCount(count) {
     const el = document.getElementById('resultsHeaderCount');
     if (!el) return;
-    el.innerHTML = `<strong>${count}</strong> ${count === 1 ? 'stay' : 'stays'} available`;
+    el.innerHTML = `<strong>${count}</strong> ${count === 1 ? 'Stay' : 'Stays'} Available`;
 }
 
 // NEW: sorts a COPY of the given array - never mutates currentDisplayedItems,
@@ -899,7 +812,7 @@ async function loadListings() {
     clearAvailabilityFilterState(); // NEW: reset the availability filter whenever the grid is fully reloaded
     clearCategoryFilterState(); // NEW: reset the category pills whenever the grid is fully reloaded
     renderSkeletonCards(); // NEW: shimmer placeholders instead of a bare "Loading..." line
-
+    
     try {
         const response = await fetch(`${API_BASE}/view`);
         const data = await response.json();
@@ -910,7 +823,7 @@ async function loadListings() {
             return;
         }
 
-        const dataToShow = (currentUser && currentUser.role === 'landlord')
+        const dataToShow = (currentUser && currentUser.role === 'landlord') 
             ? data.filter(item => {
                 const itemOwner = String(item.user_id || item.landlord_id || "");
                 const currentId = String(currentUser.id || "");
@@ -930,7 +843,7 @@ async function loadListings() {
                 'fa-clipboard-list',
                 "You haven't posted anything yet",
                 'Tap the button below to publish your first listing.',
-                `<button class="empty-state-cta" onclick="document.getElementById('postBtn').click()">Post a listing</button>`
+                `<button class="empty-state-cta" onclick="document.getElementById('postBtn').click()">Post a Listing</button>`
             );
             return;
         }
@@ -944,22 +857,9 @@ async function loadListings() {
 }
 
 // --- 3. RENDER HTML CARDS ---
-// UPDATED (UI REDESIGN): the card is now split into two parts - a photo
-// block (.card-media) carrying the carousel and the floating category chip,
-// and an info panel (.card-body) that overlaps the bottom of the photo,
-// matching the reference app design. The panel header holds the landlord
-// avatar + a "+N photos" pill on the left and the save/quick-edit round
-// button on the right; underneath sit the title, address line, a spec row
-// (rooms / size / category), and a footer row with the availability chip and
-// the price.
-//
-// Every data-* attribute the filtering/search code depends on is unchanged
-// (data-id, data-price, data-rooms, data-status, data-amenities,
-// data-category, data-title-raw, data-location-raw), as are the .title-text
-// and .location-text hooks used by highlightMatch().
 async function renderListings(items) {
-    listingsGrid.innerHTML = "";
-
+    listingsGrid.innerHTML = ""; 
+    
     // NEW: keep the "X Stays Available" header in sync with whatever's
     // actually being rendered, and make sure it's visible again (in case
     // an earlier empty-state branch had hidden it).
@@ -967,7 +867,7 @@ async function renderListings(items) {
     showResultsHeader();
 
     let savedListings = JSON.parse(localStorage.getItem('bookmarks')) || [];
-
+    
     if (currentUser && currentUser.id) {
         try {
             const favRes = await fetch(`${API_BASE}/get-bookmarks/${currentUser.id}`);
@@ -976,11 +876,11 @@ async function renderListings(items) {
                 savedListings = favData.map(item => item.listing_id);
                 localStorage.setItem('bookmarks', JSON.stringify(savedListings));
             }
-        } catch (err) {
-            console.log("Database bookmark sync failed, using local backup.");
+        } catch (err) { 
+            console.log("Database bookmark sync failed, using local backup."); 
         }
     }
-
+    
     items.forEach((item, idx) => {
         if (!item.title && !item.price) return;
 
@@ -990,32 +890,35 @@ async function renderListings(items) {
         // top of this file (also used by the details modal below).
         let carouselHTML = buildCarouselHTML(item.images, item.id);
 
-        // NEW: Availability badge (Available / Occupied), driven by the
+        // NEW: Availability badge (Available / Occupied), driven by the new
         // `status` column on listings. Defaults to 'available' for any
         // existing rows created before this column existed.
         const statusValue = (item.status || 'available').toLowerCase() === 'occupied' ? 'occupied' : 'available';
-
-        // Category chip floating over the photo (colour-coded per type).
-        const categoryLabel = item.category || 'Apartment';
+        // UPDATED: category badge + status are now one flex row (.card-badges)
+        // instead of two pills stacked on top of each other, and the
+        // category badge is color-coded per property type (see
+        // getCategoryBadgeClass()) so it's scannable while scrolling.
         const cardBadgesHTML = `
             <div class="card-badges">
-                <span class="category-badge ${getCategoryBadgeClass(item.category)}">
-                    <i class="fas ${getCategoryIcon(item.category)}"></i>${categoryLabel}
-                </span>
+                <span class="category-badge ${getCategoryBadgeClass(item.category)}">${item.category || 'Apartment'}</span>
+                <span class="status-chip status-chip-${statusValue}"><span class="status-dot"></span>${statusValue === 'occupied' ? 'Occupied' : 'Available'}</span>
             </div>
         `;
-
+        
         const card = document.createElement('div');
         card.className = 'listing-card';
         card.setAttribute('data-id', item.id);
         card.setAttribute('data-price', item.price || 0);
         card.setAttribute('data-rooms', item.rooms || 0);
-        card.setAttribute('data-status', statusValue); // NEW: used by the Available/Occupied filter
+        card.setAttribute('data-status', statusValue); // NEW: used by the Available/Occupied filter buttons
         // FIX: the search bar's placeholder promises "title, location, or
         // amenities" but amenities text was never stored anywhere on the
         // card, so searching "wifi" (or any amenity) could never match.
+        // Stashing it here (lowercased, same as the other filter fields)
+        // is what filterListings() below now checks against.
         card.setAttribute('data-amenities', (item.amenities || '').toLowerCase());
-        // NEW: lets the search bar match property type too.
+        // NEW: lets the search bar match property type too (e.g. searching
+        // "bedspace" should find a listing whose category is "Bedspace").
         card.setAttribute('data-category', (item.category || '').toLowerCase());
         // NEW: pristine (un-lowercased, unmodified) title/location strings
         // kept on the card so filterListings() can safely re-render
@@ -1023,15 +926,15 @@ async function renderListings(items) {
         // corrupting the underlying text (see highlightMatch()).
         card.setAttribute('data-title-raw', item.title || 'Cozy Room');
         card.setAttribute('data-location-raw', item.location || 'Unknown');
-        // NEW: stagger the fade-in slightly per card (capped so a long list
-        // doesn't leave later cards waiting too long to appear).
+        // NEW: stagger the fade-in-up animation slightly per card (capped so a
+        // long list doesn't leave later cards waiting too long to appear).
         card.style.animationDelay = `${Math.min(idx, 10) * 0.05}s`;
-
+        
         card.onclick = () => showFullDetails(item);
 
         // UI SECURITY: Hide save button for landlords
         const saveButtonHTML = currentUser.role === 'tenant' ? `
-            <div class="save-btn ${isSaved ? 'active' : ''}" onclick="toggleBookmark(event, ${item.id})" title="${isSaved ? 'Remove from saved' : 'Save this stay'}">
+            <div class="save-btn ${isSaved ? 'active' : ''}" onclick="toggleBookmark(event, ${item.id})">
                 <i class="fas fa-heart"></i>
             </div>
         ` : "";
@@ -1046,45 +949,23 @@ async function renderListings(items) {
             </div>
         ` : "";
 
-        // Landlord initial for the little avatar in the panel header.
-        const ownerName = item.landlord_name || 'Owner';
-        const ownerInitial = ownerName.trim().charAt(0).toUpperCase() || 'O';
-        const photoCount = countListingImages(item.images);
-        const photoPillText = photoCount > 1
-            ? `+${photoCount} photos`
-            : (photoCount === 1 ? ownerName : ownerName);
-
         card.innerHTML = `
-            <div class="card-media">
-                ${cardBadgesHTML}
-                ${carouselHTML}
-            </div>
-            <div class="card-body">
-                <div class="card-body-top">
-                    <div class="owner-cluster">
-                        <div class="owner-avatar">${ownerInitial}</div>
-                        <span class="photo-count">${photoPillText}</span>
-                    </div>
-                    ${saveButtonHTML}
-                    ${quickEditHTML}
+            ${saveButtonHTML}
+            ${quickEditHTML}
+            ${cardBadgesHTML}
+            ${carouselHTML}
+            <div class="listing-info">
+                <div class="price-row">
+                    <span class="price">₱${Number(item.price || 0).toLocaleString()}</span><span class="price-suffix">&nbsp;/mo</span>
                 </div>
-
-                <h3 class="title-text">${item.title || 'Cozy Room'}</h3>
-                <p class="location"><i class="fas fa-location-dot"></i> <span class="location-text">${item.location || 'Unknown'}</span></p>
-
+                <div class="title-text">${item.title || 'Cozy Room'}</div>
+                <div class="landlord-name">
+                    <i class="fas fa-user-tie"></i> ${item.landlord_name || 'Owner'}
+                </div>
+                <div class="location"><i class="fas fa-map-marker-alt"></i> <span class="location-text">${item.location || 'Unknown'}</span></div>
                 <div class="details">
-                    <span><i class="fas fa-bed"></i> ${item.rooms || 0} rooms</span>
-                    <span><i class="fas fa-vector-square"></i> ${item.size || 0} m²</span>
-                    <span><i class="fas fa-tag"></i> ${categoryLabel}</span>
-                </div>
-
-                <div class="card-foot">
-                    <span class="status-chip status-chip-${statusValue}">
-                        <span class="status-dot"></span>${statusValue === 'occupied' ? 'Occupied' : 'Available'}
-                    </span>
-                    <span class="price-row">
-                        <span class="price">₱${Number(item.price || 0).toLocaleString()}</span><span class="price-suffix">&nbsp;/mo</span>
-                    </span>
+                    <span><i class="fas fa-bed"></i> ${item.rooms || 0} Rooms</span>
+                    <span><i class="fas fa-expand"></i> ${item.size || 0} sqm</span>
                 </div>
             </div>
         `;
@@ -1107,7 +988,8 @@ async function renderListings(items) {
 }
 
 // NEW: maps a property category to a CSS modifier class so each type gets
-// its own badge accent colour instead of every category looking identical.
+// its own badge color (blue/green/purple/orange) instead of every category
+// looking identical on the grid.
 function getCategoryBadgeClass(category) {
     const key = (category || '').toLowerCase();
     if (key === 'apartment') return 'cat-apartment';
@@ -1117,16 +999,7 @@ function getCategoryBadgeClass(category) {
     return 'cat-default';
 }
 
-// NEW: matching Font Awesome icon per category, used inside the floating
-// chip on the card photo.
-function getCategoryIcon(category) {
-    const key = (category || '').toLowerCase();
-    if (key === 'apartment') return 'fa-building';
-    if (key === 'house') return 'fa-house';
-    if (key === 'condo') return 'fa-city';
-    if (key === 'bedspace') return 'fa-bed';
-    return 'fa-location-dot';
-}
+
 
 // --- 4. SHOW FULL DETAILS POPUP ---
 function showFullDetails(item) {
@@ -1173,11 +1046,13 @@ function showFullDetails(item) {
     const delContainer = document.getElementById('deleteBtnContainer');
     if (delContainer) {
         // UI SECURITY: Only show buttons if isOwner is true
-        delContainer.innerHTML = isOwner
-            ? `<button class="btn-edit" id="editListingBtn"><i class="fas fa-edit"></i> Edit listing</button>
-               <button class="btn-delete" onclick="deleteListing(${item.id})">Delete listing</button>`
+        delContainer.innerHTML = isOwner 
+            ? `<button class="btn-edit" id="editListingBtn" style="background:#007bff; color:white; padding:8px 15px; border:none; border-radius:5px; cursor:pointer; margin-right:10px;">
+                    <i class="fas fa-edit"></i> Edit Listing
+               </button>
+               <button class="btn-delete" onclick="deleteListing(${item.id})">Delete Listing</button>` 
             : "";
-
+        
         if (isOwner) {
             document.getElementById('editListingBtn').onclick = () => openEditModal(item);
         }
@@ -1193,20 +1068,20 @@ function openEditModal(item) {
 
     postModal.style.display = 'block';
     const modalHeader = postModal.querySelector('h2') || document.querySelector('#postModal h3');
-    if (modalHeader) modalHeader.innerText = "Edit your listing";
-
+    if(modalHeader) modalHeader.innerText = "Edit Your Listing";
+    
     const submitBtn = document.getElementById('submitPostBtn');
-    submitBtn.innerText = "Save changes";
+    submitBtn.innerText = "Save Changes";
 
     document.getElementById('postTitle').value = item.title;
     document.getElementById('postPrice').value = item.price;
     document.getElementById('postLocation').value = item.location;
     document.getElementById('postRooms').value = item.rooms;
     document.getElementById('postSize').value = item.size;
-    if (document.getElementById('postAmenities')) document.getElementById('postAmenities').value = item.amenities || "";
-    if (document.getElementById('postCategory')) document.getElementById('postCategory').value = item.category || "Apartment";
+    if(document.getElementById('postAmenities')) document.getElementById('postAmenities').value = item.amenities || "";
+    if(document.getElementById('postCategory')) document.getElementById('postCategory').value = item.category || "Apartment";
     // NEW: pre-fill the Availability dropdown with this listing's current status
-    if (document.getElementById('postStatus')) document.getElementById('postStatus').value = (item.status === 'occupied') ? 'occupied' : 'available';
+    if(document.getElementById('postStatus')) document.getElementById('postStatus').value = (item.status === 'occupied') ? 'occupied' : 'available';
 
     // NEW: reset the file input and preview the listing's existing photos so
     // the landlord can see what's currently posted, and so any leftover file
@@ -1214,8 +1089,11 @@ function openEditModal(item) {
     // into Edit mode.
     const imageInputEl = document.getElementById('postImages');
     const previewDivEl = document.getElementById('imagePreview');
+    // NEW: optional label text swap - only activates if you've added
+    // id="postImagesLabel" to the <label> above the photo input in
+    // home.html. Safe no-op if that id isn't present.
     const imagesLabelEl = document.getElementById('postImagesLabel');
-    if (imagesLabelEl) imagesLabelEl.innerText = "Current photos (choose new files only if you want to replace them)";
+    if (imagesLabelEl) imagesLabelEl.innerText = "Current Photos (choose new files only if you want to replace them)";
     // NEW: clear any pending multi-photo selection left over from a previous
     // "Post a Listing" or Edit session before showing this listing's current
     // photos - keeps the accumulating-selection behavior (see
@@ -1231,9 +1109,9 @@ function openEditModal(item) {
         }
         if (existingImgs.length > 0) {
             previewDivEl.innerHTML =
-                `<p style="width:100%; font-size:11px; color:#6c7a92; margin:0 0 5px 0;">Current photos (choose new photos below to replace all of them):</p>` +
+                `<p style="width:100%; font-size:11px; color:#777; margin:0 0 5px 0;">Current photos (choose new photos below to replace all of them):</p>` +
                 existingImgs.map(img =>
-                    `<img src="${img}" style="width:60px; height:60px; object-fit:cover; border-radius:8px; border:1px solid rgba(255,255,255,0.12);" onerror="this.src='https://via.placeholder.com/60?text=No+Img'">`
+                    `<img src="${img}" style="width:60px; height:60px; object-fit:cover; border-radius:5px; border:1px solid #ddd;" onerror="this.src='https://via.placeholder.com/60?text=No+Img'">`
                 ).join('');
         }
     }
@@ -1293,7 +1171,7 @@ function openEditModal(item) {
 
             if (response.ok) {
                 clearUnsavedFlag(); // NEW: prevent the unsaved-changes warning from firing during reload
-                Swal.fire({ title: 'Updated', text: 'Your listing has been updated.', icon: 'success' }).then(() => location.reload());
+                Swal.fire({ title: 'Updated!', text: 'Your listing has been updated.', icon: 'success' }).then(() => location.reload());
             } else {
                 // FIX: this branch used to show a hardcoded generic message and
                 // never looked at the response body, so the real reason a
@@ -1306,7 +1184,7 @@ function openEditModal(item) {
             Swal.fire('Error', 'Server connection error.', 'error');
         } finally {
             submitBtn.disabled = false;
-            submitBtn.innerText = "Save changes";
+            submitBtn.innerText = "Save Changes";
         }
     };
 }
@@ -1339,48 +1217,48 @@ function resetStars() {
 
 async function loadComments(listingId) {
     const list = document.getElementById('commentsDisplayList');
-    const revCountBadge = document.getElementById('revCount');
-
-    list.innerHTML = "<p style='font-size:12px; color:#6c7a92;'>Loading reviews...</p>";
+    const revCountBadge = document.getElementById('revCount'); 
+    
+    list.innerHTML = "<p style='font-size:12px; color:gray;'>Loading reviews...</p>";
 
     try {
         const res = await fetch(`${API_BASE}/get-reviews/${listingId}`);
         const reviews = await res.json();
-
+        
         if (revCountBadge) {
             revCountBadge.innerText = reviews.length;
         }
-
-        list.innerHTML = reviews.length ? "" : "<p style='color:#6c7a92; font-size:12px;'>No reviews yet.</p>";
-
+        
+        list.innerHTML = reviews.length ? "" : "<p style='color:gray; font-size:12px;'>No reviews yet.</p>";
+        
         reviews.forEach(rev => {
-            const starIcons = rev.rating ? `<span style="color:#ffc069; margin-left:5px;">${'★'.repeat(rev.rating)}${'☆'.repeat(5 - rev.rating)}</span>` : "";
+            const starIcons = rev.rating ? `<span style="color:#ffc107; margin-left:5px;">${'★'.repeat(rev.rating)}${'☆'.repeat(5-rev.rating)}</span>` : "";
             list.innerHTML += `
                 <div class="comment-item">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="font-size:13px; color:#f1f5fa;">${rev.user_name}</strong>
+                        <strong style="font-size:13px;">${rev.user_name}</strong>
                         ${starIcons}
                     </div>
-                    <p style="margin: 5px 0 0 0; font-size:13px; color:#9babc3;">${rev.comment}</p>
+                    <p style="margin: 5px 0 0 0; font-size:13px; color:#555;">${rev.comment}</p>
                 </div>
             `;
         });
     } catch (err) {
-        list.innerHTML = "<p style='color:#ff5c6c;'>Error loading reviews.</p>";
+        list.innerHTML = "<p style='color:red;'>Error loading reviews.</p>";
         if (revCountBadge) revCountBadge.innerText = "0";
     }
 }
 
 async function submitComment(listingId, isOwner) {
     const commentText = document.getElementById('commentText').value.trim();
-
+    
     if (!currentUser || !currentUser.id) {
-        Swal.fire({ title: 'Session error', text: 'User ID not found.', icon: 'error', target: '#detailsModal' });
+        Swal.fire({ title: 'Session Error', text: 'User ID not found.', icon: 'error', target: '#detailsModal' });
         return;
     }
 
     if (!commentText && selectedRating === 0) {
-        Swal.fire({ title: 'Nothing to post', text: 'Add a rating or a comment first.', icon: 'warning', target: '#detailsModal' });
+        Swal.fire({ title: 'Empty', text: 'Please add a rating or a comment.', icon: 'warning', target: '#detailsModal' });
         return;
     }
 
@@ -1389,7 +1267,7 @@ async function submitComment(listingId, isOwner) {
         user_id: currentUser.id,
         user_name: currentUser.full_name || currentUser.name || "User",
         comment: commentText,
-        rating: isOwner ? null : selectedRating
+        rating: isOwner ? null : selectedRating 
     };
 
     try {
@@ -1415,13 +1293,13 @@ async function submitComment(listingId, isOwner) {
 
 async function deleteListing(listingId) {
     const result = await Swal.fire({
-        title: 'Delete this listing?',
+        title: 'Are you sure?',
         text: "This listing will be permanently removed.",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#ff5c6c',
-        cancelButtonColor: '#263043',
-        confirmButtonText: 'Yes, delete it'
+        confirmButtonColor: '#ff5252',
+        cancelButtonColor: '#aaa',
+        confirmButtonText: 'Yes, delete it!'
     });
 
     if (result.isConfirmed) {
@@ -1429,11 +1307,11 @@ async function deleteListing(listingId) {
             const response = await fetch(`${API_BASE}/delete-listing/${listingId}`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: currentUser.id })
+                body: JSON.stringify({ user_id: currentUser.id }) 
             });
 
             if (response.ok) {
-                Swal.fire('Deleted', 'Listing removed.', 'success').then(() => location.reload());
+                Swal.fire('Deleted!', 'Listing removed.', 'success').then(() => location.reload());
             } else {
                 Swal.fire('Error', 'Unauthorized or failed to delete.', 'error');
             }
@@ -1448,15 +1326,15 @@ function moveCarousel(event, id, direction) {
     const container = document.getElementById(`carousel-${id}`);
     const track = container.querySelector('.carousel-track');
     const images = track.querySelectorAll('img');
-    const imgWidth = container.clientWidth;
-
+    const imgWidth = container.clientWidth; 
+    
     let currentTransform = track.style.transform.replace('translateX(', '').replace('px)', '') || 0;
     let currentIdx = Math.abs(Math.round(parseInt(currentTransform) / imgWidth));
-
+    
     let newIdx = currentIdx + direction;
     if (newIdx < 0) newIdx = images.length - 1;
     if (newIdx >= images.length) newIdx = 0;
-
+    
     track.style.transform = `translateX(-${newIdx * imgWidth}px)`;
 
     // NEW: keep the dot indicator in sync with the visible slide
@@ -1484,7 +1362,8 @@ if (logoutLink) {
 // category/title text is stored as "Bed space" (with a space) - the extra
 // space breaks a plain substring match even though they mean the same
 // thing. Running both the typed search term AND the listing's text through
-// this same normalizer fixes it in both directions.
+// this same normalizer fixes it in both directions: "bedspace" now matches
+// "Bed space", and "bed space" now matches "Bedspace" too.
 function normalizeForSearch(str) {
     return (str || '').toString().toLowerCase().replace(/\s+/g, '');
 }
@@ -1527,7 +1406,7 @@ function filterListings() {
     const normalizedSearchTerm = normalizeForSearch(searchTerm); // NEW: space-stripped version used for fuzzy matching
     const maxPriceValue = document.getElementById('maxPrice').value;
     const maxPrice = maxPriceValue === "Infinity" ? Infinity : parseInt(maxPriceValue);
-
+    
     const minRooms = document.getElementById('roomFilter').value;
     const locFilter = document.getElementById('locFilter').value.toLowerCase();
 
@@ -1545,7 +1424,9 @@ function filterListings() {
         const titleText = titleRaw.toLowerCase();
         const locationText = locationRaw.toLowerCase();
         // FIX: amenities are now stored on the card as data-amenities (see
-        // renderListings above) so the search bar can actually match them.
+        // renderListings above) so the search bar can actually match them -
+        // previously this value didn't exist anywhere and "wifi"/"aircon"/etc.
+        // searches always came up empty no matter what a listing had.
         const amenitiesText = card.getAttribute('data-amenities') || '';
         // NEW: property category/type (e.g. "bedspace"), also now searchable.
         const categoryText = card.getAttribute('data-category') || '';
@@ -1555,7 +1436,8 @@ function filterListings() {
 
         // UPDATED: every field is now compared using the space-stripped
         // normalized form (normalizeForSearch), and category was added to
-        // the fields checked.
+        // the fields checked - so "bedspace" now matches a category/title
+        // stored as "Bed space", and vice versa.
         const matchesMainSearch =
             normalizeForSearch(titleText).includes(normalizedSearchTerm) ||
             normalizeForSearch(locationText).includes(normalizedSearchTerm) ||
@@ -1610,7 +1492,7 @@ function updateFilterEmptyState(hasActiveSearch, visibleCount, totalCount) {
                 'fa-magnifying-glass-minus',
                 'No matches found',
                 'Try a different keyword or category, or clear your filters to see everything again.',
-                `<button class="empty-state-cta" onclick="resetFilters()">Clear filters</button>`
+                `<button class="empty-state-cta" onclick="resetFilters()">Clear Filters</button>`
             )}</div>`
         );
     }
@@ -1744,7 +1626,7 @@ function renderSearchSuggestions() {
     if (!rawTerm.trim()) {
         const recent = getRecentSearches();
         if (recent.length > 0) {
-            html += `<div class="search-suggestions-section-label">Recent searches</div>`;
+            html += `<div class="search-suggestions-section-label">Recent Searches</div>`;
             recent.forEach(term => {
                 html += `<div class="search-suggestion-item" data-value="${escapeHtmlAttr(term)}">
                     <i class="fas fa-clock-rotate-left"></i> ${escapeHtml(term)}
@@ -1877,11 +1759,12 @@ function setupSearchBarEnhancements() {
     updateClearButtonVisibility();
 }
 
-// --- STICKY (COMPACT) SEARCH BAR ---
-// The redesigned header is sticky on its own, so the compact bar stays
-// hidden via CSS - but the element and this wiring are kept so nothing
-// that referenced them breaks, and so it can be re-enabled by simply
-// removing `display:none` from `.sticky-search-bar` in home.html.
+// --- NEW: STICKY (COMPACT) SEARCH BAR ---
+// Slides in once the real search bar has scrolled out of view, and stays
+// two-way in sync with the main #searchLoc input, so typing in either one
+// filters the grid the same way. Deliberately kept simple (no autocomplete
+// dropdown here) - it's meant for quick re-filtering while browsing, not a
+// full replacement for the main search bar.
 function setupStickySearchBar() {
     const stickyBar = document.getElementById('stickySearchBar');
     const stickyInput = document.getElementById('stickySearchInput');
@@ -1921,7 +1804,7 @@ function setupFooter() {
     }
 }
 
-// --- NEW: CATEGORY QUICK-FILTER TABS ---
+// --- NEW: CATEGORY QUICK-FILTER PILLS ---
 function setupCategoryPills() {
     const pillsContainer = document.getElementById('categoryPills');
     if (!pillsContainer) return;
@@ -1954,20 +1837,19 @@ function resetFilters() {
     clearCategoryFilterState(); // NEW: also clear the category pills back to "All"
     updateClearButtonVisibility(); // NEW: hide the (x) clear icon
     closeSearchSuggestions(); // NEW: close any open autocomplete dropdown
-
+    
     const viewAllBtn = document.getElementById('viewAllBtn');
     const viewSavedBtn = document.getElementById('viewSavedBtn');
-    if (viewAllBtn) viewAllBtn.classList.add('nav-active');
-    if (viewSavedBtn) viewSavedBtn.classList.remove('nav-active');
-    setActiveBottomNav('explore'); // NEW: keep the tab bar in sync
-
+    if(viewAllBtn) viewAllBtn.classList.add('nav-active');
+    if(viewSavedBtn) viewSavedBtn.classList.remove('nav-active');
+    
     loadListings();
 }
 
-if (document.getElementById('searchLoc')) document.getElementById('searchLoc').addEventListener('input', filterListings);
-if (document.getElementById('maxPrice')) document.getElementById('maxPrice').addEventListener('change', filterListings);
-if (document.getElementById('roomFilter')) document.getElementById('roomFilter').addEventListener('change', filterListings);
-if (document.getElementById('locFilter')) document.getElementById('locFilter').addEventListener('input', filterListings);
+if(document.getElementById('searchLoc')) document.getElementById('searchLoc').addEventListener('input', filterListings);
+if(document.getElementById('maxPrice')) document.getElementById('maxPrice').addEventListener('change', filterListings);
+if(document.getElementById('roomFilter')) document.getElementById('roomFilter').addEventListener('change', filterListings);
+if(document.getElementById('locFilter')) document.getElementById('locFilter').addEventListener('input', filterListings);
 
 // --- 11. PROFILE SETTINGS ---
 // UPDATED: now also handles the 4th verification item (selfie with ID) and
@@ -2033,10 +1915,10 @@ function setupSettingsLogic() {
             docOwnerName = document.getElementById('settingsDocOwnerName').value.trim(); // NEW
 
             if (!docOwnershipFile || !docPermitsFile || !docBirFile || !docSelfieFile) {
-                return Swal.fire({ title: 'Missing documents', text: 'Please upload all 4 required items: proof of ownership, local permits, BIR registration, and a selfie with valid ID.', icon: 'warning', target: '#settingsModal' });
+                return Swal.fire({ title: 'Missing Documents', text: 'Please upload all 4 required items: Proof of Ownership, Local Permits, BIR Registration, and a Selfie with valid ID.', icon: 'warning', target: '#settingsModal' });
             }
             if (!docOwnerName) {
-                return Swal.fire({ title: 'Missing info', text: 'Please type the name shown on your proof of ownership document.', icon: 'warning', target: '#settingsModal' });
+                return Swal.fire({ title: 'Missing Info', text: 'Please type the name shown on your Proof of Ownership document.', icon: 'warning', target: '#settingsModal' });
             }
         }
 
@@ -2061,7 +1943,7 @@ function setupSettingsLogic() {
             } catch (e) {
                 console.error("Document conversion error:", e);
                 saveBtn.disabled = false;
-                saveBtn.innerText = "Save changes";
+                saveBtn.innerText = "Save Changes";
                 return Swal.fire({ title: 'Error', text: 'Failed to process your documents. Please try again.', icon: 'error', target: '#settingsModal' });
             }
         }
@@ -2098,7 +1980,7 @@ function setupSettingsLogic() {
                 localStorage.setItem('user', JSON.stringify(newUserObj));
 
                 Swal.fire({
-                    title: result.landlord_status === 'pending' ? 'Request submitted' : 'Saved',
+                    title: result.landlord_status === 'pending' ? 'Request Submitted' : 'Success!',
                     text: result.message || 'Profile updated successfully.',
                     icon: 'success',
                     target: '#settingsModal'
@@ -2110,7 +1992,7 @@ function setupSettingsLogic() {
             Swal.fire({ title: 'Error', text: 'Server error', icon: 'error', target: '#settingsModal' });
         } finally {
             saveBtn.disabled = false;
-            saveBtn.innerText = "Save changes";
+            saveBtn.innerText = "Save Changes";
         }
     };
 }
@@ -2135,7 +2017,8 @@ function setupPostListingLogic() {
         // selectedListingFiles array (declared near the top of this file),
         // the input is cleared so it's ready for the next pick, and the whole
         // preview strip (with per-photo remove buttons) is re-rendered from
-        // that array.
+        // that array - so choosing photo 1, then photo 2, then photo 3 in
+        // separate clicks now correctly keeps all three.
         imageInput.onchange = () => {
             const newFiles = Array.from(imageInput.files);
             if (newFiles.length === 0) return;
@@ -2148,27 +2031,29 @@ function setupPostListingLogic() {
     function openPostModalForNewListing(e) {
         if (e) e.preventDefault();
         const modalHeader = postModal.querySelector('h2') || document.querySelector('#postModal h3');
-        if (modalHeader) modalHeader.innerText = "Post a listing";
-        submitPostBtn.innerText = "Publish listing";
-
+        if(modalHeader) modalHeader.innerText = "Post a Listing";
+        submitPostBtn.innerText = "Publish Listing";
+        
         document.getElementById('postTitle').value = "";
         document.getElementById('postPrice').value = "";
         document.getElementById('postLocation').value = "";
         document.getElementById('postRooms').value = "";
         document.getElementById('postSize').value = "";
-        if (document.getElementById('postAmenities')) document.getElementById('postAmenities').value = "";
+        if(document.getElementById('postAmenities')) document.getElementById('postAmenities').value = "";
         // NEW: new listings always start as "Available"
-        if (document.getElementById('postStatus')) document.getElementById('postStatus').value = "available";
+        if(document.getElementById('postStatus')) document.getElementById('postStatus').value = "available";
         // NEW: clear the persistent multi-photo selection whenever a fresh
         // "Post a Listing" session starts, so nothing carries over from a
         // previous attempt or from Edit mode.
         selectedListingFiles = [];
-        if (previewDiv) previewDiv.innerHTML = "";
-        if (imageInput) imageInput.value = "";
+        if(previewDiv) previewDiv.innerHTML = "";
+        if(imageInput) imageInput.value = "";
+        // NEW: reset the photo label back to normal (openEditModal changes its
+        // wording) - safe no-op if you haven't added id="postImagesLabel" yet.
         const imagesLabelEl = document.getElementById('postImagesLabel');
-        if (imagesLabelEl) imagesLabelEl.innerText = "Listing photos (select multiple)";
+        if (imagesLabelEl) imagesLabelEl.innerText = "Listing Photos (Select Multiple)";
 
-        submitPostBtn.onclick = addNewListingAction;
+        submitPostBtn.onclick = addNewListingAction; 
         postModal.style.display = 'block';
         originalFormSnapshot = getCurrentFormSnapshot(); // NEW: snapshot for unsaved-changes tracking
     }
@@ -2213,14 +2098,14 @@ function setupPostListingLogic() {
             status: document.getElementById('postStatus')?.value || 'available',
             // FIX: join with '|||' instead of ',' so multi-image uploads don't get
             // corrupted when split back apart in renderListings().
-            images: base64Images.join('|||'),
-            thumbnail: base64Images.length > 0 ? base64Images[0] : ""
+            images: base64Images.join('|||'), 
+            thumbnail: base64Images.length > 0 ? base64Images[0] : "" 
         };
 
         if (!listingData.title || !listingData.price || !listingData.location) {
-            Swal.fire({ title: 'Missing info', text: 'Title, price and location are required.', icon: 'warning', target: '#postModal' });
+            Swal.fire({ title: 'Missing Info', text: 'Title, Price, and Location are required', icon: 'warning', target: '#postModal' });
             submitPostBtn.disabled = false;
-            submitPostBtn.innerText = "Publish listing";
+            submitPostBtn.innerText = "Publish Listing";
             return;
         }
 
@@ -2233,20 +2118,21 @@ function setupPostListingLogic() {
 
             if (response.ok) {
                 clearUnsavedFlag(); // NEW: prevent the unsaved-changes warning from firing during reload
-                Swal.fire({ title: 'Published', text: 'Your listing is live.', icon: 'success', target: '#postModal' }).then(() => location.reload());
+                Swal.fire({ title: 'Success!', text: 'Listing published.', icon: 'success', target: '#postModal' }).then(() => location.reload());
             } else {
-                const errResult = await response.json().catch(() => ({ message: "Submission failed" }));
+                const errResult = await response.json().catch(() => ({ message: "Submission Failed" }));
                 // FIX: the backend's addListing controller sends the failure
                 // reason as `error`, not `message`, so this was always falling
                 // through to the generic "Failed to post" text and hiding the
-                // real DB error (e.g. "Data too long for column 'images'").
+                // real DB error (e.g. "Data too long for column 'images'" when
+                // multiple photos are uploaded and the column is still TEXT).
                 Swal.fire({ title: 'Error', text: errResult.message || errResult.error || 'Failed to post', icon: 'error', target: '#postModal' });
             }
         } catch (err) {
             Swal.fire({ title: 'Error', text: 'Could not connect to server', icon: 'error', target: '#postModal' });
         } finally {
             submitPostBtn.disabled = false;
-            submitPostBtn.innerText = "Publish listing";
+            submitPostBtn.innerText = "Publish Listing";
         }
     }
 
@@ -2274,22 +2160,22 @@ async function toggleBookmark(event, listingId) {
             await fetch(`${API_BASE}/toggle-bookmark`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: currentUser.id,
+                body: JSON.stringify({ 
+                    userId: currentUser.id, 
                     listingId: listingId,
                     action: isAdding ? 'add' : 'remove'
                 })
             });
-
+            
             const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
             if (isAdding) {
-                Toast.fire({ icon: 'success', title: 'Saved' });
+                Toast.fire({ icon: 'success', title: 'Saved to bookmarks' });
             } else {
                 // NEW: "unsave" notification
-                Toast.fire({ icon: 'info', title: 'Removed from saved' });
+                Toast.fire({ icon: 'info', title: 'Removed from bookmarks' });
             }
-        } catch (err) {
-            console.error("Bookmark sync error:", err);
+        } catch (err) { 
+            console.error("Bookmark sync error:", err); 
         }
     }
 }
@@ -2305,7 +2191,7 @@ function setupBookmarkToggles() {
         clearCategoryFilterState(); // NEW: keep the category pills from conflicting with Saved view
         const savedIds = JSON.parse(localStorage.getItem('bookmarks')) || [];
         const allCards = document.querySelectorAll('.listing-card');
-
+        
         viewSavedBtn.classList.add('nav-active');
         viewAllBtn.classList.remove('nav-active');
 
@@ -2319,22 +2205,24 @@ function setupBookmarkToggles() {
                 card.style.display = "none";
             }
         });
-
-        // NEW: keep the "X stays available" header in sync with the Saved view too
+        
+        // NEW: keep the "X Stays Available" header in sync with the Saved view too
         updateResultsHeaderCount(found);
         if (found === 0) hideResultsHeader(); else showResultsHeader();
 
-        // UPDATED: added a "Browse listings" call-to-action button so this
-        // empty state gives the person something to do next.
+        // UPDATED: added a "Browse Listings" call-to-action button so this
+        // empty state gives the person something to do next, instead of
+        // just sitting there as dead space (see .empty-state-cta in
+        // home.html for the styling).
         if (found === 0) {
-            const msgText = (currentUser.role === 'landlord')
-                ? "You haven't saved any of your own listings yet."
+            const msgText = (currentUser.role === 'landlord') 
+                ? "You haven't saved any of your own listings yet." 
                 : "You haven't saved any listings yet.";
             listingsGrid.innerHTML = `<div id="no-saved-msg">${emptyStateHTML(
                 'fa-heart-crack',
                 'Nothing saved yet',
                 msgText,
-                `<button class="empty-state-cta" onclick="document.getElementById('viewAllBtn').click()">Browse listings</button>`
+                `<button class="empty-state-cta" onclick="document.getElementById('viewAllBtn').click()">Browse Listings</button>`
             )}</div>`;
         }
     };
@@ -2345,8 +2233,8 @@ function setupBookmarkToggles() {
         viewAllBtn.classList.add('nav-active');
         viewSavedBtn.classList.remove('nav-active');
         const msg = document.getElementById('no-saved-msg');
-        if (msg) msg.remove();
-        loadListings();
+        if(msg) msg.remove();
+        loadListings(); 
     };
 }
 
@@ -2406,13 +2294,13 @@ function clearUnsavedFlag() {
 function closePostModalSafely() {
     if (isPostFormDirty()) {
         Swal.fire({
-            title: 'Unsaved changes',
-            text: 'You have unsaved changes. Discard them?',
+            title: 'Unsaved Changes',
+            text: 'You have unsaved changes. Are you sure you want to discard them?',
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: 'Discard changes',
-            cancelButtonText: 'Keep editing',
-            confirmButtonColor: '#ff5c6c',
+            confirmButtonText: 'Discard Changes',
+            cancelButtonText: 'Keep Editing',
+            confirmButtonColor: '#ff5252',
             target: '#postModal'
         }).then((result) => {
             if (result.isConfirmed) {
