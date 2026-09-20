@@ -1,525 +1,525 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>StayFind - Discover Your Next Home</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>StayFind - Discover Your Next Home</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-:root {
---primary: #0d47a1;
---primary-light: #1565c0;
---accent: #42a5f5;
---accent-soft: #e3f2fd;
---ink: #1a2332;
---ink-soft: #5c6b7a;
---muted: #94a3b8;
---bg: #f6f8fb;
---surface: #ffffff;
---border: #e8edf3;
---danger: #ff5252;
---success: #2e7d32;
---radius-sm: 10px;
---radius-md: 16px;
---radius-lg: 22px;
---shadow-sm: 0 2px 10px rgba(16,24,40,.06);
---shadow-md: 0 10px 28px rgba(16,24,40,.10);
---shadow-lg: 0 24px 60px rgba(16,24,40,.16);
-}
+        :root {
+            --primary: #0d47a1;
+            --primary-light: #1565c0;
+            --accent: #42a5f5;
+            --accent-soft: #e3f2fd;
+            --ink: #1a2332;
+            --ink-soft: #5c6b7a;
+            --muted: #94a3b8;
+            --bg: #f6f8fb;
+            --surface: #ffffff;
+            --border: #e8edf3;
+            --danger: #ff5252;
+            --success: #2e7d32;
+            --radius-sm: 10px;
+            --radius-md: 16px;
+            --radius-lg: 22px;
+            --shadow-sm: 0 2px 10px rgba(16,24,40,.06);
+            --shadow-md: 0 10px 28px rgba(16,24,40,.10);
+            --shadow-lg: 0 24px 60px rgba(16,24,40,.16);
+        }
 
-* { box-sizing: border-box; font-family: 'Plus Jakarta Sans', 'Montserrat', sans-serif; }
+        * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', 'Montserrat', sans-serif; }
 
-body {
-background: var(--bg);
-margin: 0;
-padding-top: 0;
-color: var(--ink);
-line-height: 1.5;
--webkit-font-smoothing: antialiased;
-}
+        body {
+            background: var(--bg);
+            margin: 0;
+            padding-top: 0;
+            color: var(--ink);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
 
-@keyframes fadeInUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
-@keyframes floatIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+        @keyframes floatIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
 
-/* ============ HERO ============ */
-.hero {
-background: linear-gradient(135deg, #0d47a1 0%, #1461c4 55%, #1e88e5 100%);
-padding: 108px 5% 76px;
-position: relative;
-overflow: hidden;
-}
-.hero::before, .hero::after {
-content: "";
-position: absolute;
-border-radius: 50%;
-background: rgba(255,255,255,0.08);
-pointer-events: none;
-}
-.hero::before { width: 320px; height: 320px; top: -160px; right: -80px; }
-.hero::after { width: 220px; height: 220px; bottom: -130px; left: 8%; }
-.hero-inner { position: relative; z-index: 2; max-width: 760px; margin: 0 auto; text-align: center; }
-.hero-eyebrow {
-color: rgba(255,255,255,0.75); font-size: 12.5px; font-weight: 700;
-text-transform: uppercase; letter-spacing: 1.2px; margin: 0 0 10px;
-}
-.hero-greeting {
-color: #fff; font-size: clamp(1.5rem, 4vw, 2.3rem); font-weight: 800;
-margin: 0 0 10px; letter-spacing: -0.5px;
-}
-.hero-subtitle { color: rgba(255,255,255,0.88); font-size: 14.5px; margin: 0; }
+        /* ============ HERO ============ */
+        .hero {
+            background: linear-gradient(135deg, #0d47a1 0%, #1461c4 55%, #1e88e5 100%);
+            padding: 108px 5% 76px;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before, .hero::after {
+            content: "";
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.08);
+            pointer-events: none;
+        }
+        .hero::before { width: 320px; height: 320px; top: -160px; right: -80px; }
+        .hero::after { width: 220px; height: 220px; bottom: -130px; left: 8%; }
+        .hero-inner { position: relative; z-index: 2; max-width: 760px; margin: 0 auto; text-align: center; }
+        .hero-eyebrow {
+            color: rgba(255,255,255,0.75); font-size: 12.5px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1.2px; margin: 0 0 10px;
+        }
+        .hero-greeting {
+            color: #fff; font-size: clamp(1.5rem, 4vw, 2.3rem); font-weight: 800;
+            margin: 0 0 10px; letter-spacing: -0.5px;
+        }
+        .hero-subtitle { color: rgba(255,255,255,0.88); font-size: 14.5px; margin: 0; }
 
-/* ============ FLOATING MENU BUTTON (no top navbar strip at all) ============ */
-.menu-toggle {
-position: fixed;
-top: 20px;
-left: 20px;
-z-index: 1200;
-background: #ffffff;
-border: none;
-color: var(--primary);
-width: 48px;
-height: 48px;
-border-radius: 50%;
-cursor: pointer;
-font-size: 18px;
-display: flex;
-align-items: center;
-justify-content: center;
-box-shadow: 0 8px 22px rgba(0,0,0,0.18);
-transition: background 0.2s, transform 0.15s;
-}
-.menu-toggle:hover { background: #eef4fd; transform: scale(1.06); }
-.menu-toggle:active { transform: scale(0.94); }
+        /* ============ FLOATING MENU BUTTON (no top navbar strip at all) ============ */
+        .menu-toggle {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1200;
+            background: #ffffff;
+            border: none;
+            color: var(--primary);
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 22px rgba(0,0,0,0.18);
+            transition: background 0.2s, transform 0.15s;
+        }
+        .menu-toggle:hover { background: #eef4fd; transform: scale(1.06); }
+        .menu-toggle:active { transform: scale(0.94); }
 
-.floating-logo {
-position: fixed;
-top: 20px;
-right: 20px;
-z-index: 1100;
-font-weight: 800;
-font-size: 1.1rem;
-letter-spacing: -0.5px;
-color: var(--primary);
-text-decoration: none;
-background: #ffffff;
-padding: 11px 18px;
-border-radius: 24px;
-box-shadow: 0 8px 22px rgba(0,0,0,0.15);
-}
-.floating-logo span { color: var(--accent); }
+        .floating-logo {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1100;
+            font-weight: 800;
+            font-size: 1.1rem;
+            letter-spacing: -0.5px;
+            color: var(--primary);
+            text-decoration: none;
+            background: #ffffff;
+            padding: 11px 18px;
+            border-radius: 24px;
+            box-shadow: 0 8px 22px rgba(0,0,0,0.15);
+        }
+        .floating-logo span { color: var(--accent); }
 
-/* ============ SIDE DRAWER ============ */
-.drawer-overlay {
-position: fixed; inset: 0; background: rgba(9, 25, 49, 0.55);
-backdrop-filter: blur(2px);
-z-index: 1900; opacity: 0; visibility: hidden; transition: opacity 0.25s ease;
-}
-.drawer-overlay.open { opacity: 1; visibility: visible; }
+        /* ============ SIDE DRAWER ============ */
+        .drawer-overlay {
+            position: fixed; inset: 0; background: rgba(9, 25, 49, 0.55);
+            backdrop-filter: blur(2px);
+            z-index: 1900; opacity: 0; visibility: hidden; transition: opacity 0.25s ease;
+        }
+        .drawer-overlay.open { opacity: 1; visibility: visible; }
 
-.side-drawer {
-position: fixed; top: 0; left: 0; height: 100%;
-width: 290px; max-width: 85vw;
-background: #ffffff;
-z-index: 1950;
-box-shadow: 6px 0 30px rgba(0,0,0,0.18);
-transform: translateX(-105%);
-transition: transform 0.32s cubic-bezier(.25,.8,.35,1);
-display: flex; flex-direction: column;
-}
-.side-drawer.open { transform: translateX(0); }
+        .side-drawer {
+            position: fixed; top: 0; left: 0; height: 100%;
+            width: 290px; max-width: 85vw;
+            background: #ffffff;
+            z-index: 1950;
+            box-shadow: 6px 0 30px rgba(0,0,0,0.18);
+            transform: translateX(-105%);
+            transition: transform 0.32s cubic-bezier(.25,.8,.35,1);
+            display: flex; flex-direction: column;
+        }
+        .side-drawer.open { transform: translateX(0); }
 
-.drawer-header {
-background: linear-gradient(135deg, #0d47a1, #1e88e5);
-color: white; padding: 26px 22px;
-display: flex; justify-content: space-between; align-items: center;
-flex-shrink: 0;
-}
-.drawer-brand { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.5px; }
-.drawer-brand span { color: #90caf9; }
-.drawer-close {
-background: rgba(255,255,255,0.16); border: none; color: white;
-width: 32px; height: 32px; border-radius: 9px; cursor: pointer; font-size: 14px;
-transition: background 0.15s;
-}
-.drawer-close:hover { background: rgba(255,255,255,0.3); }
+        .drawer-header {
+            background: linear-gradient(135deg, #0d47a1, #1e88e5);
+            color: white; padding: 26px 22px;
+            display: flex; justify-content: space-between; align-items: center;
+            flex-shrink: 0;
+        }
+        .drawer-brand { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.5px; }
+        .drawer-brand span { color: #90caf9; }
+        .drawer-close {
+            background: rgba(255,255,255,0.16); border: none; color: white;
+            width: 32px; height: 32px; border-radius: 9px; cursor: pointer; font-size: 14px;
+            transition: background 0.15s;
+        }
+        .drawer-close:hover { background: rgba(255,255,255,0.3); }
 
-.drawer-user {
-display: flex; align-items: center; gap: 12px;
-padding: 20px 22px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-}
-.drawer-avatar {
-width: 44px; height: 44px; border-radius: 50%;
-background: linear-gradient(135deg, var(--accent-soft), #d3e9fc);
-color: var(--primary);
-font-weight: 800; display: flex; align-items: center; justify-content: center;
-font-size: 17px; flex-shrink: 0;
-}
-.drawer-user-name { font-weight: 700; font-size: 14px; color: var(--ink); line-height: 1.3; }
-.drawer-user-role { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+        .drawer-user {
+            display: flex; align-items: center; gap: 12px;
+            padding: 20px 22px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+        }
+        .drawer-avatar {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-soft), #d3e9fc);
+            color: var(--primary);
+            font-weight: 800; display: flex; align-items: center; justify-content: center;
+            font-size: 17px; flex-shrink: 0;
+        }
+        .drawer-user-name { font-weight: 700; font-size: 14px; color: var(--ink); line-height: 1.3; }
+        .drawer-user-role { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
 
-.drawer-nav { flex: 1; padding: 14px 12px; overflow-y: auto; }
-.drawer-section-label {
-font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
-color: #b0bec5; padding: 14px 14px 8px;
-}
-.drawer-link {
-display: flex; align-items: center; padding: 13px 14px; border-radius: 12px;
-color: #37474f; text-decoration: none; font-size: 14px; font-weight: 600;
-cursor: pointer; margin-bottom: 4px; transition: background 0.15s, color 0.15s, transform 0.15s;
-}
-.drawer-link i {
-width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center;
-text-align: center; color: var(--muted); margin-right: 12px; border-radius: 9px;
-background: #f4f7fb; font-size: 13px; transition: background 0.15s, color 0.15s;
-}
-.drawer-link:hover { background: #f1f6fc; transform: translateX(2px); }
-.drawer-link.nav-active { background: var(--accent-soft); color: var(--primary); }
-.drawer-link.nav-active i { color: var(--primary); background: #d3e9fc; }
-.drawer-link.post-drawer-link { background: var(--accent); color: white; margin-top: 8px; box-shadow: 0 8px 18px rgba(66,165,245,0.35); }
-.drawer-link.post-drawer-link i { color: white; background: rgba(255,255,255,0.22); }
-.drawer-link.post-drawer-link:hover { background: #1e88e5; }
+        .drawer-nav { flex: 1; padding: 14px 12px; overflow-y: auto; }
+        .drawer-section-label {
+            font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
+            color: #b0bec5; padding: 14px 14px 8px;
+        }
+        .drawer-link {
+            display: flex; align-items: center; padding: 13px 14px; border-radius: 12px;
+            color: #37474f; text-decoration: none; font-size: 14px; font-weight: 600;
+            cursor: pointer; margin-bottom: 4px; transition: background 0.15s, color 0.15s, transform 0.15s;
+        }
+        .drawer-link i {
+            width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center;
+            text-align: center; color: var(--muted); margin-right: 12px; border-radius: 9px;
+            background: #f4f7fb; font-size: 13px; transition: background 0.15s, color 0.15s;
+        }
+        .drawer-link:hover { background: #f1f6fc; transform: translateX(2px); }
+        .drawer-link.nav-active { background: var(--accent-soft); color: var(--primary); }
+        .drawer-link.nav-active i { color: var(--primary); background: #d3e9fc; }
+        .drawer-link.post-drawer-link { background: var(--accent); color: white; margin-top: 8px; box-shadow: 0 8px 18px rgba(66,165,245,0.35); }
+        .drawer-link.post-drawer-link i { color: white; background: rgba(255,255,255,0.22); }
+        .drawer-link.post-drawer-link:hover { background: #1e88e5; }
 
-.drawer-footer { padding: 12px 12px 22px; border-top: 1px solid var(--border); flex-shrink: 0; }
-.drawer-link.logout-link { color: var(--danger); }
-.drawer-link.logout-link i { color: var(--danger); background: #ffe9e9; }
+        .drawer-footer { padding: 12px 12px 22px; border-top: 1px solid var(--border); flex-shrink: 0; }
+        .drawer-link.logout-link { color: var(--danger); }
+        .drawer-link.logout-link i { color: var(--danger); background: #ffe9e9; }
 
-/* Floating "Post" action button, mobile only, landlords only */
-.post-fab {
-position: fixed;
-bottom: calc(24px + env(safe-area-inset-bottom));
-right: 22px;
-width: 58px; height: 58px; border-radius: 50%;
-background: linear-gradient(135deg, var(--primary), var(--primary-light));
-color: white; border: none; font-size: 21px;
-box-shadow: 0 10px 26px rgba(13,71,161,0.45);
-cursor: pointer; z-index: 998;
-display: none;
-align-items: center; justify-content: center;
-transition: transform 0.15s;
-}
-.post-fab:active { transform: scale(0.92); }
+        /* Floating "Post" action button, mobile only, landlords only */
+        .post-fab {
+            position: fixed;
+            bottom: calc(24px + env(safe-area-inset-bottom));
+            right: 22px;
+            width: 58px; height: 58px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white; border: none; font-size: 21px;
+            box-shadow: 0 10px 26px rgba(13,71,161,0.45);
+            cursor: pointer; z-index: 998;
+            display: none;
+            align-items: center; justify-content: center;
+            transition: transform 0.15s;
+        }
+        .post-fab:active { transform: scale(0.92); }
 
-/* --- SMART SEARCH MOBILE ADAPTATION --- */
-#smartSearchBtn {
-position: fixed;
-bottom: calc(24px + env(safe-area-inset-bottom));
-right: 20px;
-z-index: 999;
-padding: 13px 22px;
-border-radius: 30px;
-border: none;
-background: linear-gradient(135deg, #007bff, #0056d6);
-color: white;
-cursor: pointer;
-box-shadow: 0 8px 24px rgba(0,86,214,0.4);
-font-weight: 700;
-transition: transform 0.2s;
-}
-#smartSearchBtn:active { transform: scale(0.92); }
+        /* --- SMART SEARCH MOBILE ADAPTATION --- */
+        #smartSearchBtn {
+            position: fixed;
+            bottom: calc(24px + env(safe-area-inset-bottom));
+            right: 20px;
+            z-index: 999;
+            padding: 13px 22px;
+            border-radius: 30px;
+            border: none;
+            background: linear-gradient(135deg, #007bff, #0056d6);
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(0,86,214,0.4);
+            font-weight: 700;
+            transition: transform 0.2s;
+        }
+        #smartSearchBtn:active { transform: scale(0.92); }
 
-#smartSearchBox {
-display: none;
-position: fixed;
-bottom: calc(90px + env(safe-area-inset-bottom));
-right: 20px;
-z-index: 1001;
-width: 320px;
-max-width: calc(100vw - 40px);
-background: white;
-border-radius: var(--radius-md);
-box-shadow: var(--shadow-lg);
-overflow: hidden;
-border: 1px solid var(--border);
-animation: floatIn 0.2s ease;
-}
+        #smartSearchBox {
+            display: none;
+            position: fixed;
+            bottom: calc(90px + env(safe-area-inset-bottom));
+            right: 20px;
+            z-index: 1001;
+            width: 320px;
+            max-width: calc(100vw - 40px);
+            background: white;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            border: 1px solid var(--border);
+            animation: floatIn 0.2s ease;
+        }
 
-@media (max-width: 480px) {
-#smartSearchBox {
-width: 100%;
-right: 0;
-bottom: 0;
-border-radius: 22px 22px 0 0;
-max-width: 100vw;
-}
-}
+        @media (max-width: 480px) {
+            #smartSearchBox {
+                width: 100%;
+                right: 0;
+                bottom: 0;
+                border-radius: 22px 22px 0 0;
+                max-width: 100vw;
+            }
+        }
 
-/* MODAL STYLES */
-.modal {
-display: none;
-position: fixed;
-z-index: 1500;
-left: 0;
-top: 0;
-width: 100%;
-height: 100%;
-background: rgba(10,16,28,0.6);
-backdrop-filter: blur(4px);
-}
+        /* MODAL STYLES */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1500;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10,16,28,0.6);
+            backdrop-filter: blur(4px);
+        }
 
-#postModal { z-index: 2000 !important; }
+        #postModal { z-index: 2000 !important; }
 
-.modal-content {
-background: white;
-position: relative;
-top: 50%;
-left: 50%;
-transform: translate(-50%, -50%);
-padding: 32px;
-border-radius: var(--radius-lg);
-width: 90%;
-max-width: 450px;
-box-shadow: var(--shadow-lg);
-max-height: 90vh;
-overflow-y: auto;
-animation: floatIn 0.22s ease;
-}
+        .modal-content {
+            background: white;
+            position: relative;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 32px;
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 450px;
+            box-shadow: var(--shadow-lg);
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: floatIn 0.22s ease;
+        }
 
-.swal2-container { z-index: 9999 !important; }
+        .swal2-container { z-index: 9999 !important; }
 
-.modal-content h3 { color: var(--primary); font-size: 19px; font-weight: 800; margin-top: 0; text-align: center; margin-bottom: 22px; letter-spacing: -0.3px; }
-.modal-content label { display: block; font-size: 11.5px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 7px; }
-.modal-content input, .modal-content select, .modal-content textarea {
-width: 100%;
-padding: 13px 14px;
-margin-bottom: 20px;
-border: 1.5px solid var(--border);
-border-radius: 12px;
-font-size: 14px;
-background: #fbfcfe;
-transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-}
-.modal-content input:focus, .modal-content select:focus, .modal-content textarea:focus {
-outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px rgba(66,165,245,0.14); background: #fff;
-}
+        .modal-content h3 { color: var(--primary); font-size: 19px; font-weight: 800; margin-top: 0; text-align: center; margin-bottom: 22px; letter-spacing: -0.3px; }
+        .modal-content label { display: block; font-size: 11.5px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 7px; }
+        .modal-content input, .modal-content select, .modal-content textarea {
+            width: 100%;
+            padding: 13px 14px;
+            margin-bottom: 20px;
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            font-size: 14px;
+            background: #fbfcfe;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+        }
+        .modal-content input:focus, .modal-content select:focus, .modal-content textarea:focus {
+            outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px rgba(66,165,245,0.14); background: #fff;
+        }
 
-.btn-primary-block {
-width: 100%; padding: 14px; border: none; border-radius: 13px; font-weight: 700;
-cursor: pointer; font-size: 15px; color: #fff;
-background: linear-gradient(135deg, var(--primary), var(--primary-light));
-box-shadow: 0 10px 24px rgba(13,71,161,0.28);
-transition: transform 0.15s, box-shadow 0.15s;
-}
-.btn-primary-block:hover { transform: translateY(-1px); box-shadow: 0 14px 30px rgba(13,71,161,0.35); }
-.btn-primary-block:active { transform: translateY(0); }
-.btn-primary-block:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+        .btn-primary-block {
+            width: 100%; padding: 14px; border: none; border-radius: 13px; font-weight: 700;
+            cursor: pointer; font-size: 15px; color: #fff;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            box-shadow: 0 10px 24px rgba(13,71,161,0.28);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .btn-primary-block:hover { transform: translateY(-1px); box-shadow: 0 14px 30px rgba(13,71,161,0.35); }
+        .btn-primary-block:active { transform: translateY(0); }
+        .btn-primary-block:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
 
-.btn-ghost-block {
-width: 100%; margin-top: 14px; background: none; border: none; color: #94a3b8;
-cursor: pointer; font-size: 13px; font-weight: 600; padding: 8px;
-}
-.btn-ghost-block:hover { color: #64748b; }
+        .btn-ghost-block {
+            width: 100%; margin-top: 14px; background: none; border: none; color: #94a3b8;
+            cursor: pointer; font-size: 13px; font-weight: 600; padding: 8px;
+        }
+        .btn-ghost-block:hover { color: #64748b; }
 
-.detail-header { border-bottom: 1px solid var(--border); margin-bottom: 16px; padding-bottom: 12px; }
-.landlord-info-box { background: var(--accent-soft); padding: 16px; border-radius: var(--radius-sm); margin-top: 20px; }
-.landlord-info-box h4 { margin: 0 0 10px 0; color: var(--primary); font-size: 14px; }
-.landlord-info-box p { margin: 5px 0; font-size: 13px; color: #333; }
+        .detail-header { border-bottom: 1px solid var(--border); margin-bottom: 16px; padding-bottom: 12px; }
+        .landlord-info-box { background: var(--accent-soft); padding: 16px; border-radius: var(--radius-sm); margin-top: 20px; }
+        .landlord-info-box h4 { margin: 0 0 10px 0; color: var(--primary); font-size: 14px; }
+        .landlord-info-box p { margin: 5px 0; font-size: 13px; color: #333; }
 
-.btn-delete { background: var(--danger); color: white; border: none; padding: 13px; border-radius: 12px; flex: 1; font-weight: 700; cursor: pointer; transition: 0.2s; }
-.btn-delete:hover { background: #e53935; }
+        .btn-delete { background: var(--danger); color: white; border: none; padding: 13px; border-radius: 12px; flex: 1; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .btn-delete:hover { background: #e53935; }
 
-.btn-edit { background: var(--primary); color: white; border: none; padding: 13px; border-radius: 12px; flex: 1; font-weight: 700; cursor: pointer; transition: 0.2s; }
-.btn-edit:hover { background: #0a367a; }
+        .btn-edit { background: var(--primary); color: white; border: none; padding: 13px; border-radius: 12px; flex: 1; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .btn-edit:hover { background: #0a367a; }
 
-#deleteBtnContainer { display: flex; gap: 10px; margin-top: 20px; }
+        #deleteBtnContainer { display: flex; gap: 10px; margin-top: 20px; }
 
-/* CAROUSEL */
-.carousel-container { position: relative; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; background: #eef1f5; }
-.carousel-container.carousel-standalone { border-radius: 14px; margin-bottom: 16px; }
-.carousel-track { display: flex; transition: transform 0.4s ease-in-out; height: 100%; }
-.carousel-img { min-width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
-.listing-card:hover .carousel-img { transform: scale(1.06); }
-.carousel-btn {
-position: absolute; top: 50%; transform: translateY(-50%);
-background: rgba(0,0,0,0.5); color: white; border: none;
-width: 30px; height: 30px; cursor: pointer; border-radius: 50%; z-index: 5;
-display: flex; align-items: center; justify-content: center;
-}
-.prev-btn { left: 10px; }
-.next-btn { right: 10px; }
-.carousel-dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 6; }
-.carousel-dots .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.55); transition: all 0.25s; }
-.carousel-dots .dot.active { background: #fff; width: 18px; border-radius: 4px; }
+        /* CAROUSEL */
+        .carousel-container { position: relative; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; background: #eef1f5; }
+        .carousel-container.carousel-standalone { border-radius: 14px; margin-bottom: 16px; }
+        .carousel-track { display: flex; transition: transform 0.4s ease-in-out; height: 100%; }
+        .carousel-img { min-width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+        .listing-card:hover .carousel-img { transform: scale(1.06); }
+        .carousel-btn {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(0,0,0,0.5); color: white; border: none;
+            width: 30px; height: 30px; cursor: pointer; border-radius: 50%; z-index: 5;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .prev-btn { left: 10px; }
+        .next-btn { right: 10px; }
+        .carousel-dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 6; }
+        .carousel-dots .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.55); transition: all 0.25s; }
+        .carousel-dots .dot.active { background: #fff; width: 18px; border-radius: 4px; }
 
-.star-rating i { color: #ccc; font-size: 1.5rem; cursor: pointer; transition: color 0.2s, transform 0.15s; }
-.star-rating i:hover { transform: scale(1.15); }
-.star-rating i.active { color: #ffc107; }
-.comment-item { border-bottom: 1px solid var(--border); padding: 10px 0; }
-.comment-item:last-child { border: none; }
+        .star-rating i { color: #ccc; font-size: 1.5rem; cursor: pointer; transition: color 0.2s, transform 0.15s; }
+        .star-rating i:hover { transform: scale(1.15); }
+        .star-rating i.active { color: #ffc107; }
+        .comment-item { border-bottom: 1px solid var(--border); padding: 10px 0; }
+        .comment-item:last-child { border: none; }
 
-.review-badge { background: #ffc107; color: #333; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-left: 10px; vertical-align: middle; }
+        .review-badge { background: #ffc107; color: #333; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-left: 10px; vertical-align: middle; }
 
-.landlord-reply-badge { background: var(--primary); color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 5px; text-transform: uppercase; }
-.reply-item { margin-left: 30px; border-left: 3px solid var(--accent); padding-left: 10px; background: #f9f9f9; }
+        .landlord-reply-badge { background: var(--primary); color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 5px; text-transform: uppercase; }
+        .reply-item { margin-left: 30px; border-left: 3px solid var(--accent); padding-left: 10px; background: #f9f9f9; }
 
-/* ============ FILTER CARD (floats over the hero, collapsible on mobile) ============ */
-.filter-container {
-background: #fff;
-width: 92%;
-max-width: 1000px;
-margin: -46px auto 34px;
-padding: 26px 26px 24px;
-border-radius: var(--radius-lg);
-box-shadow: var(--shadow-lg);
-position: relative;
-z-index: 5;
-}
-.search-box-wrapper { display: flex; align-items: center; background: #fbfcfe; border: 1.5px solid var(--border); border-radius: 14px; padding: 6px 16px; transition: 0.2s; }
-.search-box-wrapper:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(66, 165, 245, 0.12); background: #fff; }
-.search-icon { color: #9e9e9e; margin-right: 14px; }
-.search-box-wrapper input { border: none; padding: 12px 0; font-size: 15.5px; width: 100%; outline: none; background: transparent; }
-.search-btn {
-background: linear-gradient(135deg, var(--accent), #1e88e5); color: white; border: none;
-padding: 11px 26px; border-radius: 10px; font-weight: 700; cursor: pointer; flex-shrink: 0;
-transition: transform 0.15s;
-}
-.search-btn:hover { transform: translateY(-1px); }
+        /* ============ FILTER CARD (floats over the hero, collapsible on mobile) ============ */
+        .filter-container {
+            background: #fff;
+            width: 92%;
+            max-width: 1000px;
+            margin: -46px auto 34px;
+            padding: 26px 26px 24px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            z-index: 5;
+        }
+        .search-box-wrapper { display: flex; align-items: center; background: #fbfcfe; border: 1.5px solid var(--border); border-radius: 14px; padding: 6px 16px; transition: 0.2s; }
+        .search-box-wrapper:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(66, 165, 245, 0.12); background: #fff; }
+        .search-icon { color: #9e9e9e; margin-right: 14px; }
+        .search-box-wrapper input { border: none; padding: 12px 0; font-size: 15.5px; width: 100%; outline: none; background: transparent; }
+        .search-btn {
+            background: linear-gradient(135deg, var(--accent), #1e88e5); color: white; border: none;
+            padding: 11px 26px; border-radius: 10px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+            transition: transform 0.15s;
+        }
+        .search-btn:hover { transform: translateY(-1px); }
 
-.filters-toggle-btn {
-display: none;
-align-items: center; justify-content: center; gap: 8px;
-width: 100%; margin-top: 14px; padding: 12px 16px;
-background: var(--accent-soft); border: none; color: var(--primary);
-font-weight: 700; font-size: 13px; border-radius: 12px; cursor: pointer;
-}
+        .filters-toggle-btn {
+            display: none;
+            align-items: center; justify-content: center; gap: 8px;
+            width: 100%; margin-top: 14px; padding: 12px 16px;
+            background: var(--accent-soft); border: none; color: var(--primary);
+            font-weight: 700; font-size: 13px; border-radius: 12px; cursor: pointer;
+        }
 
-#advancedFiltersBody { margin-top: 22px; }
+        #advancedFiltersBody { margin-top: 22px; }
 
-/* LEGACY: filter-layout-wrapper/.quick-actions were the old
-          two-column layout (Price/Rooms/Location next to a boxed "Quick
-          actions" panel) that caused the messy spacing described above.
-          That markup is gone now (see .advanced-filters + .clear-filters-link
-          and .quick-filter-group below) - these rules are kept but unused,
-          left in place rather than deleted. */
-.filter-layout-wrapper { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
-.advanced-filters { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; }
-.filter-item { flex: 1; min-width: 150px; }
-.filter-item label { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.3px; }
-.filter-item select, .filter-item input {
-background: #fbfcfe; border: 1.5px solid var(--border); border-radius: 10px; padding: 11px; width: 100%;
-font-size: 13.5px; transition: border-color 0.2s, background 0.2s;
-}
-.filter-item select:focus, .filter-item input:focus { outline: none; border-color: var(--accent); background: #fff; }
-.apply-filters-btn {
-background: var(--primary); color: white; border: none; padding: 12px 22px; border-radius: 10px;
-font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; white-space: nowrap;
-transition: background 0.2s;
-}
-.apply-filters-btn:hover { background: var(--primary-light); }
+        /* LEGACY: filter-layout-wrapper/.quick-actions were the old
+           two-column layout (Price/Rooms/Location next to a boxed "Quick
+           actions" panel) that caused the messy spacing described above.
+           That markup is gone now (see .advanced-filters + .clear-filters-link
+           and .quick-filter-group below) - these rules are kept but unused,
+           left in place rather than deleted. */
+        .filter-layout-wrapper { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
+        .advanced-filters { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; }
+        .filter-item { flex: 1; min-width: 150px; }
+        .filter-item label { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .filter-item select, .filter-item input {
+            background: #fbfcfe; border: 1.5px solid var(--border); border-radius: 10px; padding: 11px; width: 100%;
+            font-size: 13.5px; transition: border-color 0.2s, background 0.2s;
+        }
+        .filter-item select:focus, .filter-item input:focus { outline: none; border-color: var(--accent); background: #fff; }
+        .apply-filters-btn {
+            background: var(--primary); color: white; border: none; padding: 12px 22px; border-radius: 10px;
+            font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; white-space: nowrap;
+            transition: background 0.2s;
+        }
+        .apply-filters-btn:hover { background: var(--primary-light); }
 
-/* NEW: replaces the old boxed "Clear Filters" button - a small
-          text link sitting right at the end of the filter row instead. */
-.clear-filters-link {
-display: inline-flex; align-items: center; gap: 7px;
-background: none; border: none; color: var(--ink-soft);
-font-size: 12.5px; font-weight: 700; cursor: pointer;
-padding: 12px 6px; white-space: nowrap;
-transition: color 0.15s;
-}
-.clear-filters-link:hover { color: var(--danger); }
+        /* NEW: replaces the old boxed "Clear Filters" button - a small
+           text link sitting right at the end of the filter row instead. */
+        .clear-filters-link {
+            display: inline-flex; align-items: center; gap: 7px;
+            background: none; border: none; color: var(--ink-soft);
+            font-size: 12.5px; font-weight: 700; cursor: pointer;
+            padding: 12px 6px; white-space: nowrap;
+            transition: color 0.15s;
+        }
+        .clear-filters-link:hover { color: var(--danger); }
 
-/* LEGACY: kept but no longer referenced in the markup (see
-          .clear-filters-link and .availability-pill above/below instead). */
-.quick-actions { flex: 1; min-width: 200px; background: #fbfcfe; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 16px; }
-.quick-actions h4 { margin: 0 0 10px 0; font-size: 13px; color: var(--ink-soft); font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
-.browse-all-btn { width: 100%; background: #fff; border: 2px solid var(--accent); color: var(--accent); padding: 10px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; }
-.browse-all-btn:hover { background: var(--accent); color: #fff; }
-/* NEW: highlighted state for whichever Availability filter button is currently active */
-.browse-all-btn.availability-active { background: var(--accent); color: #fff; }
+        /* LEGACY: kept but no longer referenced in the markup (see
+           .clear-filters-link and .availability-pill above/below instead). */
+        .quick-actions { flex: 1; min-width: 200px; background: #fbfcfe; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 16px; }
+        .quick-actions h4 { margin: 0 0 10px 0; font-size: 13px; color: var(--ink-soft); font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
+        .browse-all-btn { width: 100%; background: #fff; border: 2px solid var(--accent); color: var(--accent); padding: 10px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .browse-all-btn:hover { background: var(--accent); color: #fff; }
+        /* NEW: highlighted state for whichever Availability filter button is currently active */
+        .browse-all-btn.availability-active { background: var(--accent); color: #fff; }
 
-/* ============ NEW: SEARCH BAR ENHANCEMENTS ============ */
-.search-bar-anchor { position: relative; }
+        /* ============ NEW: SEARCH BAR ENHANCEMENTS ============ */
+        .search-bar-anchor { position: relative; }
 
-/* Clear (x) button inside the search input, only shown once there's text */
-.search-clear-btn {
-display: none;
-align-items: center;
-color: #b0bcc9;
-cursor: pointer;
-padding: 0 12px;
-font-size: 15px;
-transition: color 0.15s;
-}
-.search-clear-btn:hover { color: var(--danger); }
+        /* Clear (x) button inside the search input, only shown once there's text */
+        .search-clear-btn {
+            display: none;
+            align-items: center;
+            color: #b0bcc9;
+            cursor: pointer;
+            padding: 0 12px;
+            font-size: 15px;
+            transition: color 0.15s;
+        }
+        .search-clear-btn:hover { color: var(--danger); }
 
-/* Autocomplete / recent-searches dropdown */
-.search-suggestions {
-display: none;
-position: absolute;
-top: 100%; left: 0; right: 0;
-margin-top: 8px;
-background: #fff;
-border: 1.5px solid var(--border);
-border-radius: 14px;
-box-shadow: var(--shadow-md);
-overflow-y: auto;
-max-height: 320px;
-z-index: 20;
-}
-.search-suggestions.open { display: block; }
-.search-suggestions-section-label {
-padding: 10px 16px 6px;
-font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;
-color: var(--muted);
-}
-.search-suggestion-item {
-display: flex; align-items: center; gap: 12px;
-padding: 11px 16px; cursor: pointer; font-size: 13.5px; color: var(--ink);
-transition: background 0.12s;
-}
-.search-suggestion-item:hover, .search-suggestion-item.highlighted { background: #f4f8fd; }
-.search-suggestion-item i { color: var(--muted); width: 16px; text-align: center; flex-shrink: 0; }
-.search-suggestion-item .suggestion-sub { color: var(--muted); font-size: 11.5px; margin-left: auto; flex-shrink: 0; }
-.search-suggestion-clear-recent {
-padding: 9px 16px; font-size: 11.5px; color: var(--accent); font-weight: 700; cursor: pointer;
-text-align: right; border-top: 1px dashed var(--border);
-}
-.search-suggestion-clear-recent:hover { color: var(--primary); }
+        /* Autocomplete / recent-searches dropdown */
+        .search-suggestions {
+            display: none;
+            position: absolute;
+            top: 100%; left: 0; right: 0;
+            margin-top: 8px;
+            background: #fff;
+            border: 1.5px solid var(--border);
+            border-radius: 14px;
+            box-shadow: var(--shadow-md);
+            overflow-y: auto;
+            max-height: 320px;
+            z-index: 20;
+        }
+        .search-suggestions.open { display: block; }
+        .search-suggestions-section-label {
+            padding: 10px 16px 6px;
+            font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;
+            color: var(--muted);
+        }
+        .search-suggestion-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 11px 16px; cursor: pointer; font-size: 13.5px; color: var(--ink);
+            transition: background 0.12s;
+        }
+        .search-suggestion-item:hover, .search-suggestion-item.highlighted { background: #f4f8fd; }
+        .search-suggestion-item i { color: var(--muted); width: 16px; text-align: center; flex-shrink: 0; }
+        .search-suggestion-item .suggestion-sub { color: var(--muted); font-size: 11.5px; margin-left: auto; flex-shrink: 0; }
+        .search-suggestion-clear-recent {
+            padding: 9px 16px; font-size: 11.5px; color: var(--accent); font-weight: 700; cursor: pointer;
+            text-align: right; border-top: 1px dashed var(--border);
+        }
+        .search-suggestion-clear-recent:hover { color: var(--primary); }
 
-/* Matched-text highlighting, used both in the grid and the dropdown */
-.search-highlight { background: rgba(255,193,7,0.4); border-radius: 3px; padding: 0 1px; }
+        /* Matched-text highlighting, used both in the grid and the dropdown */
+        .search-highlight { background: rgba(255,193,7,0.4); border-radius: 3px; padding: 0 1px; }
 
-/* UPDATED: category pills + availability pills are now grouped
-          together in one column (see .quick-filter-group), replacing the
-          old boxed "Quick actions" panel that used to sit awkwardly next
-          to the Price/Rooms/Location row. */
-.quick-filter-group { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+        /* UPDATED: category pills + availability pills are now grouped
+           together in one column (see .quick-filter-group), replacing the
+           old boxed "Quick actions" panel that used to sit awkwardly next
+           to the Price/Rooms/Location row. */
+        .quick-filter-group { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
 
-.category-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 0; }
-.category-pill {
-border: 1.5px solid var(--border); background: #fbfcfe; color: var(--ink-soft);
-padding: 8px 16px; border-radius: 999px; font-size: 12.5px; font-weight: 700; cursor: pointer;
-transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-.category-pill:hover { border-color: var(--accent); color: var(--primary); }
-.category-pill.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+        .category-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 0; }
+        .category-pill {
+            border: 1.5px solid var(--border); background: #fbfcfe; color: var(--ink-soft);
+            padding: 8px 16px; border-radius: 999px; font-size: 12.5px; font-weight: 700; cursor: pointer;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .category-pill:hover { border-color: var(--accent); color: var(--primary); }
+        .category-pill.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 
-/* NEW: availability pills - same visual language as category
-          pills, replacing the old bordered "Quick actions" box. */
-.availability-pills { display: flex; gap: 8px; flex-wrap: wrap; }
-.availability-pill {
-border: 1.5px solid var(--border); background: #fbfcfe; color: var(--ink-soft);
-padding: 8px 16px; border-radius: 999px; font-size: 12.5px; font-weight: 700; cursor: pointer;
-transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-.availability-pill:hover { border-color: var(--accent); color: var(--primary); }
-.availability-pill.availability-active { background: var(--primary); border-color: var(--primary); color: #fff; }
+        /* NEW: availability pills - same visual language as category
+           pills, replacing the old bordered "Quick actions" box. */
+        .availability-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+        .availability-pill {
+            border: 1.5px solid var(--border); background: #fbfcfe; color: var(--ink-soft);
+            padding: 8px 16px; border-radius: 999px; font-size: 12.5px; font-weight: 700; cursor: pointer;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .availability-pill:hover { border-color: var(--accent); color: var(--primary); }
+        .availability-pill.availability-active { background: var(--primary); border-color: var(--primary); color: #fff; }
 
-/* Live result count + Smart Search bridge row */
-.search-meta-row {
-display: none;
-align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
-margin-top: 10px; font-size: 12.5px; color: var(--ink-soft);
-}
-#resultCountText strong { color: var(--ink); }
-.smart-search-hint-link {
-display: inline-flex; align-items: center; gap: 5px;
-color: var(--primary); font-weight: 700; cursor: pointer;
-}
-.smart-search-hint-link:hover { text-decoration: underline; }
+        /* Live result count + Smart Search bridge row */
+        .search-meta-row {
+            display: none;
+            align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+            margin-top: 10px; font-size: 12.5px; color: var(--ink-soft);
+        }
+        #resultCountText strong { color: var(--ink); }
+        .smart-search-hint-link {
+            display: inline-flex; align-items: center; gap: 5px;
+            color: var(--primary); font-weight: 700; cursor: pointer;
+        }
+        .smart-search-hint-link:hover { text-decoration: underline; }
 
         /* NEW: subtle separator between the quick-filter pills above and
            the price/rooms/location "advanced filters" section below */
@@ -571,39 +571,37 @@ color: var(--primary); font-weight: 700; cursor: pointer;
         .footer-links a:hover { color: #fff; text-decoration: underline; }
         .footer-copy { font-size: 11.5px; color: rgba(255,255,255,0.4); margin: 0; }
 
-/* ============ LISTINGS GRID (centered, capped width, more breathing room) ============ */
-.container {
-padding: 0 5% 70px;
-display: grid;
-grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-gap: 28px;
-max-width: 1400px;
-margin: 0 auto;
-}
-.listing-card {
-background: white; border-radius: var(--radius-md); overflow: hidden;
-box-shadow: var(--shadow-sm); transition: transform 0.25s, box-shadow 0.25s;
-position: relative; cursor: pointer;
-animation: fadeInUp 0.5s ease both;
-}
-.listing-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
+        /* ============ LISTINGS GRID (centered, capped width, more breathing room) ============ */
+        .container {
+            padding: 0 5% 70px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 28px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .listing-card {
+            background: white; border-radius: var(--radius-md); overflow: hidden;
+            box-shadow: var(--shadow-sm); transition: transform 0.25s, box-shadow 0.25s;
+            position: relative; cursor: pointer;
+            animation: fadeInUp 0.5s ease both;
+        }
+        .listing-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
 
-        .category-badge {
         /* UPDATED: category badge + status badge used to be two separate
            absolutely-positioned pills stacked on top of each other
            (top:14px then top:46px) - now they share one flex row via
            .card-badges, and category-badge itself is position:static since
            its parent handles the positioning. */
         .card-badges {
-position: absolute; top: 14px; left: 14px; z-index: 10;
-            background: rgba(13,71,161,0.88); color: #fff; font-size: 11px; font-weight: 700;
+            position: absolute; top: 14px; left: 14px; z-index: 10;
             display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
             max-width: calc(100% - 60px); /* leaves room for the save/edit button on the right */
         }
         .category-badge {
             color: #fff; font-size: 11px; font-weight: 700;
-padding: 5px 13px; border-radius: 20px; backdrop-filter: blur(4px); letter-spacing: 0.2px;
-}
+            padding: 5px 13px; border-radius: 20px; backdrop-filter: blur(4px); letter-spacing: 0.2px;
+        }
         /* NEW: color-coded per property type so it's scannable at a glance
            while scrolling, instead of every category looking identical. */
         .category-badge.cat-apartment { background: rgba(13,71,161,0.88); }
@@ -624,22 +622,21 @@ padding: 5px 13px; border-radius: 20px; backdrop-filter: blur(4px); letter-spaci
         .status-chip.status-chip-available { background: rgba(46,125,50,0.85); }
         .status-chip.status-chip-occupied { background: rgba(255,82,82,0.85); }
 
-        /* NEW: Availability badge (Available / Occupied) shown on every listing card */
         /* LEGACY: superseded by .card-badges/.category-badge/.status-chip
            above - kept but no longer generated in renderListings(). */
-.status-badge {
-position: absolute; top: 46px; left: 14px; z-index: 10;
-color: #fff; font-size: 10.5px; font-weight: 700;
-padding: 4px 12px; border-radius: 20px; backdrop-filter: blur(4px); letter-spacing: 0.2px;
-}
-.status-badge.available { background: rgba(46,125,50,0.9); }
-.status-badge.occupied { background: rgba(255,82,82,0.9); }
+        .status-badge {
+            position: absolute; top: 46px; left: 14px; z-index: 10;
+            color: #fff; font-size: 10.5px; font-weight: 700;
+            padding: 4px 12px; border-radius: 20px; backdrop-filter: blur(4px); letter-spacing: 0.2px;
+        }
+        .status-badge.available { background: rgba(46,125,50,0.9); }
+        .status-badge.occupied { background: rgba(255,82,82,0.9); }
 
-.save-btn {
-position: absolute; top: 14px; right: 14px; background: rgba(255,255,255,0.92); border-radius: 50%;
-width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
-box-shadow: 0 4px 14px rgba(0,0,0,0.14); cursor: pointer; z-index: 10; transition: 0.2s;
-}
+        .save-btn {
+            position: absolute; top: 14px; right: 14px; background: rgba(255,255,255,0.92); border-radius: 50%;
+            width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.14); cursor: pointer; z-index: 10; transition: 0.2s;
+        }
 
         /* NEW: landlords see this instead of the heart save-btn on their
            own listing cards - opens the Edit Listing modal directly
@@ -651,377 +648,376 @@ box-shadow: 0 4px 14px rgba(0,0,0,0.14); cursor: pointer; z-index: 10; transitio
             color: var(--primary); font-size: 14px;
         }
         .quick-edit-btn:hover { transform: scale(1.1); background: var(--primary); color: #fff; }
-.save-btn:hover { transform: scale(1.1); }
-.save-btn i { color: #cbd5e1; font-size: 17px; transition: color 0.2s; }
-.save-btn.active i { color: var(--danger); }
+        .save-btn:hover { transform: scale(1.1); }
+        .save-btn i { color: #cbd5e1; font-size: 17px; transition: color 0.2s; }
+        .save-btn.active i { color: var(--danger); }
 
-.listing-info { padding: 18px 18px 20px; }
-.price-row { display: flex; align-items: baseline; margin-bottom: 4px; }
-.price { color: var(--primary); font-size: 1.28rem; font-weight: 800; letter-spacing: -0.3px; }
-.price-suffix { font-size: 12px; color: var(--muted); font-weight: 600; margin-left: 2px; }
-.title-text { font-weight: 700; font-size: 15px; color: var(--ink); margin: 3px 0 7px; line-height: 1.35; }
-.landlord-name { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--primary); font-weight: 600; margin-bottom: 8px; }
-.location { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-soft); margin: 0 0 12px; }
-.details { display: flex; gap: 16px; font-size: 12px; color: var(--ink-soft); padding-top: 12px; border-top: 1px dashed var(--border); }
-.details span { display: flex; align-items: center; gap: 5px; }
+        .listing-info { padding: 18px 18px 20px; }
+        .price-row { display: flex; align-items: baseline; margin-bottom: 4px; }
+        .price { color: var(--primary); font-size: 1.28rem; font-weight: 800; letter-spacing: -0.3px; }
+        .price-suffix { font-size: 12px; color: var(--muted); font-weight: 600; margin-left: 2px; }
+        .title-text { font-weight: 700; font-size: 15px; color: var(--ink); margin: 3px 0 7px; line-height: 1.35; }
+        .landlord-name { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--primary); font-weight: 600; margin-bottom: 8px; }
+        .location { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-soft); margin: 0 0 12px; }
+        .details { display: flex; gap: 16px; font-size: 12px; color: var(--ink-soft); padding-top: 12px; border-top: 1px dashed var(--border); }
+        .details span { display: flex; align-items: center; gap: 5px; }
 
-/* Skeleton loading placeholders */
-.skeleton-card { cursor: default; animation: none; box-shadow: var(--shadow-sm); }
-.skeleton-block { background: linear-gradient(90deg, #edf1f6 25%, #e2e8f0 37%, #edf1f6 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; border-radius: 8px; }
-.skeleton-image { width: 100%; aspect-ratio: 4 / 3; border-radius: 0; }
-.skeleton-line { height: 14px; }
+        /* Skeleton loading placeholders */
+        .skeleton-card { cursor: default; animation: none; box-shadow: var(--shadow-sm); }
+        .skeleton-block { background: linear-gradient(90deg, #edf1f6 25%, #e2e8f0 37%, #edf1f6 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; border-radius: 8px; }
+        .skeleton-image { width: 100%; aspect-ratio: 4 / 3; border-radius: 0; }
+        .skeleton-line { height: 14px; }
 
-/* Empty / error states */
-/* UPDATED: bumped up the icon/heading/paragraph sizes and padding so
-          this reads as an intentional, prominent state instead of a small
-          afterthought lost in a large empty grid area. The icon now uses
-          the site's own accent-soft/primary tokens (already used elsewhere,
-          e.g. .drawer-avatar / .landlord-info-box) instead of flat grey, so
-          it feels branded rather than like a placeholder. */
-.empty-state { grid-column: 1 / -1; text-align: center; padding: 90px 20px 100px; color: var(--ink-soft); }
-.empty-state-icon {
-width: 96px; height: 96px; border-radius: 50%; background: var(--accent-soft); color: var(--primary);
-display: flex; align-items: center; justify-content: center; font-size: 36px; margin: 0 auto 24px;
-box-shadow: 0 12px 30px -12px rgba(13,71,161,0.25);
-}
-.empty-state h3 { color: #263449; font-size: 21px; font-weight: 800; margin: 0 0 8px; letter-spacing: -0.2px; }
-.empty-state p { font-size: 14.5px; margin: 0 auto; max-width: 380px; line-height: 1.6; }
-/* NEW: optional call-to-action button inside certain empty states
-          (e.g. "Nothing saved yet" -> Browse Listings, or the landlord
-          "haven't posted anything yet" -> Post a Listing). Only appears
-          when emptyStateHTML() in home.js is called with a 4th argument -
-          existing 3-argument calls render exactly as before. */
-.empty-state-cta {
-margin-top: 22px; border: none; padding: 13px 26px; border-radius: 12px;
-background: linear-gradient(135deg, var(--primary), var(--primary-light));
-color: #fff; font-weight: 700; font-size: 13.5px; cursor: pointer;
-box-shadow: 0 10px 24px rgba(13,71,161,0.28); transition: transform 0.15s, box-shadow 0.15s;
-}
-.empty-state-cta:hover { transform: translateY(-1px); box-shadow: 0 14px 30px rgba(13,71,161,0.35); }
+        /* Empty / error states */
+        /* UPDATED: bumped up the icon/heading/paragraph sizes and padding so
+           this reads as an intentional, prominent state instead of a small
+           afterthought lost in a large empty grid area. The icon now uses
+           the site's own accent-soft/primary tokens (already used elsewhere,
+           e.g. .drawer-avatar / .landlord-info-box) instead of flat grey, so
+           it feels branded rather than like a placeholder. */
+        .empty-state { grid-column: 1 / -1; text-align: center; padding: 90px 20px 100px; color: var(--ink-soft); }
+        .empty-state-icon {
+            width: 96px; height: 96px; border-radius: 50%; background: var(--accent-soft); color: var(--primary);
+            display: flex; align-items: center; justify-content: center; font-size: 36px; margin: 0 auto 24px;
+            box-shadow: 0 12px 30px -12px rgba(13,71,161,0.25);
+        }
+        .empty-state h3 { color: #263449; font-size: 21px; font-weight: 800; margin: 0 0 8px; letter-spacing: -0.2px; }
+        .empty-state p { font-size: 14.5px; margin: 0 auto; max-width: 380px; line-height: 1.6; }
+        /* NEW: optional call-to-action button inside certain empty states
+           (e.g. "Nothing saved yet" -> Browse Listings, or the landlord
+           "haven't posted anything yet" -> Post a Listing). Only appears
+           when emptyStateHTML() in home.js is called with a 4th argument -
+           existing 3-argument calls render exactly as before. */
+        .empty-state-cta {
+            margin-top: 22px; border: none; padding: 13px 26px; border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: #fff; font-weight: 700; font-size: 13.5px; cursor: pointer;
+            box-shadow: 0 10px 24px rgba(13,71,161,0.28); transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .empty-state-cta:hover { transform: translateY(-1px); box-shadow: 0 14px 30px rgba(13,71,161,0.35); }
 
-/* ============ RESPONSIVE ============ */
-@media (max-width: 768px) {
-.hero { padding: 92px 6% 58px; }
-.menu-toggle { top: 16px; left: 16px; width: 44px; height: 44px; font-size: 16px; }
-            .floating-logo { top: 16px; right: 16px; font-size: 1rem; padding: 9px 15px; }
+        /* ============ RESPONSIVE ============ */
+        @media (max-width: 768px) {
+            .hero { padding: 92px 6% 58px; }
+            .menu-toggle { top: 16px; left: 16px; width: 44px; height: 44px; font-size: 16px; }
             /* UPDATED: hidden on mobile - the drawer already carries the
                StayFind branding once opened, so this floating copy just
                added extra visual clutter next to the hamburger button. */
             .floating-logo { display: none; }
-.filter-container { margin: -30px auto 24px; padding: 20px 18px 18px; width: 90%; }
-.filters-toggle-btn { display: flex; }
-#advancedFiltersBody { display: none; margin-top: 0; }
-#advancedFiltersBody.open { display: block; margin-top: 18px; }
-.filter-layout-wrapper { flex-direction: column; gap: 14px; }
-.advanced-filters { flex-direction: column; align-items: stretch; gap: 12px; }
-.filter-item { min-width: 100%; }
-.modal-content { width: 95%; padding: 24px 20px; }
-.container { grid-template-columns: 1fr; padding: 0 5% 100px; gap: 20px; }
-.search-box-wrapper { flex-direction: row; }
-.search-btn { padding: 10px 16px; font-size: 14px; }
-.category-pill { padding: 7px 14px; font-size: 12px; } /* NEW: slightly tighter pills on phones */
+            .filter-container { margin: -30px auto 24px; padding: 20px 18px 18px; width: 90%; }
+            .filters-toggle-btn { display: flex; }
+            #advancedFiltersBody { display: none; margin-top: 0; }
+            #advancedFiltersBody.open { display: block; margin-top: 18px; }
+            .filter-layout-wrapper { flex-direction: column; gap: 14px; }
+            .advanced-filters { flex-direction: column; align-items: stretch; gap: 12px; }
+            .filter-item { min-width: 100%; }
+            .modal-content { width: 95%; padding: 24px 20px; }
+            .container { grid-template-columns: 1fr; padding: 0 5% 100px; gap: 20px; }
+            .search-box-wrapper { flex-direction: row; }
+            .search-btn { padding: 10px 16px; font-size: 14px; }
+            .category-pill { padding: 7px 14px; font-size: 12px; } /* NEW: slightly tighter pills on phones */
             .sticky-search-bar { padding: 12px 60px; } /* NEW: matches the smaller hamburger button on phones */
             .results-header { padding: 0 5% 14px; font-size: 13px; }
             .site-footer { padding: 36px 6% 110px; } /* NEW: extra bottom room so the mobile FAB/Smart Search button doesn't sit on top of the footer text */
-.availability-pill { padding: 7px 14px; font-size: 12px; } /* NEW: matches category pills on phones */
-.clear-filters-link { justify-content: center; padding: 10px; } /* NEW: centers when stacked full-width */
-.post-fab { display: flex; }
-}
+            .availability-pill { padding: 7px 14px; font-size: 12px; } /* NEW: matches category pills on phones */
+            .clear-filters-link { justify-content: center; padding: 10px; } /* NEW: centers when stacked full-width */
+            .post-fab { display: flex; }
+        }
 
-@media (min-width: 1600px) {
-.container { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
-}
-</style>
+        @media (min-width: 1600px) {
+            .container { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+        }
+    </style>
 </head>
 <body>
 
-<!-- No top navbar strip — just a floating menu button (opens the drawer)
-        and a small floating brand mark. Page content starts right underneath. -->
-<button class="menu-toggle" id="menuToggleBtn" aria-label="Open menu" aria-expanded="false">
-<i class="fas fa-bars"></i>
-</button>
-<a href="home.html" class="floating-logo">Stay<span>Find</span></a>
+    <!-- No top navbar strip — just a floating menu button (opens the drawer)
+         and a small floating brand mark. Page content starts right underneath. -->
+    <button class="menu-toggle" id="menuToggleBtn" aria-label="Open menu" aria-expanded="false">
+        <i class="fas fa-bars"></i>
+    </button>
+    <a href="home.html" class="floating-logo">Stay<span>Find</span></a>
 
-<!-- ============ SIDE DRAWER (replaces the old top nav links + bottom mobile nav) ============ -->
-<div class="drawer-overlay" id="sideDrawerOverlay"></div>
-<aside class="side-drawer" id="sideDrawer" aria-hidden="true">
-<div class="drawer-header">
-<div class="drawer-brand">Stay<span>Find</span></div>
-<button class="drawer-close" id="closeDrawerBtn" aria-label="Close menu"><i class="fas fa-times"></i></button>
-</div>
+    <!-- ============ SIDE DRAWER (replaces the old top nav links + bottom mobile nav) ============ -->
+    <div class="drawer-overlay" id="sideDrawerOverlay"></div>
+    <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
+        <div class="drawer-header">
+            <div class="drawer-brand">Stay<span>Find</span></div>
+            <button class="drawer-close" id="closeDrawerBtn" aria-label="Close menu"><i class="fas fa-times"></i></button>
+        </div>
 
-<div class="drawer-user" id="drawerUserInfo"></div>
+        <div class="drawer-user" id="drawerUserInfo"></div>
 
-<nav class="drawer-nav">
-<div class="drawer-section-label">Menu</div>
-<a id="viewAllBtn" class="drawer-link nav-active"><i class="fas fa-compass"></i> Browse</a>
-<a id="landlordDashboardBtn" class="drawer-link" style="display:none;"><i class="fas fa-chart-line"></i> My Dashboard</a>
-<a id="viewSavedBtn" class="drawer-link"><i class="fas fa-heart"></i> Saved</a>
-<a href="#" class="drawer-link post-drawer-link" id="postBtn" style="display:none;"><i class="fas fa-plus"></i> Post a Listing</a>
+        <nav class="drawer-nav">
+            <div class="drawer-section-label">Menu</div>
+            <a id="viewAllBtn" class="drawer-link nav-active"><i class="fas fa-compass"></i> Browse</a>
+            <a id="landlordDashboardBtn" class="drawer-link" style="display:none;"><i class="fas fa-chart-line"></i> My Dashboard</a>
+            <a id="viewSavedBtn" class="drawer-link"><i class="fas fa-heart"></i> Saved</a>
+            <a href="#" class="drawer-link post-drawer-link" id="postBtn" style="display:none;"><i class="fas fa-plus"></i> Post a Listing</a>
 
-<div class="drawer-section-label">Account</div>
-<a id="settingsBtn" class="drawer-link"><i class="fas fa-cog"></i> Settings</a>
-<a href="admin.html" class="drawer-link"><i class="fas fa-user-shield"></i> Admin Panel</a>
-</nav>
+            <div class="drawer-section-label">Account</div>
+            <a id="settingsBtn" class="drawer-link"><i class="fas fa-cog"></i> Settings</a>
+            <a href="admin.html" class="drawer-link"><i class="fas fa-user-shield"></i> Admin Panel</a>
+        </nav>
 
-<div class="drawer-footer">
-<a id="logoutLink" class="drawer-link logout-link"><i class="fas fa-sign-out-alt"></i> Logout</a>
-</div>
-</aside>
+        <div class="drawer-footer">
+            <a id="logoutLink" class="drawer-link logout-link"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </aside>
 
-<!-- Floating "Post" button shown on mobile for landlords only (mirrors the drawer's Post link) -->
-<button class="post-fab" id="postFab" aria-label="Post a new listing"><i class="fas fa-plus"></i></button>
+    <!-- Floating "Post" button shown on mobile for landlords only (mirrors the drawer's Post link) -->
+    <button class="post-fab" id="postFab" aria-label="Post a new listing"><i class="fas fa-plus"></i></button>
 
-<!-- ============ HERO (personalized greeting, filled in by home.js) ============ -->
-<header class="hero">
-<div class="hero-inner">
-<p class="hero-eyebrow" id="heroEyebrow">Find Your Next Stay</p>
-<h1 class="hero-greeting" id="heroGreeting">Welcome to StayFind 👋</h1>
-<p class="hero-subtitle" id="heroSubtitle">Discover verified stays across the Philippines.</p>
-</div>
-</header>
+    <!-- ============ HERO (personalized greeting, filled in by home.js) ============ -->
+    <header class="hero">
+        <div class="hero-inner">
+            <p class="hero-eyebrow" id="heroEyebrow">Find Your Next Stay</p>
+            <h1 class="hero-greeting" id="heroGreeting">Welcome to StayFind 👋</h1>
+            <p class="hero-subtitle" id="heroSubtitle">Discover verified stays across the Philippines.</p>
+        </div>
+    </header>
 
-<div id="settingsModal" class="modal">
-<div class="modal-content">
-<h3>Account Settings</h3>
-<label>Full Name</label>
-<input type="text" id="editName" placeholder="Your Full Name">
-<label>Address</label>
-<input type="text" id="editAddress" placeholder="Your Address">
-<label>Contact</label>
-<input type="text" id="editContact" placeholder="Phone Number">
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <h3>Account Settings</h3>
+            <label>Full Name</label>
+            <input type="text" id="editName" placeholder="Your Full Name">
+            <label>Address</label>
+            <input type="text" id="editAddress" placeholder="Your Address">
+            <label>Contact</label>
+            <input type="text" id="editContact" placeholder="Phone Number">
 
-<p style="font-size: 11px; color: #e53935; margin-top: -15px; margin-bottom: 15px;">* Name, Address, and Contact can only be changed once a month.</p>
+            <p style="font-size: 11px; color: #e53935; margin-top: -15px; margin-bottom: 15px;">* Name, Address, and Contact can only be changed once a month.</p>
 
-<label>Your Role</label>
-<select id="editRole">
-<option value="tenant">Tenant</option>
-<option value="landlord">Landlord</option>
-</select>
+            <label>Your Role</label>
+            <select id="editRole">
+                <option value="tenant">Tenant</option>
+                <option value="landlord">Landlord</option>
+            </select>
 
-<p style="font-size: 11px; color: #43a047; margin-top: -15px; margin-bottom: 15px;">* Account role can be changed anytime.</p>
+            <p style="font-size: 11px; color: #43a047; margin-top: -15px; margin-bottom: 15px;">* Account role can be changed anytime.</p>
 
-<!-- Shown only when "Landlord" is selected AND the user is
-                not already an approved landlord. Required to submit a
-                landlord request.
-                UPDATED: now collects 4 items (was 3) — the 3 original
-                documents, PLUS a typed "name on document" field (for the
-                admin-side name cross-check) and a selfie-with-ID photo. -->
-<div id="settingsLandlordDocsSection" style="display:none; background:#f8fbff; border:1px solid #e3f2fd; border-radius:14px; padding:14px; margin-bottom:20px;">
-<p style="font-size:11px; color:#0d47a1; font-weight:bold; margin:0 0 8px 0;"><i class="fas fa-file-shield"></i> Landlord Verification Documents (required)</p>
-<p style="font-size:10px; color:#90a4ae; margin:0 0 10px 0;">Upload clear photos and fill in the details below. An admin will review these before your landlord account is approved.</p>
+            <!-- Shown only when "Landlord" is selected AND the user is
+                 not already an approved landlord. Required to submit a
+                 landlord request.
+                 UPDATED: now collects 4 items (was 3) — the 3 original
+                 documents, PLUS a typed "name on document" field (for the
+                 admin-side name cross-check) and a selfie-with-ID photo. -->
+            <div id="settingsLandlordDocsSection" style="display:none; background:#f8fbff; border:1px solid #e3f2fd; border-radius:14px; padding:14px; margin-bottom:20px;">
+                <p style="font-size:11px; color:#0d47a1; font-weight:bold; margin:0 0 8px 0;"><i class="fas fa-file-shield"></i> Landlord Verification Documents (required)</p>
+                <p style="font-size:10px; color:#90a4ae; margin:0 0 10px 0;">Upload clear photos and fill in the details below. An admin will review these before your landlord account is approved.</p>
 
-<label style="font-size:11px; text-transform:none;">Proof of Property Ownership (TCT or Tax Declaration)</label>
-<input type="file" id="settingsDocOwnership" accept="image/*" style="margin-bottom:12px; padding:8px; font-size:12px;">
+                <label style="font-size:11px; text-transform:none;">Proof of Property Ownership (TCT or Tax Declaration)</label>
+                <input type="file" id="settingsDocOwnership" accept="image/*" style="margin-bottom:12px; padding:8px; font-size:12px;">
 
-<!-- NEW: name cross-check field -->
-<label style="font-size:11px; text-transform:none;">Full name as printed on your Proof of Ownership doc</label>
-<input type="text" id="settingsDocOwnerName" placeholder="e.g. Juan Dela Cruz" style="width:100%; margin-bottom:4px; padding:8px; font-size:12px; border:1px solid #e3f2fd; border-radius:8px;">
-<p style="font-size:10px; color:#90a4ae; margin:0 0 12px 0;">This gets compared to your registered name to help the admin spot mismatches.</p>
+                <!-- NEW: name cross-check field -->
+                <label style="font-size:11px; text-transform:none;">Full name as printed on your Proof of Ownership doc</label>
+                <input type="text" id="settingsDocOwnerName" placeholder="e.g. Juan Dela Cruz" style="width:100%; margin-bottom:4px; padding:8px; font-size:12px; border:1px solid #e3f2fd; border-radius:8px;">
+                <p style="font-size:10px; color:#90a4ae; margin:0 0 12px 0;">This gets compared to your registered name to help the admin spot mismatches.</p>
 
-<label style="font-size:11px; text-transform:none;">Local Permits (Barangay Clearance + Mayor's/Business Permit)</label>
-<input type="file" id="settingsDocPermits" accept="image/*" style="margin-bottom:12px; padding:8px; font-size:12px;">
+                <label style="font-size:11px; text-transform:none;">Local Permits (Barangay Clearance + Mayor's/Business Permit)</label>
+                <input type="file" id="settingsDocPermits" accept="image/*" style="margin-bottom:12px; padding:8px; font-size:12px;">
 
-<label style="font-size:11px; text-transform:none;">BIR Registration (Form 1901/1903)</label>
-<input type="file" id="settingsDocBir" accept="image/*" style="margin-bottom:12px; padding:8px; font-size:12px;">
+                <label style="font-size:11px; text-transform:none;">BIR Registration (Form 1901/1903)</label>
+                <input type="file" id="settingsDocBir" accept="image/*" style="margin-bottom:12px; padding:8px; font-size:12px;">
 
-<!-- NEW: selfie-with-ID upload -->
-<label style="font-size:11px; text-transform:none;">Selfie holding a valid government ID</label>
-<input type="file" id="settingsDocSelfie" accept="image/*" style="margin-bottom:5px; padding:8px; font-size:12px;">
-<p style="font-size:10px; color:#90a4ae; margin:0;">Make sure your face and the ID details are both clearly visible.</p>
-</div>
+                <!-- NEW: selfie-with-ID upload -->
+                <label style="font-size:11px; text-transform:none;">Selfie holding a valid government ID</label>
+                <input type="file" id="settingsDocSelfie" accept="image/*" style="margin-bottom:5px; padding:8px; font-size:12px;">
+                <p style="font-size:10px; color:#90a4ae; margin:0;">Make sure your face and the ID details are both clearly visible.</p>
+            </div>
 
-<button id="saveSettingsBtn" class="btn-primary-block">Save Changes</button>
-<button class="btn-ghost-block" onclick="document.getElementById('settingsModal').style.display='none'">Cancel</button>
-</div>
-</div>
+            <button id="saveSettingsBtn" class="btn-primary-block">Save Changes</button>
+            <button class="btn-ghost-block" onclick="document.getElementById('settingsModal').style.display='none'">Cancel</button>
+        </div>
+    </div>
 
-<div id="postModal" class="modal">
-<div class="modal-content">
-<h3 id="postModalTitle">Post New Listing</h3>
+    <div id="postModal" class="modal">
+        <div class="modal-content">
+            <h3 id="postModalTitle">Post New Listing</h3>
 
-<label>Listing Title</label>
-<input type="text" id="postTitle" placeholder="e.g. Modern Studio Apartment">
+            <label>Listing Title</label>
+            <input type="text" id="postTitle" placeholder="e.g. Modern Studio Apartment">
 
-<label>Property Category</label>
-<select id="postCategory">
-<option value="Apartment">Apartment</option>
-<option value="House">House</option>
-<option value="Bedspace">Bedspace</option>
-<option value="Condo">Condo</option>
-</select>
+            <label>Property Category</label>
+            <select id="postCategory">
+                <option value="Apartment">Apartment</option>
+                <option value="House">House</option>
+                <option value="Bedspace">Bedspace</option>
+                <option value="Condo">Condo</option>
+            </select>
 
-<label>Price (₱ per month)</label>
-<input type="number" id="postPrice" placeholder="5000" min="0">
+            <label>Price (₱ per month)</label>
+            <input type="number" id="postPrice" placeholder="5000" min="0">
 
-<label>Location / Address</label>
-<input type="text" id="postLocation" placeholder="e.g. Los Baños, Laguna">
+            <label>Location / Address</label>
+            <input type="text" id="postLocation" placeholder="e.g. Los Baños, Laguna">
 
-<div style="display: flex; gap: 10px;">
-<div style="flex: 1;">
-<label>Rooms</label>
-<input type="number" id="postRooms" value="1" min="0">
-</div>
-<div style="flex: 1;">
-<label>Size (sqm)</label>
-<input type="number" id="postSize" placeholder="25" min="0">
-</div>
-</div>
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <label>Rooms</label>
+                    <input type="number" id="postRooms" value="1" min="0">
+                </div>
+                <div style="flex: 1;">
+                    <label>Size (sqm)</label>
+                    <input type="number" id="postSize" placeholder="25" min="0">
+                </div>
+            </div>
 
-<label>Amenities</label>
-<input type="text" id="postAmenities" placeholder="e.g. WiFi, Aircon, Parking">
+            <label>Amenities</label>
+            <input type="text" id="postAmenities" placeholder="e.g. WiFi, Aircon, Parking">
 
-<!-- NEW: Availability status for this listing -->
-<label>Availability</label>
-<select id="postStatus">
-<option value="available">Available</option>
-<option value="occupied">Occupied</option>
-</select>
+            <!-- NEW: Availability status for this listing -->
+            <label>Availability</label>
+            <select id="postStatus">
+                <option value="available">Available</option>
+                <option value="occupied">Occupied</option>
+            </select>
 
-<label>Listing Photos (Select Multiple)</label>
-<input type="file" id="postImages" accept="image/*" multiple style="border:none; padding:5px 0;">
-<div id="imagePreview" style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 20px;"></div>
+            <label>Listing Photos (Select Multiple)</label>
+            <input type="file" id="postImages" accept="image/*" multiple style="border:none; padding:5px 0;">
+            <div id="imagePreview" style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 20px;"></div>
 
-<button id="submitPostBtn" class="btn-primary-block">Publish Listing</button>
-<button class="btn-ghost-block" onclick="document.getElementById('postModal').style.display='none'">Cancel</button>
-</div>
-</div>
+            <button id="submitPostBtn" class="btn-primary-block">Publish Listing</button>
+            <button class="btn-ghost-block" onclick="document.getElementById('postModal').style.display='none'">Cancel</button>
+        </div>
+    </div>
 
-<div id="detailsModal" class="modal">
-<div class="modal-content" style="max-width: 500px;">
-<div id="carouselWrapper"></div>
-<div class="detail-header">
-<h2 id="detTitle" style="margin:0; color:#0d47a1; text-align:left;">Listing Details</h2>
-<p style="color:gray; font-size:14px;"><i class="fas fa-map-marker-alt"></i> <span id="detLocation"></span></p>
-</div>
+    <div id="detailsModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div id="carouselWrapper"></div>
+            <div class="detail-header">
+                <h2 id="detTitle" style="margin:0; color:#0d47a1; text-align:left;">Listing Details</h2>
+                <p style="color:gray; font-size:14px;"><i class="fas fa-map-marker-alt"></i> <span id="detLocation"></span></p>
+            </div>
 
-<p><strong>Price:</strong> ₱<span id="detPrice"></span>/mo</p>
-<p><strong>Type:</strong> <span id="detType"></span></p>
-<p><strong>Specs:</strong> <span id="detRooms"></span> Rooms | <span id="detSize"></span> sqm</p>
-<p><strong>Amenities:</strong> <span id="detAmenities"></span></p>
+            <p><strong>Price:</strong> ₱<span id="detPrice"></span>/mo</p>
+            <p><strong>Type:</strong> <span id="detType"></span></p>
+            <p><strong>Specs:</strong> <span id="detRooms"></span> Rooms | <span id="detSize"></span> sqm</p>
+            <p><strong>Amenities:</strong> <span id="detAmenities"></span></p>
 
-<div class="landlord-info-box">
-<h4><i class="fas fa-id-card"></i> Landlord Contact Info</h4>
-<p><strong>Name:</strong> <span id="detLandlord"></span></p>
-<p><strong>Contact:</strong> <span id="detContact"></span></p>
-</div>
+            <div class="landlord-info-box">
+                <h4><i class="fas fa-id-card"></i> Landlord Contact Info</h4>
+                <p><strong>Name:</strong> <span id="detLandlord"></span></p>
+                <p><strong>Contact:</strong> <span id="detContact"></span></p>
+            </div>
 
-<div style="margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px;">
-<h4 style="margin-bottom: 15px; color: #333;">Reviews & Comments <span id="revCount" class="review-badge">0</span></h4>
+            <div style="margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px;">
+                <h4 style="margin-bottom: 15px; color: #333;">Reviews & Comments <span id="revCount" class="review-badge">0</span></h4>
 
-<div id="ratingInputArea" style="margin-bottom: 15px;">
-<label id="ratingLabel" style="margin-bottom: 8px; display:block; font-size:12px; font-weight:700; color:#555;">Rate this stay:</label>
-<div class="star-rating" id="starContainer">
-<i class="fas fa-star" data-value="1"></i>
-<i class="fas fa-star" data-value="2"></i>
-<i class="fas fa-star" data-value="3"></i>
-<i class="fas fa-star" data-value="4"></i>
-<i class="fas fa-star" data-value="5"></i>
-</div>
-</div>
+                <div id="ratingInputArea" style="margin-bottom: 15px;">
+                    <label id="ratingLabel" style="margin-bottom: 8px; display:block; font-size:12px; font-weight:700; color:#555;">Rate this stay:</label>
+                    <div class="star-rating" id="starContainer">
+                        <i class="fas fa-star" data-value="1"></i>
+                        <i class="fas fa-star" data-value="2"></i>
+                        <i class="fas fa-star" data-value="3"></i>
+                        <i class="fas fa-star" data-value="4"></i>
+                        <i class="fas fa-star" data-value="5"></i>
+                    </div>
+                </div>
 
-<div class="comment-form">
-<textarea id="commentText" placeholder="Write a comment..." style="width:100%; padding:12px; border-radius:12px; border:1.5px solid #e5e9f0; resize:none; height:70px; font-size:13px; background:#fbfcfe;"></textarea>
-<button id="postCommentBtn" class="btn-primary-block" style="margin-top:10px; background:linear-gradient(135deg, #42a5f5, #1e88e5); box-shadow:0 10px 24px rgba(66,165,245,0.3);">Post Comment</button>
-<button id="cancelReplyBtn" style="display:none; width:100%; margin-top:5px; background:none; border:none; color:red; cursor:pointer; font-size:12px;">Cancel Reply Mode</button>
-</div>
+                <div class="comment-form">
+                    <textarea id="commentText" placeholder="Write a comment..." style="width:100%; padding:12px; border-radius:12px; border:1.5px solid #e5e9f0; resize:none; height:70px; font-size:13px; background:#fbfcfe;"></textarea>
+                    <button id="postCommentBtn" class="btn-primary-block" style="margin-top:10px; background:linear-gradient(135deg, #42a5f5, #1e88e5); box-shadow:0 10px 24px rgba(66,165,245,0.3);">Post Comment</button>
+                    <button id="cancelReplyBtn" style="display:none; width:100%; margin-top:5px; background:none; border:none; color:red; cursor:pointer; font-size:12px;">Cancel Reply Mode</button>
+                </div>
 
-<div id="commentsDisplayList" style="margin-top: 20px; max-height: 250px; overflow-y: auto;">
-</div>
-</div>
+                <div id="commentsDisplayList" style="margin-top: 20px; max-height: 250px; overflow-y: auto;">
+                </div>
+            </div>
 
-<div id="deleteBtnContainer"></div>
+            <div id="deleteBtnContainer"></div>
 
-<button onclick="closeDetails()" style="width:100%; margin-top:20px; padding:13px; background:#f1f5f9; border:none; border-radius:12px; cursor:pointer; font-weight:700; color:#475569;">Close</button>
-</div>
-</div>
+            <button onclick="closeDetails()" style="width:100%; margin-top:20px; padding:13px; background:#f1f5f9; border:none; border-radius:12px; cursor:pointer; font-weight:700; color:#475569;">Close</button>
+        </div>
+    </div>
 
-<div class="filter-container">
-<div class="search-bar-anchor">
-<form onsubmit="event.preventDefault(); filterListings();" class="search-box-wrapper" id="searchBoxWrapper">
-<i class="fas fa-search search-icon"></i>
-<input type="text" id="searchLoc" placeholder="Search by title, location, or amenities..." autocomplete="off">
-<i class="fas fa-circle-xmark search-clear-btn" id="searchClearBtn" title="Clear search"></i>
-<button type="submit" class="search-btn">Search</button>
-</form>
+    <div class="filter-container">
+        <div class="search-bar-anchor">
+            <form onsubmit="event.preventDefault(); filterListings();" class="search-box-wrapper" id="searchBoxWrapper">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="searchLoc" placeholder="Search by title, location, or amenities..." autocomplete="off">
+                <i class="fas fa-circle-xmark search-clear-btn" id="searchClearBtn" title="Clear search"></i>
+                <button type="submit" class="search-btn">Search</button>
+            </form>
 
-<!-- NEW: autocomplete / recent-searches dropdown, anchored to the search bar -->
-<div class="search-suggestions" id="searchSuggestions"></div>
-</div>
+            <!-- NEW: autocomplete / recent-searches dropdown, anchored to the search bar -->
+            <div class="search-suggestions" id="searchSuggestions"></div>
+        </div>
 
-<!-- UPDATED: category pills + availability pills grouped together
-            (used to be a separate boxed "Quick actions" panel sitting
-            next to the Price/Rooms/Location row - that mismatch in height
-            was what caused the messy extra spacing). Both rows now share
-            the same pill visual language. -->
-<div class="quick-filter-group">
-<div class="category-pills" id="categoryPills">
-<button type="button" class="category-pill active" data-category="">All</button>
-<button type="button" class="category-pill" data-category="apartment">Apartment</button>
-<button type="button" class="category-pill" data-category="house">House</button>
-<button type="button" class="category-pill" data-category="condo">Condo</button>
-<button type="button" class="category-pill" data-category="bedspace">Bedspace</button>
-</div>
+        <!-- UPDATED: category pills + availability pills grouped together
+             (used to be a separate boxed "Quick actions" panel sitting
+             next to the Price/Rooms/Location row - that mismatch in height
+             was what caused the messy extra spacing). Both rows now share
+             the same pill visual language. -->
+        <div class="quick-filter-group">
+            <div class="category-pills" id="categoryPills">
+                <button type="button" class="category-pill active" data-category="">All</button>
+                <button type="button" class="category-pill" data-category="apartment">Apartment</button>
+                <button type="button" class="category-pill" data-category="house">House</button>
+                <button type="button" class="category-pill" data-category="condo">Condo</button>
+                <button type="button" class="category-pill" data-category="bedspace">Bedspace</button>
+            </div>
 
-<!-- UPDATED: replaces the old bordered "Quick actions" box. Same
-                IDs (availablePropertyBtn/occupiedPropertyBtn) are kept so
-                nothing else needs to change. -->
-<div class="availability-pills" id="availabilityPills">
-<button type="button" class="availability-pill active" id="anyStatusBtn" data-availability="">Any Status</button>
-<button type="button" class="availability-pill" id="availablePropertyBtn" data-availability="available">Available</button>
-<button type="button" class="availability-pill" id="occupiedPropertyBtn" data-availability="occupied">Occupied</button>
-</div>
-</div>
+            <!-- UPDATED: replaces the old bordered "Quick actions" box. Same
+                 IDs (availablePropertyBtn/occupiedPropertyBtn) are kept so
+                 nothing else needs to change. -->
+            <div class="availability-pills" id="availabilityPills">
+                <button type="button" class="availability-pill active" id="anyStatusBtn" data-availability="">Any Status</button>
+                <button type="button" class="availability-pill" id="availablePropertyBtn" data-availability="available">Available</button>
+                <button type="button" class="availability-pill" id="occupiedPropertyBtn" data-availability="occupied">Occupied</button>
+            </div>
+        </div>
 
-<!-- NEW: live result count + Smart Search bridge, only shown once a search/filter is active -->
-<div class="search-meta-row" id="searchMetaRow"></div>
+        <!-- NEW: live result count + Smart Search bridge, only shown once a search/filter is active -->
+        <div class="search-meta-row" id="searchMetaRow"></div>
 
         <!-- NEW: subtle separator between the "quick filters" section
              above (search/category/availability) and the "advanced
              filters" section below (price/rooms/location) -->
         <div class="filter-divider"></div>
 
-<button type="button" id="filtersToggleBtn" class="filters-toggle-btn" aria-expanded="false">
-<i class="fas fa-filter"></i> <span id="filtersToggleLabel">Filters</span>
-</button>
+        <button type="button" id="filtersToggleBtn" class="filters-toggle-btn" aria-expanded="false">
+            <i class="fas fa-filter"></i> <span id="filtersToggleLabel">Filters</span>
+        </button>
 
-<!-- UPDATED: Price/Rooms/Location/Apply is now a single row (the
-            old two-column filter-layout-wrapper + quick-actions sidebar
-            is gone). "Clear all" is now a small text link at the end of
-            this same row instead of a big standalone button. -->
-<div id="advancedFiltersBody">
-<div class="advanced-filters">
-<div class="filter-item">
-<label>Price Range (₱)</label>
-<select id="maxPrice" onchange="filterListings()">
-<option value="Infinity">Any Price</option>
-<option value="5000">Under ₱5,000</option>
-<option value="10000">Under ₱10,000</option>
-<option value="20000">Under ₱20,000</option>
-</select>
-</div>
-<div class="filter-item">
-<label>Rooms</label>
-<select id="roomFilter" onchange="filterListings()">
-<option value="all">Any</option>
-<option value="1">1+ Room</option>
-<option value="2">2+ Rooms</option>
-<option value="3">3+ Rooms</option>
-</select>
-</div>
-<div class="filter-item">
-<label>Location</label>
-<input type="text" id="locFilter" placeholder="e.g., Los Baños" oninput="filterListings()">
-</div>
-<button class="apply-filters-btn" onclick="filterListings()">
-<i class="fas fa-filter"></i> Apply Filters
-</button>
-<button type="button" class="clear-filters-link" onclick="resetFilters()">
-<i class="fas fa-rotate-left"></i> Clear all
-</button>
-</div>
-</div>
-</div>
+        <!-- UPDATED: Price/Rooms/Location/Apply is now a single row (the
+             old two-column filter-layout-wrapper + quick-actions sidebar
+             is gone). "Clear all" is now a small text link at the end of
+             this same row instead of a big standalone button. -->
+        <div id="advancedFiltersBody">
+            <div class="advanced-filters">
+                <div class="filter-item">
+                    <label>Price Range (₱)</label>
+                    <select id="maxPrice" onchange="filterListings()">
+                        <option value="Infinity">Any Price</option>
+                        <option value="5000">Under ₱5,000</option>
+                        <option value="10000">Under ₱10,000</option>
+                        <option value="20000">Under ₱20,000</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label>Rooms</label>
+                    <select id="roomFilter" onchange="filterListings()">
+                        <option value="all">Any</option>
+                        <option value="1">1+ Room</option>
+                        <option value="2">2+ Rooms</option>
+                        <option value="3">3+ Rooms</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label>Location</label>
+                    <input type="text" id="locFilter" placeholder="e.g., Los Baños" oninput="filterListings()">
+                </div>
+                <button class="apply-filters-btn" onclick="filterListings()">
+                    <i class="fas fa-filter"></i> Apply Filters
+                </button>
+                <button type="button" class="clear-filters-link" onclick="resetFilters()">
+                    <i class="fas fa-rotate-left"></i> Clear all
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- NEW: results header + sort options, sits between the filter card and the grid -->
     <div class="results-header" id="resultsHeader">
@@ -1037,7 +1033,7 @@ box-shadow: 0 10px 24px rgba(13,71,161,0.28); transition: transform 0.15s, box-s
         </div>
     </div>
 
-<div class="container" id="listingsGrid"></div>
+    <div class="container" id="listingsGrid"></div>
 
     <!-- NEW: footer so the page has a proper closing section instead of
          just stopping after the last row of cards -->
@@ -1064,6 +1060,6 @@ box-shadow: 0 10px 24px rgba(13,71,161,0.28); transition: transform 0.15s, box-s
         </div>
     </div>
 
-<script src="home.js"></script>
+    <script src="home.js"></script>
 </body>
 </html>
