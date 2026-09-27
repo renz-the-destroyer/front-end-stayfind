@@ -763,6 +763,60 @@ function getListingRatingInfo(item) {
     return { avg, count };
 }
 
+// NEW: patches the star-average pill (.card-rating) and the comment-count
+// badge (.card-comment-btn .comment-count-dot) on the grid card matching
+// this listing, in place - called right after loadComments() fetches fresh
+// review data, so posting a rating/comment reflects on the card underneath
+// the modal immediately instead of requiring a reload. Safe no-op if the
+// card isn't currently in the DOM (e.g. it's been filtered out).
+function syncCardRatingBadge(listingId, avg, totalCount) {
+    const card = document.querySelector(`.listing-card[data-id="${listingId}"]`);
+    if (!card) return;
+
+    const ratingEl = card.querySelector('.card-rating');
+    if (ratingEl) {
+        if (avg > 0) {
+            ratingEl.classList.remove('card-rating-empty');
+            ratingEl.innerHTML = `<i class="fas fa-star"></i>${avg.toFixed(1)}<span class="card-rating-count">(${totalCount})</span>`;
+        } else {
+            ratingEl.classList.add('card-rating-empty');
+            ratingEl.innerHTML = `<i class="fas fa-star"></i>New`;
+        }
+    }
+
+    const commentBtn = card.querySelector('.card-comment-btn');
+    if (commentBtn) {
+        let dot = commentBtn.querySelector('.comment-count-dot');
+        if (totalCount > 0) {
+            const label = totalCount > 99 ? '99+' : String(totalCount);
+            if (dot) {
+                dot.innerText = label;
+            } else {
+                dot = document.createElement('span');
+                dot.className = 'comment-count-dot';
+                dot.innerText = label;
+                commentBtn.appendChild(dot);
+            }
+        } else if (dot) {
+            dot.remove();
+        }
+    }
+}
+
+// NEW: keeps allListingsCache/currentDisplayedItems in sync with the latest
+// avg_rating/review_count for a listing, so re-sorting or re-filtering
+// after posting a rating doesn't fall back to the stale numbers from the
+// last full /api/view fetch.
+function updateCachedListingRating(listingId, avg, totalCount) {
+    [allListingsCache, currentDisplayedItems].forEach(arr => {
+        const item = arr.find(i => String(i.id) === String(listingId));
+        if (item) {
+            item.avg_rating = avg;
+            item.review_count = totalCount;
+        }
+    });
+}
+
 // --- 2. FETCH LISTINGS FROM MYSQL ---
 async function loadListings() {
     if (!listingsGrid) return;
@@ -1170,13 +1224,15 @@ async function loadComments(listingId) {
         // NEW: fill in the "at a glance" summary box (average score, stars,
         // and count) from whatever rows actually carry a star rating.
         const ratedReviews = reviews.filter(r => r.rating && r.rating > 0);
+        const avg = ratedReviews.length > 0
+            ? ratedReviews.reduce((sum, r) => sum + Number(r.rating), 0) / ratedReviews.length
+            : 0;
         const summaryBox = document.getElementById('commentsSummaryBox');
         const summaryScore = document.getElementById('commentsSummaryScore');
         const summaryStars = document.getElementById('commentsSummaryStars');
         const summaryCount = document.getElementById('commentsSummaryCount');
         if (summaryBox && summaryScore && summaryStars && summaryCount) {
             if (ratedReviews.length > 0) {
-                const avg = ratedReviews.reduce((sum, r) => sum + Number(r.rating), 0) / ratedReviews.length;
                 summaryBox.classList.remove('comments-summary-empty');
                 summaryScore.innerText = avg.toFixed(1);
                 summaryStars.innerText = buildStarString(avg);
@@ -1188,7 +1244,19 @@ async function loadComments(listingId) {
                 summaryCount.innerText = 'No ratings yet';
             }
         }
-        
+
+        // FIX: the star-average pill and comment-count badge on this
+        // listing's card (sitting behind the modal, built once back in
+        // renderListings()) never used to get told about a new rating/
+        // comment - they only reflected whatever avg_rating/review_count
+        // came back from the LAST full /api/view fetch, so a fresh rating
+        // wouldn't show up on the card until the page was reloaded. Both
+        // helpers below patch the actual DOM element in place and update
+        // the cached listing data, so the card is correct immediately -
+        // no reload, no refetch.
+        syncCardRatingBadge(listingId, avg, reviews.length);
+        updateCachedListingRating(listingId, avg, reviews.length);
+
         if (reviews.length === 0) {
             list.innerHTML = `<div class="comment-empty"><i class="fas fa-comment-slash"></i>No reviews yet. Be the first to leave one!</div>`;
             return;
