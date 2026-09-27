@@ -295,13 +295,6 @@ window.onload = () => {
 };
 
 // --- NEW: SIDE DRAWER NAVIGATION ---
-// Consolidates what used to be separate top-nav links + a bottom mobile nav
-// bar into a single hamburger-triggered slide-in panel that works the same
-// way on phone and desktop. All the individual nav items (Browse, Saved,
-// Post, Settings, Admin, Logout) keep their original element IDs, so every
-// existing click handler elsewhere in this file (setupBookmarkToggles,
-// setupSettingsLogic, the logout handler, etc.) keeps working untouched -
-// this only adds the open/close behavior around them.
 function setupSideDrawer() {
     const menuToggleBtn = document.getElementById('menuToggleBtn');
     const closeDrawerBtn = document.getElementById('closeDrawerBtn');
@@ -332,11 +325,8 @@ function setupSideDrawer() {
         if (e.key === 'Escape') closeDrawer();
     });
 
-    // Close the drawer automatically once any link inside it is used, so the
-    // user doesn't have to close it manually after navigating.
     drawer.querySelectorAll('a').forEach(link => link.addEventListener('click', closeDrawer));
 
-    // Fill in the little identity card at the top of the drawer.
     const drawerUserInfo = document.getElementById('drawerUserInfo');
     if (drawerUserInfo && currentUser) {
         const name = currentUser.full_name || currentUser.name || "User";
@@ -352,10 +342,6 @@ function setupSideDrawer() {
 }
 
 // --- NEW: COLLAPSIBLE FILTER PANEL (mobile only) ---
-// On phones, the price/rooms/location filters used to always take up
-// vertical space below the search bar even when nobody needed them right
-// now. This tucks them behind a "Filters" toggle so the page opens clean;
-// on desktop the CSS media query keeps them visible as before.
 function setupFiltersToggle() {
     const toggleBtn = document.getElementById('filtersToggleBtn');
     const label = document.getElementById('filtersToggleLabel');
@@ -372,13 +358,6 @@ function setupFiltersToggle() {
 }
 
 // --- UPDATED: AVAILABLE / OCCUPIED PILLS (Any Status / Available / Occupied) ---
-// Used to be two standalone buttons directly manipulating card.style.display
-// (see the legacy applyAvailabilityFilter() below), which meant this filter
-// could silently ignore whatever was typed in the search box or picked in
-// the category pills. Now it's a 3-pill row (Any Status/Available/Occupied)
-// that just sets currentAvailabilityFilter and runs it through the same
-// filterListings() combined-matching logic everything else uses - the same
-// pattern as setupCategoryPills() below.
 function setupAvailabilityFilterButtons() {
     const pillsContainer = document.getElementById('availabilityPills');
     if (!pillsContainer) return;
@@ -397,9 +376,6 @@ function setupAvailabilityFilterButtons() {
 
 function clearAvailabilityFilterState() {
     currentAvailabilityFilter = null;
-    // UPDATED: also re-activates the "Any Status" pill so the UI stays in
-    // sync whenever this gets reset from elsewhere (loadListings, resetFilters,
-    // switching to Saved/Browse).
     const pillsContainer = document.getElementById('availabilityPills');
     if (pillsContainer) {
         pillsContainer.querySelectorAll('.availability-pill').forEach(p => p.classList.remove('availability-active'));
@@ -412,13 +388,11 @@ function clearAvailabilityFilterState() {
 
 // LEGACY: no longer wired up (setupAvailabilityFilterButtons() above now
 // handles clicks directly through filterListings() instead). Left in place
-// rather than deleted, per project convention - see similar notes on
-// updateListing()/smartSearch() in controllers/userController.js.
+// rather than deleted, per project convention.
 function applyAvailabilityFilter(status, clickedBtn, otherBtn) {
     const cards = document.querySelectorAll('.listing-card');
     const isReapplyingSame = currentAvailabilityFilter === status;
 
-    // Clear any "Saved" view state so the two filters don't fight each other
     const savedMsg = document.getElementById('no-saved-msg');
     if (savedMsg) savedMsg.remove();
     const noStatusMsg = document.getElementById('no-status-msg');
@@ -428,7 +402,6 @@ function applyAvailabilityFilter(status, clickedBtn, otherBtn) {
     if (viewSavedBtn) viewSavedBtn.classList.remove('nav-active');
 
     if (isReapplyingSame) {
-        // Tapping the same button again clears the filter and shows everything
         currentAvailabilityFilter = null;
         clickedBtn.classList.remove('availability-active');
         cards.forEach(card => { card.style.display = "block"; });
@@ -462,13 +435,7 @@ function applyAvailabilityFilter(status, clickedBtn, otherBtn) {
 }
 
 // --- REDESIGNED: SMART SEARCH UI INJECTION ---
-// Builds the floating "Smart Finder" launcher + panel. The IDs
-// (smartSearchBtn, smartSearchBox, smartInput, executeSmartSearch) and the
-// show/hide-via-style.display mechanism are kept the same so
-// processSmartSearch() below still works without any changes to its wiring.
 function injectSmartSearchUI() {
-    // Inject the widget's CSS once (keyframes/hover states need a real
-    // stylesheet - inline style attributes can't do animations or :hover).
     if (!document.getElementById('smartSearchStyles')) {
         const styleTag = document.createElement('style');
         styleTag.id = 'smartSearchStyles';
@@ -623,11 +590,6 @@ function injectSmartSearchUI() {
     `;
     document.body.appendChild(chatbox);
 
-    // Animated open/close. Still driven by style.display (block <-> none)
-    // underneath, so processSmartSearch()'s existing line that sets
-    // smartSearchBox.style.display = 'none' on a successful search keeps
-    // working exactly as before - no changes needed there for the open/close
-    // mechanism itself.
     function openPanel() {
         chatbox.style.display = 'flex';
         requestAnimationFrame(() => chatbox.classList.add('open'));
@@ -646,9 +608,6 @@ function injectSmartSearchUI() {
     };
     document.getElementById('smartSearchCloseBtn').onclick = closePanel;
 
-    // NEW: Suggestion chips - tapping one fills the input and runs the
-    // search immediately, doubling as a quick demo of what Smart Search
-    // actually understands (property type, amenities, price).
     document.querySelectorAll('.ss-chip').forEach(chip => {
         chip.onclick = () => {
             document.getElementById('smartInput').value = chip.getAttribute('data-query');
@@ -668,9 +627,6 @@ async function processSmartSearch() {
     if (!rawQuery) return;
 
     const searchBtn = document.getElementById('executeSmartSearch');
-    // NEW: swap in an animated "thinking" dots indicator instead of just
-    // changing button text, and remember the original markup so it can be
-    // restored exactly afterward.
     const originalBtnContent = searchBtn.innerHTML;
     searchBtn.disabled = true;
     searchBtn.innerHTML = '<span class="ss-dot"></span><span class="ss-dot"></span><span class="ss-dot"></span>';
@@ -681,7 +637,7 @@ async function processSmartSearch() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 message: rawQuery.toLowerCase(),
-                userContext: { role: currentUser.role, id: currentUser.id } // Send role context to backend
+                userContext: { role: currentUser.role, id: currentUser.id }
             }) 
         });
 
@@ -694,10 +650,10 @@ async function processSmartSearch() {
 
         if (results.length > 0) {
             const smartSearchBoxEl = document.getElementById('smartSearchBox');
-            smartSearchBoxEl.classList.remove('open'); // NEW: keep panel state consistent for next time it's opened
+            smartSearchBoxEl.classList.remove('open');
             smartSearchBoxEl.style.display = 'none';
-            allListingsCache = results; // NEW: keep the search bar's autocomplete in sync with these results
-            currentDisplayedItems = results; // NEW: keep the Sort dropdown's source data in sync too
+            allListingsCache = results;
+            currentDisplayedItems = results;
             renderListings(results); 
             
             Swal.fire({ 
@@ -721,20 +677,12 @@ async function processSmartSearch() {
         Swal.fire('Error', 'Something went wrong with the smart search.', 'error');
     } finally {
         searchBtn.disabled = false;
-        searchBtn.innerHTML = originalBtnContent; // NEW: restore the original icon+label markup
+        searchBtn.innerHTML = originalBtnContent;
         document.getElementById('smartInput').value = "";
     }
 }
 
 // --- NEW: SHARED UI HELPERS (empty states + skeleton loaders) ---
-// Small presentational helpers used by loadListings() and the "Saved" view
-// so every empty/loading/error state looks consistent instead of a plain
-// line of text.
-// UPDATED: accepts an optional 4th argument, ctaHTML - a small snippet of
-// button markup (e.g. `<button class="empty-state-cta" onclick="...">Browse
-// Listings</button>`) rendered under the subtitle. Existing 3-argument calls
-// elsewhere in this file are unaffected - ctaHTML defaults to "" so nothing
-// extra renders unless a caller explicitly passes it.
 function emptyStateHTML(icon, title, subtitle, ctaHTML = "") {
     return `
         <div class="empty-state">
@@ -778,8 +726,6 @@ function updateResultsHeaderCount(count) {
     el.innerHTML = `<strong>${count}</strong> ${count === 1 ? 'Stay' : 'Stays'} Available`;
 }
 
-// NEW: sorts a COPY of the given array - never mutates currentDisplayedItems,
-// so switching back to "Newest" always restores the original server order.
 function sortListings(items, sortOption) {
     const copy = [...items];
     switch (sortOption) {
@@ -788,37 +734,49 @@ function sortListings(items, sortOption) {
         case 'rooms_desc': return copy.sort((a, b) => (Number(b.rooms) || 0) - (Number(a.rooms) || 0));
         case 'newest':
         default:
-            // The Browse view's data already comes back ORDER BY created_at
-            // DESC from the server (see getAllListings), so "Newest" just
-            // means "leave it in the order we received it".
             return copy;
     }
 }
 
-// NEW: called by the Sort <select> in the results header. Re-renders the
-// grid using whatever's currently loaded (currentDisplayedItems), just in a
-// different order - works for the normal Browse view and Smart Search
-// results, since both keep currentDisplayedItems in sync.
 function applySorting() {
     const sortSelect = document.getElementById('sortSelect');
     if (sortSelect) currentSortOption = sortSelect.value;
     renderListings(sortListings(currentDisplayedItems, currentSortOption));
 }
 
+// --- NEW: RATING HELPERS (for the card badge + the modal summary box) ---
+// Builds a "★★★★☆"-style string for a given average (0-5). Used by both the
+// card badge tooltip context and the details-modal summary box.
+function buildStarString(avg) {
+    const rounded = Math.round(avg);
+    const full = Math.max(0, Math.min(5, rounded));
+    return '★'.repeat(full) + '☆'.repeat(5 - full);
+}
+
+// Reads a listing's rating fields the same way regardless of where they came
+// from (the normal /view endpoint, which now includes avg_rating/review_count
+// via a SQL subquery, or Smart Search results, which may not have them yet -
+// in that case we just show "no ratings" rather than guessing).
+function getListingRatingInfo(item) {
+    const avg = Number(item.avg_rating) || 0;
+    const count = Number(item.review_count) || 0;
+    return { avg, count };
+}
+
 // --- 2. FETCH LISTINGS FROM MYSQL ---
 async function loadListings() {
     if (!listingsGrid) return;
 
-    clearAvailabilityFilterState(); // NEW: reset the availability filter whenever the grid is fully reloaded
-    clearCategoryFilterState(); // NEW: reset the category pills whenever the grid is fully reloaded
-    renderSkeletonCards(); // NEW: shimmer placeholders instead of a bare "Loading..." line
+    clearAvailabilityFilterState();
+    clearCategoryFilterState();
+    renderSkeletonCards();
     
     try {
         const response = await fetch(`${API_BASE}/view`);
         const data = await response.json();
 
         if (!data || data.length === 0) {
-            hideResultsHeader(); // NEW: no point showing "0 Stays Available" above this empty state
+            hideResultsHeader();
             listingsGrid.innerHTML = emptyStateHTML('fa-house-circle-xmark', 'No listings yet', 'Check back soon — new stays are added regularly.');
             return;
         }
@@ -831,14 +789,11 @@ async function loadListings() {
             })
             : data;
 
-        allListingsCache = dataToShow; // NEW: keep the search bar's autocomplete in sync with what's shown
-        currentDisplayedItems = dataToShow; // NEW: keep the Sort dropdown's source data in sync too
+        allListingsCache = dataToShow;
+        currentDisplayedItems = dataToShow;
 
-        // UPDATED: added a "Post a Listing" call-to-action button to this
-        // empty state, opening the exact same modal as the Post button/FAB
-        // (an empty screen should always give the person something to do).
         if (dataToShow.length === 0 && currentUser.role === 'landlord') {
-            hideResultsHeader(); // NEW
+            hideResultsHeader();
             listingsGrid.innerHTML = emptyStateHTML(
                 'fa-clipboard-list',
                 "You haven't posted anything yet",
@@ -851,7 +806,7 @@ async function loadListings() {
         renderListings(dataToShow);
     } catch (error) {
         console.error("Error fetching listings:", error);
-        hideResultsHeader(); // NEW
+        hideResultsHeader();
         listingsGrid.innerHTML = emptyStateHTML('fa-triangle-exclamation', 'Something went wrong', "We couldn't load listings. Check if the backend is live and try again.");
     }
 }
@@ -860,9 +815,6 @@ async function loadListings() {
 async function renderListings(items) {
     listingsGrid.innerHTML = ""; 
     
-    // NEW: keep the "X Stays Available" header in sync with whatever's
-    // actually being rendered, and make sure it's visible again (in case
-    // an earlier empty-state branch had hidden it).
     updateResultsHeaderCount(items.length);
     showResultsHeader();
 
@@ -886,18 +838,9 @@ async function renderListings(items) {
 
         const isSaved = savedListings.includes(item.id);
 
-        // UPDATED: now uses the shared buildCarouselHTML() helper defined near the
-        // top of this file (also used by the details modal below).
         let carouselHTML = buildCarouselHTML(item.images, item.id);
 
-        // NEW: Availability badge (Available / Occupied), driven by the new
-        // `status` column on listings. Defaults to 'available' for any
-        // existing rows created before this column existed.
         const statusValue = (item.status || 'available').toLowerCase() === 'occupied' ? 'occupied' : 'available';
-        // UPDATED: category badge + status are now one flex row (.card-badges)
-        // instead of two pills stacked on top of each other, and the
-        // category badge is color-coded per property type (see
-        // getCategoryBadgeClass()) so it's scannable while scrolling.
         const cardBadgesHTML = `
             <div class="card-badges">
                 <span class="category-badge ${getCategoryBadgeClass(item.category)}">${item.category || 'Apartment'}</span>
@@ -910,24 +853,11 @@ async function renderListings(items) {
         card.setAttribute('data-id', item.id);
         card.setAttribute('data-price', item.price || 0);
         card.setAttribute('data-rooms', item.rooms || 0);
-        card.setAttribute('data-status', statusValue); // NEW: used by the Available/Occupied filter buttons
-        // FIX: the search bar's placeholder promises "title, location, or
-        // amenities" but amenities text was never stored anywhere on the
-        // card, so searching "wifi" (or any amenity) could never match.
-        // Stashing it here (lowercased, same as the other filter fields)
-        // is what filterListings() below now checks against.
+        card.setAttribute('data-status', statusValue);
         card.setAttribute('data-amenities', (item.amenities || '').toLowerCase());
-        // NEW: lets the search bar match property type too (e.g. searching
-        // "bedspace" should find a listing whose category is "Bedspace").
         card.setAttribute('data-category', (item.category || '').toLowerCase());
-        // NEW: pristine (un-lowercased, unmodified) title/location strings
-        // kept on the card so filterListings() can safely re-render
-        // highlighted search matches on every keystroke without ever
-        // corrupting the underlying text (see highlightMatch()).
         card.setAttribute('data-title-raw', item.title || 'Cozy Room');
         card.setAttribute('data-location-raw', item.location || 'Unknown');
-        // NEW: stagger the fade-in-up animation slightly per card (capped so a
-        // long list doesn't leave later cards waiting too long to appear).
         card.style.animationDelay = `${Math.min(idx, 10) * 0.05}s`;
         
         card.onclick = () => showFullDetails(item);
@@ -939,9 +869,6 @@ async function renderListings(items) {
             </div>
         ` : "";
 
-        // NEW: landlords get a quick-edit shortcut on their own cards
-        // instead of the (tenant-only) save heart, so they don't have to
-        // open the details modal first just to fix a typo or price.
         const isOwnerCard = currentUser.role === 'landlord' && item.user_id && String(currentUser.id) === String(item.user_id);
         const quickEditHTML = isOwnerCard ? `
             <div class="quick-edit-btn" title="Quick edit">
@@ -949,9 +876,27 @@ async function renderListings(items) {
             </div>
         ` : "";
 
+        // NEW: round "reviews" shortcut button - sits next to save/quick-edit
+        // and jumps straight to the comment section of this listing's
+        // details modal, with the current comment count as a little badge.
+        const ratingInfo = getListingRatingInfo(item);
+        const commentBtnHTML = `
+            <div class="card-comment-btn" title="View reviews">
+                <i class="fas fa-comment-dots"></i>
+                ${ratingInfo.count > 0 ? `<span class="comment-count-dot">${ratingInfo.count > 99 ? '99+' : ratingInfo.count}</span>` : ''}
+            </div>
+        `;
+
+        // NEW: star-average pill, shown in the same row as the landlord name.
+        // Falls back to a muted "New" pill when the listing has no ratings yet.
+        const ratingBadgeHTML = ratingInfo.avg > 0
+            ? `<span class="card-rating"><i class="fas fa-star"></i>${ratingInfo.avg.toFixed(1)}<span class="card-rating-count">(${ratingInfo.count})</span></span>`
+            : `<span class="card-rating card-rating-empty"><i class="fas fa-star"></i>New</span>`;
+
         card.innerHTML = `
             ${saveButtonHTML}
             ${quickEditHTML}
+            ${commentBtnHTML}
             ${cardBadgesHTML}
             ${carouselHTML}
             <div class="listing-info">
@@ -961,6 +906,7 @@ async function renderListings(items) {
                 <div class="title-text">${item.title || 'Cozy Room'}</div>
                 <div class="landlord-name">
                     <i class="fas fa-user-tie"></i> ${item.landlord_name || 'Owner'}
+                    ${ratingBadgeHTML}
                 </div>
                 <div class="location"><i class="fas fa-map-marker-alt"></i> <span class="location-text">${item.location || 'Unknown'}</span></div>
                 <div class="details">
@@ -970,9 +916,6 @@ async function renderListings(items) {
             </div>
         `;
 
-        // NEW: wire the quick-edit button separately (rather than an inline
-        // onclick with the item serialized into the attribute) so large
-        // fields like base64 images never have to round-trip through HTML.
         if (isOwnerCard) {
             const quickEditEl = card.querySelector('.quick-edit-btn');
             if (quickEditEl) {
@@ -983,13 +926,36 @@ async function renderListings(items) {
             }
         }
 
+        // NEW: wire the comment shortcut separately (same reasoning as the
+        // quick-edit button above - avoids serializing the whole item into
+        // an inline onclick attribute). Opens the details modal and jumps
+        // straight to the reviews section.
+        const commentBtnEl = card.querySelector('.card-comment-btn');
+        if (commentBtnEl) {
+            commentBtnEl.onclick = (e) => {
+                e.stopPropagation();
+                openReviewsFor(item);
+            };
+        }
+
         listingsGrid.appendChild(card);
     });
 }
 
-// NEW: maps a property category to a CSS modifier class so each type gets
-// its own badge color (blue/green/purple/orange) instead of every category
-// looking identical on the grid.
+// NEW: opens a listing's details modal and scrolls straight to the reviews
+// section, focusing the comment box so the person can start typing right
+// away. Used by the new card "chat" shortcut button.
+function openReviewsFor(item) {
+    showFullDetails(item);
+    // Wait a tick for the modal to render/display before scrolling to it.
+    setTimeout(() => {
+        const anchor = document.getElementById('reviewsSectionAnchor');
+        if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const commentBox = document.getElementById('commentText');
+        if (commentBox) commentBox.focus();
+    }, 120);
+}
+
 function getCategoryBadgeClass(category) {
     const key = (category || '').toLowerCase();
     if (key === 'apartment') return 'cat-apartment';
@@ -1016,11 +982,6 @@ function showFullDetails(item) {
     document.getElementById('detContact').innerText = item.landlord_contact || "No contact provided";
     document.getElementById('detType').innerText = item.category || "Apartment";
 
-    // NEW / FIX: render the photo carousel inside the details modal.
-    // #carouselWrapper already existed in home.html but nothing was ever
-    // writing into it, so no photos ever showed up here before. We use a
-    // distinct 'modal-<id>' key so this carousel never shares a DOM id with
-    // the same listing's carousel on the grid card behind it.
     const carouselWrapperEl = document.getElementById('carouselWrapper');
     if (carouselWrapperEl) {
         carouselWrapperEl.innerHTML = buildCarouselHTML(item.images, `modal-${item.id}`);
@@ -1045,7 +1006,6 @@ function showFullDetails(item) {
 
     const delContainer = document.getElementById('deleteBtnContainer');
     if (delContainer) {
-        // UI SECURITY: Only show buttons if isOwner is true
         delContainer.innerHTML = isOwner 
             ? `<button class="btn-edit" id="editListingBtn" style="background:#007bff; color:white; padding:8px 15px; border:none; border-radius:5px; cursor:pointer; margin-right:10px;">
                     <i class="fas fa-edit"></i> Edit Listing
@@ -1061,7 +1021,6 @@ function showFullDetails(item) {
     detailModal.style.display = 'block';
 }
 
-// (The rest of your functions: openEditModal, setupStarRatingLogic, etc. remain unchanged below)
 function openEditModal(item) {
     const postModal = document.getElementById('postModal');
     if (!postModal) return;
@@ -1080,25 +1039,12 @@ function openEditModal(item) {
     document.getElementById('postSize').value = item.size;
     if(document.getElementById('postAmenities')) document.getElementById('postAmenities').value = item.amenities || "";
     if(document.getElementById('postCategory')) document.getElementById('postCategory').value = item.category || "Apartment";
-    // NEW: pre-fill the Availability dropdown with this listing's current status
     if(document.getElementById('postStatus')) document.getElementById('postStatus').value = (item.status === 'occupied') ? 'occupied' : 'available';
 
-    // NEW: reset the file input and preview the listing's existing photos so
-    // the landlord can see what's currently posted, and so any leftover file
-    // selection/preview from a previous "Post a Listing" session doesn't leak
-    // into Edit mode.
     const imageInputEl = document.getElementById('postImages');
     const previewDivEl = document.getElementById('imagePreview');
-    // NEW: optional label text swap - only activates if you've added
-    // id="postImagesLabel" to the <label> above the photo input in
-    // home.html. Safe no-op if that id isn't present.
     const imagesLabelEl = document.getElementById('postImagesLabel');
     if (imagesLabelEl) imagesLabelEl.innerText = "Current Photos (choose new files only if you want to replace them)";
-    // NEW: clear any pending multi-photo selection left over from a previous
-    // "Post a Listing" or Edit session before showing this listing's current
-    // photos - keeps the accumulating-selection behavior (see
-    // renderSelectedFilePreviews / imageInput.onchange in
-    // setupPostListingLogic) from mixing sessions together.
     selectedListingFiles = [];
     if (imageInputEl) imageInputEl.value = "";
     if (previewDivEl) {
@@ -1116,27 +1062,16 @@ function openEditModal(item) {
         }
     }
 
-    // NEW: capture a snapshot of the form so we can warn about unsaved changes later
     originalFormSnapshot = getCurrentFormSnapshot();
 
     submitBtn.onclick = async () => {
         submitBtn.disabled = true;
         submitBtn.innerText = "Saving...";
 
-        // FIX: this used to never read the image input at all, so uploading a
-        // new photo while editing had zero effect - nothing was ever sent to
-        // the server. Now we compress any newly selected files and include
-        // them in the update, exactly like New Listing does.
         let newImages = [];
-        // UPDATED: use the accumulated selectedListingFiles array instead of
-        // imageInputEl.files directly, so picking replacement photos across
-        // multiple "Choose files" clicks accumulates instead of only keeping
-        // the last click's picks.
         if (selectedListingFiles.length > 0) {
             try {
                 newImages = await Promise.all(selectedListingFiles.map(file => compressImageFile(file)));
-                // NEW: warn (non-blocking) if the newly selected photos are large
-                // enough to risk hitting a DB/server payload limit.
                 warnIfImagesTooLarge(newImages);
             } catch (e) {
                 console.error("Image conversion error (edit):", e);
@@ -1153,11 +1088,7 @@ function openEditModal(item) {
             rooms: parseInt(document.getElementById('postRooms').value) || 0,
             size: parseFloat(document.getElementById('postSize').value) || 0,
             amenities: document.getElementById('postAmenities')?.value || "",
-            // NEW: send the chosen Availability status along with the rest of the update
             status: document.getElementById('postStatus')?.value || 'available',
-            // FIX: only overwrite photos when the landlord actually picked new
-            // ones - otherwise send null so the backend's COALESCE(...) in
-            // server.js keeps the existing photos untouched.
             images: newImages.length > 0 ? newImages.join('|||') : null,
             thumbnail: newImages.length > 0 ? newImages[0] : null
         };
@@ -1170,13 +1101,9 @@ function openEditModal(item) {
             });
 
             if (response.ok) {
-                clearUnsavedFlag(); // NEW: prevent the unsaved-changes warning from firing during reload
+                clearUnsavedFlag();
                 Swal.fire({ title: 'Updated!', text: 'Your listing has been updated.', icon: 'success' }).then(() => location.reload());
             } else {
-                // FIX: this branch used to show a hardcoded generic message and
-                // never looked at the response body, so the real reason a
-                // multi-photo edit failed (e.g. a DB "Data too long for column"
-                // error) was completely invisible. Now we surface it.
                 const errResult = await response.json().catch(() => ({ message: "Failed to update listing." }));
                 Swal.fire('Error', errResult.message || errResult.error || 'Failed to update listing.', 'error');
             }
@@ -1215,11 +1142,22 @@ function resetStars() {
     stars.forEach(s => s.classList.remove('active'));
 }
 
+// --- UPDATED: RESTYLED COMMENT RENDERING ---
+// This is the part Renz actually asked to change. Each comment now renders
+// as a small card with an avatar-initial circle, a name + star row, and the
+// comment text underneath - built from the .comment-item/.comment-avatar/
+// .comment-body/.comment-top-row/.comment-name/.comment-stars/.comment-text
+// classes defined in home.html. A landlord reply (is_reply === 1) gets the
+// .reply-item modifier class plus the existing .landlord-reply-badge, so it
+// reads as visually "attached" to the comment above it. The average-rating
+// summary box above the list (#commentsSummaryBox) is also filled in here,
+// computed from whatever rated reviews (rating > 0) came back for this
+// listing - no separate network call needed.
 async function loadComments(listingId) {
     const list = document.getElementById('commentsDisplayList');
     const revCountBadge = document.getElementById('revCount'); 
     
-    list.innerHTML = "<p style='font-size:12px; color:gray;'>Loading reviews...</p>";
+    list.innerHTML = "<p style='font-size:12px; color:gray; text-align:center; padding:14px 0;'>Loading reviews...</p>";
 
     try {
         const res = await fetch(`${API_BASE}/get-reviews/${listingId}`);
@@ -1228,23 +1166,59 @@ async function loadComments(listingId) {
         if (revCountBadge) {
             revCountBadge.innerText = reviews.length;
         }
+
+        // NEW: fill in the "at a glance" summary box (average score, stars,
+        // and count) from whatever rows actually carry a star rating.
+        const ratedReviews = reviews.filter(r => r.rating && r.rating > 0);
+        const summaryBox = document.getElementById('commentsSummaryBox');
+        const summaryScore = document.getElementById('commentsSummaryScore');
+        const summaryStars = document.getElementById('commentsSummaryStars');
+        const summaryCount = document.getElementById('commentsSummaryCount');
+        if (summaryBox && summaryScore && summaryStars && summaryCount) {
+            if (ratedReviews.length > 0) {
+                const avg = ratedReviews.reduce((sum, r) => sum + Number(r.rating), 0) / ratedReviews.length;
+                summaryBox.classList.remove('comments-summary-empty');
+                summaryScore.innerText = avg.toFixed(1);
+                summaryStars.innerText = buildStarString(avg);
+                summaryCount.innerText = `${ratedReviews.length} rating${ratedReviews.length === 1 ? '' : 's'}`;
+            } else {
+                summaryBox.classList.add('comments-summary-empty');
+                summaryScore.innerText = '—';
+                summaryStars.innerText = '☆☆☆☆☆';
+                summaryCount.innerText = 'No ratings yet';
+            }
+        }
         
-        list.innerHTML = reviews.length ? "" : "<p style='color:gray; font-size:12px;'>No reviews yet.</p>";
-        
-        reviews.forEach(rev => {
-            const starIcons = rev.rating ? `<span style="color:#ffc107; margin-left:5px;">${'★'.repeat(rev.rating)}${'☆'.repeat(5-rev.rating)}</span>` : "";
-            list.innerHTML += `
-                <div class="comment-item">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="font-size:13px;">${rev.user_name}</strong>
-                        ${starIcons}
+        if (reviews.length === 0) {
+            list.innerHTML = `<div class="comment-empty"><i class="fas fa-comment-slash"></i>No reviews yet. Be the first to leave one!</div>`;
+            return;
+        }
+
+        list.innerHTML = reviews.map(rev => {
+            const isReply = Number(rev.is_reply) === 1;
+            const starsHTML = (!isReply && rev.rating)
+                ? `<span class="comment-stars">${buildStarString(rev.rating)}</span>`
+                : "";
+            const nameLabel = isReply
+                ? `${rev.user_name} <span class="landlord-reply-badge">Landlord</span>`
+                : rev.user_name;
+            const initial = (rev.user_name || "?").trim().charAt(0).toUpperCase() || "?";
+
+            return `
+                <div class="comment-item${isReply ? ' reply-item' : ''}">
+                    <div class="comment-avatar">${initial}</div>
+                    <div class="comment-body">
+                        <div class="comment-top-row">
+                            <span class="comment-name">${nameLabel}</span>
+                            ${starsHTML}
+                        </div>
+                        <p class="comment-text">${rev.comment || ""}</p>
                     </div>
-                    <p style="margin: 5px 0 0 0; font-size:13px; color:#555;">${rev.comment}</p>
                 </div>
             `;
-        });
+        }).join('');
     } catch (err) {
-        list.innerHTML = "<p style='color:red;'>Error loading reviews.</p>";
+        list.innerHTML = "<p style='color:red; text-align:center;'>Error loading reviews.</p>";
         if (revCountBadge) revCountBadge.innerText = "0";
     }
 }
@@ -1337,7 +1311,6 @@ function moveCarousel(event, id, direction) {
     
     track.style.transform = `translateX(-${newIdx * imgWidth}px)`;
 
-    // NEW: keep the dot indicator in sync with the visible slide
     const dots = container.querySelectorAll('.carousel-dots .dot');
     if (dots.length) {
         dots.forEach((d, i) => d.classList.toggle('active', i === newIdx));
@@ -1350,26 +1323,17 @@ if (logoutLink) {
     logoutLink.onclick = (e) => {
         e.preventDefault();
         localStorage.removeItem('user');
-        localStorage.removeItem('bookmarks'); // Clean local bookmarks on logout
+        localStorage.removeItem('bookmarks');
         window.location.href = "index.html";
     };
 }
 
 // --- 10. FILTERING & SEARCH ---
 
-// NEW: strips ALL whitespace (and lowercases) before comparing search text.
-// Without this, typing "bedspace" would never match a listing whose
-// category/title text is stored as "Bed space" (with a space) - the extra
-// space breaks a plain substring match even though they mean the same
-// thing. Running both the typed search term AND the listing's text through
-// this same normalizer fixes it in both directions: "bedspace" now matches
-// "Bed space", and "bed space" now matches "Bedspace" too.
 function normalizeForSearch(str) {
     return (str || '').toString().toLowerCase().replace(/\s+/g, '');
 }
 
-// NEW: escapes a raw string for safe insertion into innerHTML, so titles
-// or locations containing < or & can't break the page's markup.
 function escapeHtml(str) {
     return (str || '').toString()
         .replace(/&/g, '&amp;')
@@ -1377,23 +1341,14 @@ function escapeHtml(str) {
         .replace(/>/g, '&gt;');
 }
 
-// NEW: same as escapeHtml, but also escapes quotes - used when a string is
-// going inside an HTML attribute (e.g. data-value="...") rather than
-// between tags.
 function escapeHtmlAttr(str) {
     return escapeHtml(str).replace(/"/g, '&quot;');
 }
 
-// NEW: escapes regex special characters in a user-typed string so it can
-// be safely dropped into a `new RegExp(...)` call below.
 function escapeRegExp(str) {
     return (str || '').toString().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// NEW: wraps the first case-insensitive match of `rawTerm` inside `rawText`
-// with a <mark> tag, so search matches can be visibly highlighted in the
-// grid and in the autocomplete dropdown. Returns the text unchanged if
-// there's no term to match, so it's always safe to call.
 function highlightMatch(rawText, rawTerm) {
     const term = (rawTerm || '').trim();
     if (!term) return rawText;
@@ -1403,7 +1358,7 @@ function highlightMatch(rawText, rawTerm) {
 
 function filterListings() {
     const searchTerm = document.getElementById('searchLoc').value.toLowerCase();
-    const normalizedSearchTerm = normalizeForSearch(searchTerm); // NEW: space-stripped version used for fuzzy matching
+    const normalizedSearchTerm = normalizeForSearch(searchTerm);
     const maxPriceValue = document.getElementById('maxPrice').value;
     const maxPrice = maxPriceValue === "Infinity" ? Infinity : parseInt(maxPriceValue);
     
@@ -1411,33 +1366,19 @@ function filterListings() {
     const locFilter = document.getElementById('locFilter').value.toLowerCase();
 
     const cards = document.querySelectorAll('.listing-card');
-    let visibleCount = 0; // NEW: powers the live "X of Y stays shown" counter
+    let visibleCount = 0;
 
     cards.forEach(card => {
-        // UPDATED: read from the pristine data-title-raw/data-location-raw
-        // attributes (set in renderListings) instead of the rendered DOM
-        // text, since that text now gets rewritten with <mark> highlight
-        // tags below - reading it back on the next keystroke would have
-        // slowly corrupted it.
         const titleRaw = card.getAttribute('data-title-raw') || '';
         const locationRaw = card.getAttribute('data-location-raw') || '';
         const titleText = titleRaw.toLowerCase();
         const locationText = locationRaw.toLowerCase();
-        // FIX: amenities are now stored on the card as data-amenities (see
-        // renderListings above) so the search bar can actually match them -
-        // previously this value didn't exist anywhere and "wifi"/"aircon"/etc.
-        // searches always came up empty no matter what a listing had.
         const amenitiesText = card.getAttribute('data-amenities') || '';
-        // NEW: property category/type (e.g. "bedspace"), also now searchable.
         const categoryText = card.getAttribute('data-category') || '';
         const price = parseInt(card.getAttribute('data-price'));
         const rooms = parseInt(card.getAttribute('data-rooms'));
         const cardStatus = card.getAttribute('data-status') || 'available';
 
-        // UPDATED: every field is now compared using the space-stripped
-        // normalized form (normalizeForSearch), and category was added to
-        // the fields checked - so "bedspace" now matches a category/title
-        // stored as "Bed space", and vice versa.
         const matchesMainSearch =
             normalizeForSearch(titleText).includes(normalizedSearchTerm) ||
             normalizeForSearch(locationText).includes(normalizedSearchTerm) ||
@@ -1446,41 +1387,26 @@ function filterListings() {
         const matchesPrice = isNaN(maxPrice) || price <= maxPrice;
         const matchesRooms = minRooms === "all" || rooms >= parseInt(minRooms);
         const matchesSpecificLoc = locationText.includes(locFilter);
-        // NEW: also respect whatever Available/Occupied filter is currently active
         const matchesAvailability = !currentAvailabilityFilter || cardStatus === currentAvailabilityFilter;
-        // NEW: also respect whatever category pill (Apartment/House/etc.) is active
         const matchesCategoryPill = !currentCategoryFilter || categoryText === currentCategoryFilter;
 
         const isVisible = matchesMainSearch && matchesPrice && matchesRooms && matchesSpecificLoc && matchesAvailability && matchesCategoryPill;
         card.style.display = isVisible ? "block" : "none";
         if (isVisible) visibleCount++;
 
-        // NEW: live-highlight whatever part of the title/location matches
-        // the typed search term. Calling highlightMatch() with an empty
-        // term just returns the plain text back, so this also correctly
-        // clears old highlights the moment the search box is emptied.
         const titleEl = card.querySelector('.title-text');
         const locationTextEl = card.querySelector('.location-text');
         if (titleEl) titleEl.innerHTML = highlightMatch(escapeHtml(titleRaw), searchTerm);
         if (locationTextEl) locationTextEl.innerHTML = highlightMatch(escapeHtml(locationRaw), searchTerm);
     });
 
-    // NEW: drive the live result counter + Smart Search bridge under the
-    // search bar. Only shown once something is actually being filtered, so
-    // a fresh unfiltered grid doesn't get a redundant "42 of 42 shown" line.
     const hasActiveSearch = searchTerm.trim() !== "" || currentCategoryFilter !== "" || !!currentAvailabilityFilter ||
         locFilter.trim() !== "" || minRooms !== "all" || maxPriceValue !== "Infinity";
     updateSearchMetaRow(searchTerm, visibleCount, cards.length, hasActiveSearch);
 
-    // NEW: a proper big empty state (icon + message + Clear Filters button)
-    // when a search/filter combo matches nothing, instead of just leaving
-    // the grid blank with only the small "0 of 42 shown" counter as a clue.
     updateFilterEmptyState(hasActiveSearch, visibleCount, cards.length);
 }
 
-// NEW: shows/removes the "No matches found" empty state for the search
-// bar + advanced filters combo (separate from the Saved-view and
-// Available/Occupied-pill empty states, which use their own message IDs).
 function updateFilterEmptyState(hasActiveSearch, visibleCount, totalCount) {
     const existingMsg = document.getElementById('no-filter-results-msg');
     if (existingMsg) existingMsg.remove();
@@ -1498,12 +1424,9 @@ function updateFilterEmptyState(hasActiveSearch, visibleCount, totalCount) {
     }
 }
 
-// NEW: heuristic for "this looks like a typed sentence, not a keyword" -
-// used to offer a one-click bridge into the Smart Search AI widget instead
-// of making people notice its separate floating button on their own.
 function looksLikeNaturalLanguageQuery(term) {
     const words = term.trim().split(/\s+/).filter(Boolean);
-    if (words.length < 3) return false; // short keyword-style queries don't need it
+    if (words.length < 3) return false;
     const connectorWords = [
         'malapit', 'sa', 'na', 'may', 'meron', 'gusto', 'kong',
         'under', 'near', 'with', 'around', 'less', 'than', 'below', 'over', 'above',
@@ -1513,11 +1436,6 @@ function looksLikeNaturalLanguageQuery(term) {
     return connectorWords.some(w => lower.includes(w));
 }
 
-// NEW: opens the existing floating Smart Search panel with the given text
-// pre-filled, mirroring what injectSmartSearchUI()'s internal openPanel()
-// does. Only tenants have the Smart Search widget at all, so this quietly
-// no-ops for landlords (the hint link is never shown to them either - see
-// updateSearchMetaRow).
 function openSmartSearchWithQuery(term) {
     const smartBox = document.getElementById('smartSearchBox');
     const smartInput = document.getElementById('smartInput');
@@ -1529,8 +1447,6 @@ function openSmartSearchWithQuery(term) {
     closeSearchSuggestions();
 }
 
-// NEW: renders the "X of Y stays shown" counter and, when the typed query
-// reads like a sentence, a "Try Smart Search for this" link.
 function updateSearchMetaRow(searchTerm, visibleCount, totalCount, hasActiveSearch) {
     const metaRow = document.getElementById('searchMetaRow');
     if (!metaRow) return;
@@ -1579,7 +1495,6 @@ function clearRecentSearches() {
     localStorage.removeItem('recentSearches');
 }
 
-// --- NEW: AUTOCOMPLETE SUGGESTIONS (built from allListingsCache, no extra network call) ---
 function buildAutocompleteSuggestions(rawTerm) {
     const term = normalizeForSearch(rawTerm);
     if (!term) return [];
@@ -1613,8 +1528,6 @@ function buildAutocompleteSuggestions(rawTerm) {
     return suggestions.slice(0, 6);
 }
 
-// NEW: (re)paints the autocomplete/recent-searches dropdown based on the
-// search box's current value. Called on focus and on every keystroke.
 function renderSearchSuggestions() {
     const box = document.getElementById('searchSuggestions');
     const input = document.getElementById('searchLoc');
@@ -1662,8 +1575,6 @@ function closeSearchSuggestions() {
     suggestionHighlightIndex = -1;
 }
 
-// NEW: shows/hides the little (x) clear icon inside the search box based
-// on whether there's any text to clear.
 function updateClearButtonVisibility() {
     const input = document.getElementById('searchLoc');
     const clearBtn = document.getElementById('searchClearBtn');
@@ -1671,9 +1582,6 @@ function updateClearButtonVisibility() {
     clearBtn.style.display = input.value.trim() ? 'flex' : 'none';
 }
 
-// NEW: wires up every search-bar enhancement - autocomplete, keyboard
-// navigation, recent searches, the clear button, and closing the dropdown
-// on outside clicks. Called once from window.onload.
 function setupSearchBarEnhancements() {
     const input = document.getElementById('searchLoc');
     const clearBtn = document.getElementById('searchClearBtn');
@@ -1681,11 +1589,6 @@ function setupSearchBarEnhancements() {
     const wrapper = document.getElementById('searchBoxWrapper');
     if (!input || !suggestionsBox || !wrapper) return;
 
-    // Live filter + suggestions + clear-button state on every keystroke.
-    // NOTE: this is IN ADDITION to the existing plain
-    // `addEventListener('input', filterListings)` registered further down -
-    // both listeners fire on the same event, so filtering still happens
-    // exactly as before, this just layers the new behavior on top.
     input.addEventListener('input', () => {
         updateClearButtonVisibility();
         renderSearchSuggestions();
@@ -1715,9 +1618,6 @@ function setupSearchBarEnhancements() {
         }
     });
 
-    // Remember the search once it's actually submitted (Enter or the
-    // Search button) - filterListings() itself still runs via the form's
-    // existing inline onsubmit, this just adds the "remember it" side effect.
     wrapper.addEventListener('submit', () => {
         saveRecentSearch(input.value);
         closeSearchSuggestions();
@@ -1760,11 +1660,6 @@ function setupSearchBarEnhancements() {
 }
 
 // --- NEW: STICKY (COMPACT) SEARCH BAR ---
-// Slides in once the real search bar has scrolled out of view, and stays
-// two-way in sync with the main #searchLoc input, so typing in either one
-// filters the grid the same way. Deliberately kept simple (no autocomplete
-// dropdown here) - it's meant for quick re-filtering while browsing, not a
-// full replacement for the main search bar.
 function setupStickySearchBar() {
     const stickyBar = document.getElementById('stickySearchBar');
     const stickyInput = document.getElementById('stickySearchInput');
@@ -1783,7 +1678,6 @@ function setupStickySearchBar() {
         filterListings();
     });
 
-    // Keep the sticky input mirrored if the person types in the main bar instead
     mainInput.addEventListener('input', () => {
         if (document.activeElement !== stickyInput) stickyInput.value = mainInput.value;
     });
@@ -1799,7 +1693,7 @@ function setupFooter() {
         footerSettingsLink.onclick = (e) => {
             e.preventDefault();
             const settingsBtn = document.getElementById('settingsBtn');
-            if (settingsBtn) settingsBtn.click(); // reuses the exact same modal/logic as the drawer's Settings link
+            if (settingsBtn) settingsBtn.click();
         };
     }
 }
@@ -1833,10 +1727,10 @@ function resetFilters() {
     document.getElementById('maxPrice').value = "Infinity";
     document.getElementById('roomFilter').value = "all";
     document.getElementById('locFilter').value = "";
-    clearAvailabilityFilterState(); // NEW: also clear the Available/Occupied toggle
-    clearCategoryFilterState(); // NEW: also clear the category pills back to "All"
-    updateClearButtonVisibility(); // NEW: hide the (x) clear icon
-    closeSearchSuggestions(); // NEW: close any open autocomplete dropdown
+    clearAvailabilityFilterState();
+    clearCategoryFilterState();
+    updateClearButtonVisibility();
+    closeSearchSuggestions();
     
     const viewAllBtn = document.getElementById('viewAllBtn');
     const viewSavedBtn = document.getElementById('viewSavedBtn');
@@ -1852,22 +1746,15 @@ if(document.getElementById('roomFilter')) document.getElementById('roomFilter').
 if(document.getElementById('locFilter')) document.getElementById('locFilter').addEventListener('input', filterListings);
 
 // --- 11. PROFILE SETTINGS ---
-// UPDATED: now also handles the 4th verification item (selfie with ID) and
-// the landlord_doc_name field (name typed as printed on the ownership doc,
-// used by the admin panel's name cross-check).
 function setupSettingsLogic() {
     const settingsBtn = document.getElementById('settingsBtn');
     const modal = document.getElementById('settingsModal');
     const saveBtn = document.getElementById('saveSettingsBtn');
-    // NEW: refs for the landlord document upload section
     const editRoleSelect = document.getElementById('editRole');
     const docsSection = document.getElementById('settingsLandlordDocsSection');
 
     if (!settingsBtn || !modal) return;
 
-    // NEW: toggle the document section based on the currently selected role
-    // in the dropdown. Skips showing it if the user is already an approved
-    // landlord (no need to re-upload documents every time).
     function toggleDocsSection() {
         if (!docsSection || !editRoleSelect) return;
         const alreadyApproved = currentUser.landlord_status === 'approved';
@@ -1887,13 +1774,11 @@ function setupSettingsLogic() {
         document.getElementById('editAddress').value = currentUser.address || "";
         document.getElementById('editContact').value = currentUser.contact || "";
         document.getElementById('editRole').value = currentUser.role || "tenant";
-        // NEW: reset file/text inputs and re-evaluate whether the doc
-        // section should show, every time the modal is opened
         if (document.getElementById('settingsDocOwnership')) document.getElementById('settingsDocOwnership').value = "";
         if (document.getElementById('settingsDocPermits')) document.getElementById('settingsDocPermits').value = "";
         if (document.getElementById('settingsDocBir')) document.getElementById('settingsDocBir').value = "";
-        if (document.getElementById('settingsDocSelfie')) document.getElementById('settingsDocSelfie').value = ""; // NEW
-        if (document.getElementById('settingsDocOwnerName')) document.getElementById('settingsDocOwnerName').value = ""; // NEW
+        if (document.getElementById('settingsDocSelfie')) document.getElementById('settingsDocSelfie').value = "";
+        if (document.getElementById('settingsDocOwnerName')) document.getElementById('settingsDocOwnerName').value = "";
         toggleDocsSection();
         modal.style.display = 'block';
     };
@@ -1903,16 +1788,14 @@ function setupSettingsLogic() {
         const alreadyApproved = currentUser.landlord_status === 'approved';
         const isNewLandlordRequest = (chosenRole === 'landlord' && !alreadyApproved);
 
-        // UPDATED: require all 4 verification items + owner name when
-        // submitting a fresh landlord request
         let docOwnershipFile = null, docPermitsFile = null, docBirFile = null, docSelfieFile = null;
         let docOwnerName = "";
         if (isNewLandlordRequest) {
             docOwnershipFile = document.getElementById('settingsDocOwnership').files[0];
             docPermitsFile = document.getElementById('settingsDocPermits').files[0];
             docBirFile = document.getElementById('settingsDocBir').files[0];
-            docSelfieFile = document.getElementById('settingsDocSelfie').files[0]; // NEW
-            docOwnerName = document.getElementById('settingsDocOwnerName').value.trim(); // NEW
+            docSelfieFile = document.getElementById('settingsDocSelfie').files[0];
+            docOwnerName = document.getElementById('settingsDocOwnerName').value.trim();
 
             if (!docOwnershipFile || !docPermitsFile || !docBirFile || !docSelfieFile) {
                 return Swal.fire({ title: 'Missing Documents', text: 'Please upload all 4 required items: Proof of Ownership, Local Permits, BIR Registration, and a Selfie with valid ID.', icon: 'warning', target: '#settingsModal' });
@@ -1925,10 +1808,6 @@ function setupSettingsLogic() {
         saveBtn.disabled = true;
         saveBtn.innerText = "Updating...";
 
-        // UPDATED: compress and attach all 4 landlord documents (if
-        // applicable), reusing the shared compressImageFile() helper defined
-        // near the top of this file. Order must match the labels array used
-        // by admin.js's viewLandlordDocs(): Ownership, Permits, BIR, Selfie.
         let landlordDocuments = null;
         if (isNewLandlordRequest) {
             try {
@@ -1937,7 +1816,7 @@ function setupSettingsLogic() {
                     compressImageFile(docOwnershipFile),
                     compressImageFile(docPermitsFile),
                     compressImageFile(docBirFile),
-                    compressImageFile(docSelfieFile) // NEW
+                    compressImageFile(docSelfieFile)
                 ]);
                 landlordDocuments = compressed.join('|||');
             } catch (e) {
@@ -1954,10 +1833,7 @@ function setupSettingsLogic() {
             contact: document.getElementById('editContact').value.trim(),
             role: chosenRole,
             email: currentUser.email,
-            // NEW: only populated when submitting a fresh landlord request
             landlord_documents: landlordDocuments,
-            // NEW: the applicant's self-typed "name on document", used by the
-            // admin panel's name cross-check against the registered full_name
             landlord_doc_name: isNewLandlordRequest ? docOwnerName : null
         };
 
@@ -1973,10 +1849,9 @@ function setupSettingsLogic() {
             const result = await response.json();
 
             if (response.ok && (result.success || result.status === 'success')) {
-                // NEW: trust the server's real role/landlord_status, same as dashboard.js
                 const newUserObj = { ...currentUser, ...updatedData, role: result.role || updatedData.role, landlord_status: result.landlord_status };
-                delete newUserObj.landlord_documents; // don't keep base64 blobs in localStorage
-                delete newUserObj.landlord_doc_name; // NEW: no need to keep this locally either
+                delete newUserObj.landlord_documents;
+                delete newUserObj.landlord_doc_name;
                 localStorage.setItem('user', JSON.stringify(newUserObj));
 
                 Swal.fire({
@@ -2001,7 +1876,7 @@ function setupSettingsLogic() {
 function setupPostListingLogic() {
     const postModal = document.getElementById('postModal');
     const postBtn = document.getElementById('postBtn');
-    const postFab = document.getElementById('postFab'); // NEW: floating mobile shortcut, mirrors postBtn
+    const postFab = document.getElementById('postFab');
     const submitPostBtn = document.getElementById('submitPostBtn');
     const imageInput = document.getElementById('postImages');
     const previewDiv = document.getElementById('imagePreview');
@@ -2009,21 +1884,11 @@ function setupPostListingLogic() {
     if (!postBtn || !postModal) return;
 
     if (imageInput) {
-        // UPDATED: this used to read imageInput.files directly and REPLACE the
-        // whole preview every time it fired - which meant picking photos in
-        // more than one "Choose files" click threw away the earlier picks
-        // (browsers replace the input's FileList on every open, they never
-        // merge). Now every newly chosen batch is APPENDED to the persistent
-        // selectedListingFiles array (declared near the top of this file),
-        // the input is cleared so it's ready for the next pick, and the whole
-        // preview strip (with per-photo remove buttons) is re-rendered from
-        // that array - so choosing photo 1, then photo 2, then photo 3 in
-        // separate clicks now correctly keeps all three.
         imageInput.onchange = () => {
             const newFiles = Array.from(imageInput.files);
             if (newFiles.length === 0) return;
             selectedListingFiles = selectedListingFiles.concat(newFiles);
-            imageInput.value = ""; // reset so re-picking the same file still fires onchange
+            imageInput.value = "";
             renderSelectedFilePreviews();
         };
     }
@@ -2040,37 +1905,22 @@ function setupPostListingLogic() {
         document.getElementById('postRooms').value = "";
         document.getElementById('postSize').value = "";
         if(document.getElementById('postAmenities')) document.getElementById('postAmenities').value = "";
-        // NEW: new listings always start as "Available"
         if(document.getElementById('postStatus')) document.getElementById('postStatus').value = "available";
-        // NEW: clear the persistent multi-photo selection whenever a fresh
-        // "Post a Listing" session starts, so nothing carries over from a
-        // previous attempt or from Edit mode.
         selectedListingFiles = [];
         if(previewDiv) previewDiv.innerHTML = "";
         if(imageInput) imageInput.value = "";
-        // NEW: reset the photo label back to normal (openEditModal changes its
-        // wording) - safe no-op if you haven't added id="postImagesLabel" yet.
         const imagesLabelEl = document.getElementById('postImagesLabel');
         if (imagesLabelEl) imagesLabelEl.innerText = "Listing Photos (Select Multiple)";
 
         submitPostBtn.onclick = addNewListingAction; 
         postModal.style.display = 'block';
-        originalFormSnapshot = getCurrentFormSnapshot(); // NEW: snapshot for unsaved-changes tracking
+        originalFormSnapshot = getCurrentFormSnapshot();
     }
 
     postBtn.onclick = openPostModalForNewListing;
-    // NEW: the mobile floating "+" button opens the exact same flow
     if (postFab) postFab.onclick = openPostModalForNewListing;
 
-    // UPDATED: now calls the shared compressImageFile() helper defined near
-    // the top of this file (instead of a local copy that only existed inside
-    // this function), so New Listing and Edit Listing both compress photos
-    // exactly the same way.
     async function addNewListingAction() {
-        // UPDATED: use the accumulated selectedListingFiles array (built up
-        // across possibly multiple "Choose files" clicks) instead of
-        // imageInput.files, which only ever reflects the most recent single
-        // picker interaction.
         const imageFiles = selectedListingFiles;
         submitPostBtn.disabled = true;
         submitPostBtn.innerText = "Processing...";
@@ -2078,8 +1928,6 @@ function setupPostListingLogic() {
         let base64Images = [];
         try {
             base64Images = await Promise.all(imageFiles.map(file => compressImageFile(file)));
-            // NEW: warn (non-blocking) if the selected photos are large enough
-            // to risk hitting a DB/server payload limit once combined.
             warnIfImagesTooLarge(base64Images);
         } catch (e) {
             console.error("Image conversion error", e);
@@ -2094,10 +1942,7 @@ function setupPostListingLogic() {
             rooms: parseInt(document.getElementById('postRooms').value) || 0,
             size: parseFloat(document.getElementById('postSize').value) || 0,
             amenities: document.getElementById('postAmenities')?.value || "",
-            // NEW: send the chosen Availability status ('available' by default)
             status: document.getElementById('postStatus')?.value || 'available',
-            // FIX: join with '|||' instead of ',' so multi-image uploads don't get
-            // corrupted when split back apart in renderListings().
             images: base64Images.join('|||'), 
             thumbnail: base64Images.length > 0 ? base64Images[0] : "" 
         };
@@ -2117,15 +1962,10 @@ function setupPostListingLogic() {
             });
 
             if (response.ok) {
-                clearUnsavedFlag(); // NEW: prevent the unsaved-changes warning from firing during reload
+                clearUnsavedFlag();
                 Swal.fire({ title: 'Success!', text: 'Listing published.', icon: 'success', target: '#postModal' }).then(() => location.reload());
             } else {
                 const errResult = await response.json().catch(() => ({ message: "Submission Failed" }));
-                // FIX: the backend's addListing controller sends the failure
-                // reason as `error`, not `message`, so this was always falling
-                // through to the generic "Failed to post" text and hiding the
-                // real DB error (e.g. "Data too long for column 'images'" when
-                // multiple photos are uploaded and the column is still TEXT).
                 Swal.fire({ title: 'Error', text: errResult.message || errResult.error || 'Failed to post', icon: 'error', target: '#postModal' });
             }
         } catch (err) {
@@ -2171,7 +2011,6 @@ async function toggleBookmark(event, listingId) {
             if (isAdding) {
                 Toast.fire({ icon: 'success', title: 'Saved to bookmarks' });
             } else {
-                // NEW: "unsave" notification
                 Toast.fire({ icon: 'info', title: 'Removed from bookmarks' });
             }
         } catch (err) { 
@@ -2187,8 +2026,8 @@ function setupBookmarkToggles() {
     if (!viewAllBtn || !viewSavedBtn) return;
 
     viewSavedBtn.onclick = () => {
-        clearAvailabilityFilterState(); // NEW: keep the Available/Occupied toggle from conflicting with Saved view
-        clearCategoryFilterState(); // NEW: keep the category pills from conflicting with Saved view
+        clearAvailabilityFilterState();
+        clearCategoryFilterState();
         const savedIds = JSON.parse(localStorage.getItem('bookmarks')) || [];
         const allCards = document.querySelectorAll('.listing-card');
         
@@ -2206,14 +2045,9 @@ function setupBookmarkToggles() {
             }
         });
         
-        // NEW: keep the "X Stays Available" header in sync with the Saved view too
         updateResultsHeaderCount(found);
         if (found === 0) hideResultsHeader(); else showResultsHeader();
 
-        // UPDATED: added a "Browse Listings" call-to-action button so this
-        // empty state gives the person something to do next, instead of
-        // just sitting there as dead space (see .empty-state-cta in
-        // home.html for the styling).
         if (found === 0) {
             const msgText = (currentUser.role === 'landlord') 
                 ? "You haven't saved any of your own listings yet." 
@@ -2228,8 +2062,8 @@ function setupBookmarkToggles() {
     };
 
     viewAllBtn.onclick = () => {
-        clearAvailabilityFilterState(); // NEW
-        clearCategoryFilterState(); // NEW
+        clearAvailabilityFilterState();
+        clearCategoryFilterState();
         viewAllBtn.classList.add('nav-active');
         viewSavedBtn.classList.remove('nav-active');
         const msg = document.getElementById('no-saved-msg');
@@ -2241,8 +2075,6 @@ function setupBookmarkToggles() {
 // --- 14. MODAL & CLOSING UTILITIES ---
 window.onclick = (event) => {
     if (event.target.classList.contains('modal')) {
-        // NEW: If the click is on the postModal's dark background, run the
-        // unsaved-changes check first instead of closing it immediately.
         if (event.target.id === 'postModal') {
             closePostModalSafely();
         } else {
@@ -2256,10 +2088,8 @@ function closeDetails() {
     if (modal) modal.style.display = 'none';
 }
 
-// --- 15. UNSAVED CHANGES PROTECTION (NEW) ---
+// --- 15. UNSAVED CHANGES PROTECTION ---
 
-// Snapshot of the Post/Edit Listing form's text fields, taken right after the modal opens.
-// Used to detect if the user changed anything before trying to close the modal.
 function getCurrentFormSnapshot() {
     return JSON.stringify({
         title: document.getElementById('postTitle')?.value || "",
@@ -2269,28 +2099,22 @@ function getCurrentFormSnapshot() {
         rooms: document.getElementById('postRooms')?.value || "",
         size: document.getElementById('postSize')?.value || "",
         amenities: document.getElementById('postAmenities')?.value || "",
-        status: document.getElementById('postStatus')?.value || "" // NEW: track availability changes too
+        status: document.getElementById('postStatus')?.value || ""
     });
 }
 
-// Returns true if any field changed OR the user selected new/pending photos since the modal opened.
 function isPostFormDirty() {
-    if (originalFormSnapshot === null) return false; // modal isn't currently being tracked
+    if (originalFormSnapshot === null) return false;
     const currentSnapshot = getCurrentFormSnapshot();
     const fieldsChanged = currentSnapshot !== originalFormSnapshot;
-    // NEW: also counts as dirty if photos are pending in the shared
-    // selectedListingFiles array (this file's actual source of truth for
-    // pending uploads, since the <input> itself gets cleared after every pick).
     const newPhotosSelected = selectedListingFiles.length > 0;
     return fieldsChanged || newPhotosSelected;
 }
 
-// Call this right after a successful publish/update so no stale warning fires during reload.
 function clearUnsavedFlag() {
     originalFormSnapshot = null;
 }
 
-// Safely closes the Post/Edit Listing modal - warns the user first if they have unsaved changes.
 function closePostModalSafely() {
     if (isPostFormDirty()) {
         Swal.fire({
@@ -2314,12 +2138,11 @@ function closePostModalSafely() {
     }
 }
 
-// Warn on browser tab close / refresh / navigation while the Post/Edit Listing modal is open and dirty.
 window.addEventListener('beforeunload', function (e) {
     const postModal = document.getElementById('postModal');
     if (postModal && postModal.style.display === 'block' && isPostFormDirty()) {
         e.preventDefault();
-        e.returnValue = ''; // required for browsers to show the native confirmation prompt
+        e.returnValue = '';
         return '';
     }
 });
