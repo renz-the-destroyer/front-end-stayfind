@@ -344,6 +344,17 @@
         .carousel-dots .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.55); transition: all 0.25s; }
         .carousel-dots .dot.active { background: #fff; width: 18px; border-radius: 4px; }
 
+        .star-rating i { color: #ccc; font-size: 1.5rem; cursor: pointer; transition: color 0.2s, transform 0.15s; }
+        .star-rating i:hover { transform: scale(1.15); }
+        .star-rating i.active { color: #ffc107; }
+        .comment-item { border-bottom: 1px solid var(--border); padding: 10px 0; }
+        .comment-item:last-child { border: none; }
+
+        .review-badge { background: #ffc107; color: #333; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-left: 10px; vertical-align: middle; }
+
+        .landlord-reply-badge { background: var(--primary); color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 5px; text-transform: uppercase; }
+        .reply-item { margin-left: 30px; border-left: 3px solid var(--accent); padding-left: 10px; background: #f9f9f9; }
+
         /* ============ FILTER CARD (floats over the hero, collapsible on mobile) ============ */
         .filter-container {
             background: #fff;
@@ -651,38 +662,6 @@
         .details { display: flex; gap: 16px; font-size: 12px; color: var(--ink-soft); padding-top: 12px; border-top: 1px dashed var(--border); }
         .details span { display: flex; align-items: center; gap: 5px; }
 
-        /* NEW: star-average + review-count pill shown on each card, in the
-           same row as the landlord name, plus a small round "reviews"
-           shortcut button that sits next to the save/quick-edit button and
-           jumps straight to the comment section of the details modal. See
-           .card-rating / .card-comment-btn usage in home.js renderListings(). */
-        .card-rating {
-            display: inline-flex; align-items: center; gap: 5px;
-            font-size: 12px; font-weight: 700; color: #b8860b;
-            background: #fff8e1; border: 1px solid #ffe7a6;
-            padding: 3px 9px; border-radius: 999px; margin-left: auto;
-        }
-        .card-rating i { color: #ffb300; font-size: 11px; }
-        .card-rating .card-rating-count { color: var(--ink-soft); font-weight: 600; }
-        .card-rating.card-rating-empty {
-            color: var(--muted); background: #f4f7fb; border-color: var(--border);
-        }
-        .card-rating.card-rating-empty i { color: var(--muted); }
-
-        .card-comment-btn {
-            position: absolute; top: 14px; right: 58px; background: rgba(255,255,255,0.92); border-radius: 50%;
-            width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.14); cursor: pointer; z-index: 10; transition: 0.2s;
-            color: var(--ink-soft); font-size: 14px;
-        }
-        .card-comment-btn:hover { transform: scale(1.1); background: var(--primary); color: #fff; }
-        .card-comment-btn .comment-count-dot {
-            position: absolute; top: -4px; right: -4px;
-            background: var(--danger); color: #fff; font-size: 9.5px; font-weight: 800;
-            min-width: 16px; height: 16px; border-radius: 999px; padding: 0 3px;
-            display: flex; align-items: center; justify-content: center; line-height: 1;
-        }
-
         /* Skeleton loading placeholders */
         .skeleton-card { cursor: default; animation: none; box-shadow: var(--shadow-sm); }
         .skeleton-block { background: linear-gradient(90deg, #edf1f6 25%, #e2e8f0 37%, #edf1f6 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; border-radius: 8px; }
@@ -690,6 +669,12 @@
         .skeleton-line { height: 14px; }
 
         /* Empty / error states */
+        /* UPDATED: bumped up the icon/heading/paragraph sizes and padding so
+           this reads as an intentional, prominent state instead of a small
+           afterthought lost in a large empty grid area. The icon now uses
+           the site's own accent-soft/primary tokens (already used elsewhere,
+           e.g. .drawer-avatar / .landlord-info-box) instead of flat grey, so
+           it feels branded rather than like a placeholder. */
         .empty-state { grid-column: 1 / -1; text-align: center; padding: 90px 20px 100px; color: var(--ink-soft); }
         .empty-state-icon {
             width: 96px; height: 96px; border-radius: 50%; background: var(--accent-soft); color: var(--primary);
@@ -698,6 +683,11 @@
         }
         .empty-state h3 { color: #263449; font-size: 21px; font-weight: 800; margin: 0 0 8px; letter-spacing: -0.2px; }
         .empty-state p { font-size: 14.5px; margin: 0 auto; max-width: 380px; line-height: 1.6; }
+        /* NEW: optional call-to-action button inside certain empty states
+           (e.g. "Nothing saved yet" -> Browse Listings, or the landlord
+           "haven't posted anything yet" -> Post a Listing). Only appears
+           when emptyStateHTML() in home.js is called with a 4th argument -
+           existing 3-argument calls render exactly as before. */
         .empty-state-cta {
             margin-top: 22px; border: none; padding: 13px 26px; border-radius: 12px;
             background: linear-gradient(135deg, var(--primary), var(--primary-light));
@@ -706,76 +696,13 @@
         }
         .empty-state-cta:hover { transform: translateY(-1px); box-shadow: 0 14px 30px rgba(13,71,161,0.35); }
 
-        /* ============ RESTYLED: REVIEWS & COMMENTS SECTION (details modal) ============
-           This is the ONLY section Renz asked to actually redesign this
-           round. Each comment now looks like a small chat card with an
-           avatar initial, a name/star row, and a soft background - instead
-           of the old plain bordered list-item. Landlord replies reuse the
-           existing .reply-item / .landlord-reply-badge class names so
-           nothing else needs to change once replies get wired up. A small
-           "at a glance" summary (average score + stars + count) now sits
-           above the list too. */
-        .star-rating i { color: #ccc; font-size: 1.5rem; cursor: pointer; transition: color 0.2s, transform 0.15s; }
-        .star-rating i:hover { transform: scale(1.15); }
-        .star-rating i.active { color: #ffc107; }
-
-        .review-badge { background: #ffc107; color: #333; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-left: 10px; vertical-align: middle; }
-
-        .landlord-reply-badge { background: var(--primary); color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 5px; text-transform: uppercase; }
-
-        .comments-section-title {
-            display: flex; align-items: center; gap: 8px;
-            margin: 0 0 14px; font-size: 14.5px; font-weight: 800; color: var(--ink);
-        }
-        .comments-summary {
-            display: flex; align-items: center; gap: 12px;
-            background: #fff8e1; border: 1px solid #ffe7a6;
-            border-radius: 14px; padding: 12px 14px; margin-bottom: 16px;
-        }
-        .comments-summary-score { font-size: 24px; font-weight: 800; color: #b8860b; line-height: 1; }
-        .comments-summary-stars { color: #ffb300; font-size: 13px; margin: 3px 0 2px; letter-spacing: 1px; }
-        .comments-summary-count { font-size: 11.5px; color: var(--ink-soft); font-weight: 600; }
-        .comments-summary.comments-summary-empty { background: #f4f7fb; border-color: var(--border); }
-        .comments-summary.comments-summary-empty .comments-summary-score,
-        .comments-summary.comments-summary-empty .comments-summary-stars { color: var(--muted); }
-
-        .comment-item {
-            display: flex; gap: 12px;
-            border-bottom: none;
-            background: #fbfcfe; border: 1px solid var(--border);
-            border-radius: 14px; padding: 13px 14px; margin-bottom: 10px;
-        }
-        .comment-item:last-child { margin-bottom: 0; }
-        .comment-avatar {
-            width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
-            background: linear-gradient(135deg, var(--accent-soft), #d3e9fc);
-            color: var(--primary); font-weight: 800; font-size: 13px;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .comment-body { flex: 1; min-width: 0; }
-        .comment-top-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-        .comment-name { font-size: 13px; font-weight: 700; color: var(--ink); }
-        .comment-stars { color: #ffb300; font-size: 11px; letter-spacing: 1px; }
-        .comment-text { margin: 5px 0 0; font-size: 13px; color: #4b5769; line-height: 1.5; }
-        .comment-empty { text-align: center; padding: 26px 10px; color: var(--muted); font-size: 13px; }
-        .comment-empty i { display: block; font-size: 22px; margin-bottom: 8px; color: #cbd5e1; }
-
-        /* Landlord replies reuse .reply-item/.landlord-reply-badge but get
-           slightly different framing here so a reply reads as "attached to"
-           the comment above it. */
-        .comment-item.reply-item {
-            margin-left: 32px; margin-top: -2px;
-            border-left: 3px solid var(--accent);
-            background: #f3f8fe;
-        }
-        .comment-item.reply-item .comment-avatar {
-            background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: #fff;
-        }
-
         /* ============ RESPONSIVE ============ */
         @media (max-width: 768px) {
             .hero { padding: 92px 6% 58px; }
             .menu-toggle { top: 16px; left: 16px; width: 44px; height: 44px; font-size: 16px; }
+            /* UPDATED: hidden on mobile - the drawer already carries the
+               StayFind branding once opened, so this floating copy just
+               added extra visual clutter next to the hamburger button. */
             .floating-logo { display: none; }
             .filter-container { margin: -30px auto 24px; padding: 20px 18px 18px; width: 90%; }
             .filters-toggle-btn { display: flex; }
@@ -788,12 +715,12 @@
             .container { grid-template-columns: 1fr; padding: 0 5% 100px; gap: 20px; }
             .search-box-wrapper { flex-direction: row; }
             .search-btn { padding: 10px 16px; font-size: 14px; }
-            .category-pill { padding: 7px 14px; font-size: 12px; }
-            .sticky-search-bar { padding: 12px 60px; }
+            .category-pill { padding: 7px 14px; font-size: 12px; } /* NEW: slightly tighter pills on phones */
+            .sticky-search-bar { padding: 12px 60px; } /* NEW: matches the smaller hamburger button on phones */
             .results-header { padding: 0 5% 14px; font-size: 13px; }
-            .site-footer { padding: 36px 6% 110px; }
-            .availability-pill { padding: 7px 14px; font-size: 12px; }
-            .clear-filters-link { justify-content: center; padding: 10px; }
+            .site-footer { padding: 36px 6% 110px; } /* NEW: extra bottom room so the mobile FAB/Smart Search button doesn't sit on top of the footer text */
+            .availability-pill { padding: 7px 14px; font-size: 12px; } /* NEW: matches category pills on phones */
+            .clear-filters-link { justify-content: center; padding: 10px; } /* NEW: centers when stacked full-width */
             .post-fab { display: flex; }
         }
 
@@ -804,11 +731,14 @@
 </head>
 <body>
 
+    <!-- No top navbar strip — just a floating menu button (opens the drawer)
+         and a small floating brand mark. Page content starts right underneath. -->
     <button class="menu-toggle" id="menuToggleBtn" aria-label="Open menu" aria-expanded="false">
         <i class="fas fa-bars"></i>
     </button>
     <a href="home.html" class="floating-logo">Stay<span>Find</span></a>
 
+    <!-- ============ SIDE DRAWER (replaces the old top nav links + bottom mobile nav) ============ -->
     <div class="drawer-overlay" id="sideDrawerOverlay"></div>
     <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
         <div class="drawer-header">
@@ -835,8 +765,10 @@
         </div>
     </aside>
 
+    <!-- Floating "Post" button shown on mobile for landlords only (mirrors the drawer's Post link) -->
     <button class="post-fab" id="postFab" aria-label="Post a new listing"><i class="fas fa-plus"></i></button>
 
+    <!-- ============ HERO (personalized greeting, filled in by home.js) ============ -->
     <header class="hero">
         <div class="hero-inner">
             <p class="hero-eyebrow" id="heroEyebrow">Find Your Next Stay</p>
@@ -865,6 +797,12 @@
 
             <p style="font-size: 11px; color: #43a047; margin-top: -15px; margin-bottom: 15px;">* Account role can be changed anytime.</p>
 
+            <!-- Shown only when "Landlord" is selected AND the user is
+                 not already an approved landlord. Required to submit a
+                 landlord request.
+                 UPDATED: now collects 4 items (was 3) — the 3 original
+                 documents, PLUS a typed "name on document" field (for the
+                 admin-side name cross-check) and a selfie-with-ID photo. -->
             <div id="settingsLandlordDocsSection" style="display:none; background:#f8fbff; border:1px solid #e3f2fd; border-radius:14px; padding:14px; margin-bottom:20px;">
                 <p style="font-size:11px; color:#0d47a1; font-weight:bold; margin:0 0 8px 0;"><i class="fas fa-file-shield"></i> Landlord Verification Documents (required)</p>
                 <p style="font-size:10px; color:#90a4ae; margin:0 0 10px 0;">Upload clear photos and fill in the details below. An admin will review these before your landlord account is approved.</p>
@@ -872,6 +810,7 @@
                 <label style="font-size:11px; text-transform:none;">Proof of Property Ownership (TCT or Tax Declaration)</label>
                 <input type="file" id="settingsDocOwnership" accept="image/*" style="margin-bottom:12px; padding:8px; font-size:12px;">
 
+                <!-- NEW: name cross-check field -->
                 <label style="font-size:11px; text-transform:none;">Full name as printed on your Proof of Ownership doc</label>
                 <input type="text" id="settingsDocOwnerName" placeholder="e.g. Juan Dela Cruz" style="width:100%; margin-bottom:4px; padding:8px; font-size:12px; border:1px solid #e3f2fd; border-radius:8px;">
                 <p style="font-size:10px; color:#90a4ae; margin:0 0 12px 0;">This gets compared to your registered name to help the admin spot mismatches.</p>
@@ -882,6 +821,7 @@
                 <label style="font-size:11px; text-transform:none;">BIR Registration (Form 1901/1903)</label>
                 <input type="file" id="settingsDocBir" accept="image/*" style="margin-bottom:12px; padding:8px; font-size:12px;">
 
+                <!-- NEW: selfie-with-ID upload -->
                 <label style="font-size:11px; text-transform:none;">Selfie holding a valid government ID</label>
                 <input type="file" id="settingsDocSelfie" accept="image/*" style="margin-bottom:5px; padding:8px; font-size:12px;">
                 <p style="font-size:10px; color:#90a4ae; margin:0;">Make sure your face and the ID details are both clearly visible.</p>
@@ -927,6 +867,7 @@
             <label>Amenities</label>
             <input type="text" id="postAmenities" placeholder="e.g. WiFi, Aircon, Parking">
 
+            <!-- NEW: Availability status for this listing -->
             <label>Availability</label>
             <select id="postStatus">
                 <option value="available">Available</option>
@@ -961,24 +902,8 @@
                 <p><strong>Contact:</strong> <span id="detContact"></span></p>
             </div>
 
-            <!-- ===== RESTYLED SECTION: Reviews & Comments =====
-                 Structure (title / textarea / post button / cancel-reply
-                 button) is unchanged so nothing in home.js's element lookups
-                 breaks. Two things are new: #reviewsSectionAnchor (a scroll
-                 target for the new card "chat" shortcut button) and
-                 #commentsSummaryBox (the average-rating summary chip). -->
-            <div id="reviewsSectionAnchor" style="margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px;">
-                <h4 class="comments-section-title">Reviews &amp; Comments <span id="revCount" class="review-badge">0</span></h4>
-
-                <div class="comments-summary comments-summary-empty" id="commentsSummaryBox">
-                    <div>
-                        <div class="comments-summary-score" id="commentsSummaryScore">—</div>
-                    </div>
-                    <div>
-                        <div class="comments-summary-stars" id="commentsSummaryStars">☆☆☆☆☆</div>
-                        <div class="comments-summary-count" id="commentsSummaryCount">No ratings yet</div>
-                    </div>
-                </div>
+            <div style="margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px;">
+                <h4 style="margin-bottom: 15px; color: #333;">Reviews & Comments <span id="revCount" class="review-badge">0</span></h4>
 
                 <div id="ratingInputArea" style="margin-bottom: 15px;">
                     <label id="ratingLabel" style="margin-bottom: 8px; display:block; font-size:12px; font-weight:700; color:#555;">Rate this stay:</label>
@@ -997,7 +922,7 @@
                     <button id="cancelReplyBtn" style="display:none; width:100%; margin-top:5px; background:none; border:none; color:red; cursor:pointer; font-size:12px;">Cancel Reply Mode</button>
                 </div>
 
-                <div id="commentsDisplayList" style="margin-top: 20px; max-height: 320px; overflow-y: auto;">
+                <div id="commentsDisplayList" style="margin-top: 20px; max-height: 250px; overflow-y: auto;">
                 </div>
             </div>
 
@@ -1016,9 +941,15 @@
                 <button type="submit" class="search-btn">Search</button>
             </form>
 
+            <!-- NEW: autocomplete / recent-searches dropdown, anchored to the search bar -->
             <div class="search-suggestions" id="searchSuggestions"></div>
         </div>
 
+        <!-- UPDATED: category pills + availability pills grouped together
+             (used to be a separate boxed "Quick actions" panel sitting
+             next to the Price/Rooms/Location row - that mismatch in height
+             was what caused the messy extra spacing). Both rows now share
+             the same pill visual language. -->
         <div class="quick-filter-group">
             <div class="category-pills" id="categoryPills">
                 <button type="button" class="category-pill active" data-category="">All</button>
@@ -1028,6 +959,9 @@
                 <button type="button" class="category-pill" data-category="bedspace">Bedspace</button>
             </div>
 
+            <!-- UPDATED: replaces the old bordered "Quick actions" box. Same
+                 IDs (availablePropertyBtn/occupiedPropertyBtn) are kept so
+                 nothing else needs to change. -->
             <div class="availability-pills" id="availabilityPills">
                 <button type="button" class="availability-pill active" id="anyStatusBtn" data-availability="">Any Status</button>
                 <button type="button" class="availability-pill" id="availablePropertyBtn" data-availability="available">Available</button>
@@ -1035,14 +969,22 @@
             </div>
         </div>
 
+        <!-- NEW: live result count + Smart Search bridge, only shown once a search/filter is active -->
         <div class="search-meta-row" id="searchMetaRow"></div>
 
+        <!-- NEW: subtle separator between the "quick filters" section
+             above (search/category/availability) and the "advanced
+             filters" section below (price/rooms/location) -->
         <div class="filter-divider"></div>
 
         <button type="button" id="filtersToggleBtn" class="filters-toggle-btn" aria-expanded="false">
             <i class="fas fa-filter"></i> <span id="filtersToggleLabel">Filters</span>
         </button>
 
+        <!-- UPDATED: Price/Rooms/Location/Apply is now a single row (the
+             old two-column filter-layout-wrapper + quick-actions sidebar
+             is gone). "Clear all" is now a small text link at the end of
+             this same row instead of a big standalone button. -->
         <div id="advancedFiltersBody">
             <div class="advanced-filters">
                 <div class="filter-item">
@@ -1077,6 +1019,7 @@
         </div>
     </div>
 
+    <!-- NEW: results header + sort options, sits between the filter card and the grid -->
     <div class="results-header" id="resultsHeader">
         <span id="resultsHeaderCount">Loading stays…</span>
         <div class="sort-control">
@@ -1092,6 +1035,8 @@
 
     <div class="container" id="listingsGrid"></div>
 
+    <!-- NEW: footer so the page has a proper closing section instead of
+         just stopping after the last row of cards -->
     <footer class="site-footer">
         <div class="footer-inner">
             <div class="footer-brand">Stay<span>Find</span></div>
@@ -1105,6 +1050,9 @@
         </div>
     </footer>
 
+    <!-- NEW: compact sticky search bar - slides in once the real search
+         bar has scrolled out of view, so searching doesn't require
+         scrolling back to the top. -->
     <div class="sticky-search-bar" id="stickySearchBar">
         <div class="sticky-search-inner">
             <i class="fas fa-search"></i>
