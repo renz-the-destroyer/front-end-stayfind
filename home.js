@@ -26,7 +26,7 @@ let allListingsCache = [];
 let suggestionHighlightIndex = -1;
 
 // NEW: whatever array is currently being shown in the grid (before any
-// client-side sorting), refreshed by loadListings()/processSmartSearch().
+// client-side sorting), refreshed by loadListings()/runSmartSearch().
 // Powers the Sort dropdown - sorting works on a fresh copy of this each
 // time, so switching back to "Newest" always restores the original order.
 let currentDisplayedItems = [];
@@ -259,7 +259,7 @@ function setupHeroGreeting() {
         if (heroSubtitle) heroSubtitle.innerText = "Here's what's happening with your listings today.";
     } else {
         if (heroEyebrow) heroEyebrow.innerText = "Find Your Next Stay";
-        if (heroSubtitle) heroSubtitle.innerText = "Discover verified stays across the Philippines.";
+        if (heroSubtitle) heroSubtitle.innerText = "Discover verified stays across Candelaria.";
     }
 }
 
@@ -447,6 +447,8 @@ function applyAvailabilityFilter(status, clickedBtn, otherBtn) {
 
 // --- REDESIGNED: SMART SEARCH UI INJECTION ---
 function injectSmartSearchUI() {
+    // The launcher's own CSS (needs a real stylesheet for the hover state and
+    // the pulsing ring - inline style attributes can't do either).
     if (!document.getElementById('smartSearchStyles')) {
         const styleTag = document.createElement('style');
         styleTag.id = 'smartSearchStyles';
@@ -473,88 +475,12 @@ function injectSmartSearchUI() {
                 0% { transform: scale(1); opacity: 0.8; }
                 100% { transform: scale(1.35); opacity: 0; }
             }
-            .ss-panel {
-                display: none; position: fixed; bottom: 90px; right: 20px; z-index: 1000;
-                width: 340px; max-width: calc(100vw - 40px);
-                background: #ffffff; border-radius: 22px; overflow: hidden;
-                box-shadow: 0 24px 60px rgba(16,24,40,0.22);
-                border: 1px solid rgba(13,71,161,0.08);
-                font-family: 'Plus Jakarta Sans', 'Montserrat', sans-serif;
-                opacity: 0; transform: translateY(16px) scale(0.97);
-                transition: opacity 0.25s ease, transform 0.25s ease;
-                flex-direction: column;
-            }
-            .ss-panel.open { display: flex; opacity: 1; transform: translateY(0) scale(1); }
-            .ss-panel-header {
-                background: linear-gradient(135deg, #0d47a1, #1565c0 55%, #1e88e5);
-                padding: 20px 20px 22px; display: flex; align-items: flex-start;
-                justify-content: space-between; position: relative; overflow: hidden;
-            }
-            .ss-panel-header::after {
-                content: ""; position: absolute; width: 140px; height: 140px;
-                background: rgba(255,255,255,0.08); border-radius: 50%; top: -60px; right: -40px;
-            }
-            .ss-panel-eyebrow {
-                display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 1px;
-                text-transform: uppercase; color: rgba(255,255,255,0.75); margin-bottom: 4px;
-            }
-            .ss-panel-title { margin: 0; color: #fff; font-size: 19px; font-weight: 800; letter-spacing: -0.3px; }
-            .ss-close-btn {
-                background: rgba(255,255,255,0.16); border: none; color: #fff;
-                width: 30px; height: 30px; border-radius: 9px; cursor: pointer; font-size: 13px;
-                flex-shrink: 0; position: relative; z-index: 2; transition: background 0.15s;
-            }
-            .ss-close-btn:hover { background: rgba(255,255,255,0.3); }
-            .ss-panel-body { padding: 18px 20px 20px; }
-            .ss-panel-intro { margin: 0 0 14px; font-size: 12.5px; color: #64748b; line-height: 1.5; }
-            .ss-chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-            .ss-chip {
-                display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px;
-                border-radius: 999px; border: 1px solid #e3f2fd; background: #f8fbff;
-                color: #0d47a1; font-size: 11.5px; font-weight: 600; cursor: pointer;
-                font-family: inherit; transition: background 0.15s, transform 0.15s, border-color 0.15s;
-            }
-            .ss-chip i { font-size: 10px; color: #42a5f5; }
-            .ss-chip:hover { background: #e3f2fd; border-color: #42a5f5; transform: translateY(-1px); }
-            .ss-chip:active { transform: scale(0.96); }
-            .ss-input-row { position: relative; margin-bottom: 12px; }
-            .ss-input-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 13px; }
-            .ss-input {
-                width: 100%; padding: 12px 14px 12px 38px; border-radius: 12px;
-                border: 1.5px solid #e5e9f0; background: #fbfcfe; font-size: 13.5px;
-                font-family: inherit; outline: none; box-sizing: border-box;
-                transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-            }
-            .ss-input:focus { border-color: #42a5f5; box-shadow: 0 0 0 4px rgba(66,165,245,0.14); background: #fff; }
-            .ss-submit-btn {
-                width: 100%; padding: 13px; border: none; border-radius: 13px;
-                background: linear-gradient(135deg, #0d47a1, #1565c0); color: #fff;
-                font-weight: 700; font-size: 13.5px; cursor: pointer;
-                box-shadow: 0 10px 22px rgba(13,71,161,0.28);
-                transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
-                display: flex; align-items: center; justify-content: center; gap: 8px;
-                font-family: inherit;
-            }
-            .ss-submit-btn:hover { transform: translateY(-1px); box-shadow: 0 14px 28px rgba(13,71,161,0.35); }
-            .ss-submit-btn:disabled { opacity: 0.75; cursor: not-allowed; transform: none; }
-            .ss-dot {
-                width: 6px; height: 6px; border-radius: 50%; background: #fff;
-                display: inline-block; margin: 0 2px; animation: ss-bounce 1.2s infinite ease-in-out;
-            }
-            .ss-dot:nth-child(2) { animation-delay: 0.15s; }
-            .ss-dot:nth-child(3) { animation-delay: 0.3s; }
-            @keyframes ss-bounce {
-                0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
-                40% { transform: scale(1); opacity: 1; }
-            }
             @media (max-width: 480px) {
-                .ss-panel { width: 100%; right: 0; bottom: 0; border-radius: 22px 22px 0 0; max-width: 100vw; }
                 .ss-launcher-label { display: none; }
                 .ss-launcher { padding: 14px; }
             }
             @media (prefers-reduced-motion: reduce) {
-                .ss-launcher-pulse, .ss-dot { animation: none; }
-                .ss-panel { transition: none; }
+                .ss-launcher-pulse { animation: none; }
             }
         `;
         document.head.appendChild(styleTag);
@@ -563,7 +489,7 @@ function injectSmartSearchUI() {
     const btn = document.createElement('button');
     btn.id = "smartSearchBtn";
     btn.className = "ss-launcher";
-    btn.setAttribute('aria-label', 'Open Smart Search');
+    btn.setAttribute('aria-label', 'How to use Smart Search');
     btn.innerHTML = `
         <span class="ss-launcher-pulse"></span>
         <i class="fas fa-wand-magic-sparkles"></i>
@@ -571,127 +497,125 @@ function injectSmartSearchUI() {
     `;
     document.body.appendChild(btn);
 
-    const chatbox = document.createElement('div');
-    chatbox.id = "smartSearchBox";
-    chatbox.className = "ss-panel";
-    chatbox.innerHTML = `
-        <div class="ss-panel-header">
-            <div>
-                <span class="ss-panel-eyebrow">AI-Assisted</span>
-                <h3 class="ss-panel-title">Smart Finder</h3>
+    // The old floating panel (input, suggestion chips, "Find Stays" button)
+    // is gone. Tapping the launcher now just explains how Smart Search
+    // works; the actual searching happens in the main search bar.
+    btn.onclick = showSmartSearchTips;
+}
+
+// NEW: the how-to popup shown when the Smart Search button is tapped.
+function showSmartSearchTips() {
+    const examples = [
+        'bahay malapit sa UP',
+        'apartment na may wifi',
+        'room under 5000',
+        '5k pababa na bedspace',
+        'cheapest condo',
+        '3 bedrooms with parking'
+    ];
+
+    Swal.fire({
+        title: 'Smart Search',
+        html: `
+            <div style="text-align:left; font-size:14px; color:#475569; line-height:1.6;">
+                <p style="margin:0 0 14px;">Search the way you'd normally talk, in English or Tagalog. Type a sentence in the <strong>search bar</strong> and press <strong>Enter</strong>.</p>
+                <div style="background:#f4f8fd; border:1px solid #e3f2fd; border-radius:12px; padding:12px 14px;">
+                    <div style="font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#0d47a1; margin-bottom:8px;">Try typing</div>
+                    ${examples.map(e => `<div style="padding:4px 0; font-weight:600; color:#1a2332;">&ldquo;${e}&rdquo;</div>`).join('')}
+                </div>
+                <p style="margin:12px 0 0; font-size:12.5px; color:#90a4ae;">It understands property types, prices, room counts, amenities and words like &ldquo;cheapest&rdquo; or &ldquo;malapit sa&rdquo;.</p>
             </div>
-            <button type="button" id="smartSearchCloseBtn" class="ss-close-btn" aria-label="Close"><i class="fas fa-xmark"></i></button>
-        </div>
-        <div class="ss-panel-body">
-            <p class="ss-panel-intro">Search naturally, in English or Tagalog — try a shortcut below or type your own.</p>
-            <div class="ss-chip-row" id="smartChipRow">
-                <button type="button" class="ss-chip" data-query="house malapit sa UP"><i class="fas fa-house"></i>House near UP</button>
-                <button type="button" class="ss-chip" data-query="apartment na may wifi"><i class="fas fa-wifi"></i>Has wifi</button>
-                <button type="button" class="ss-chip" data-query="room under 5000"><i class="fas fa-peso-sign"></i>Under ₱5,000</button>
-                <button type="button" class="ss-chip" data-query="may parking"><i class="fas fa-square-parking"></i>Parking</button>
-            </div>
-            <div class="ss-input-row">
-                <i class="fas fa-magnifying-glass ss-input-icon"></i>
-                <input type="text" id="smartInput" class="ss-input" placeholder="e.g. bahay malapit sa palengke...">
-            </div>
-            <button type="button" id="executeSmartSearch" class="ss-submit-btn">
-                <span class="ss-submit-label"><i class="fas fa-wand-magic-sparkles"></i> Find Stays</span>
-            </button>
-        </div>
-    `;
-    document.body.appendChild(chatbox);
-
-    function openPanel() {
-        chatbox.style.display = 'flex';
-        requestAnimationFrame(() => chatbox.classList.add('open'));
-        document.getElementById('smartInput').focus();
-    }
-    function closePanel() {
-        chatbox.classList.remove('open');
-        setTimeout(() => {
-            if (!chatbox.classList.contains('open')) chatbox.style.display = 'none';
-        }, 220);
-    }
-
-    btn.onclick = () => {
-        const isOpen = chatbox.classList.contains('open');
-        if (isOpen) closePanel(); else openPanel();
-    };
-    document.getElementById('smartSearchCloseBtn').onclick = closePanel;
-
-    document.querySelectorAll('.ss-chip').forEach(chip => {
-        chip.onclick = () => {
-            document.getElementById('smartInput').value = chip.getAttribute('data-query');
-            processSmartSearch();
-        };
-    });
-
-    document.getElementById('executeSmartSearch').onclick = processSmartSearch;
-    document.getElementById('smartInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') processSmartSearch();
+        `,
+        confirmButtonText: 'Got it, let me try',
+        confirmButtonColor: '#0d47a1'
+    }).then((result) => {
+        if (result.isConfirmed) focusMainSearchBar();
     });
 }
 
+// Scrolls back up to the main search bar and puts the cursor in it.
+function focusMainSearchBar() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+        const input = document.getElementById('searchLoc');
+        if (input) input.focus({ preventScroll: true });
+    }, 350);
+}
+
 // --- UPDATED: SMART SEARCH LOGIC (API Connected) ---
-async function processSmartSearch() {
-    const rawQuery = document.getElementById('smartInput').value.trim();
+// Only tenants get Smart Search (same as before - landlords never had the widget).
+function isSmartSearchAvailable() {
+    return !!currentUser && currentUser.role === 'tenant';
+}
+
+// When set, the main search bar's text is a Smart Search sentence rather than
+// a keyword, so filterListings() must NOT use it as a substring filter - the
+// grid already holds the smart results, and matching the whole sentence
+// against titles would hide every card.
+let smartSearchActiveQuery = null;
+
+// Called by the main search form. Sentence-like queries go to Smart Search;
+// short keyword queries keep filtering the loaded cards live, as before.
+function handleMainSearchSubmit() {
+    const term = (document.getElementById('searchLoc')?.value || '').trim();
+    if (isSmartSearchAvailable() && looksLikeNaturalLanguageQuery(term)) {
+        runSmartSearch(term);
+    } else {
+        filterListings();
+    }
+}
+
+async function runSmartSearch(rawQuery) {
+    rawQuery = (rawQuery || '').trim();
     if (!rawQuery) return;
 
-    const searchBtn = document.getElementById('executeSmartSearch');
-    const originalBtnContent = searchBtn.innerHTML;
-    searchBtn.disabled = true;
-    searchBtn.innerHTML = '<span class="ss-dot"></span><span class="ss-dot"></span><span class="ss-dot"></span>';
+    closeSearchSuggestions();
+    Swal.fire({ title: 'Searching...', allowOutsideClick: false, showConfirmButton: false, didOpen: () => Swal.showLoading() });
 
     try {
         const response = await fetch(`${API_BASE}/smart-search`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 message: rawQuery.toLowerCase(),
                 userContext: { role: currentUser.role, id: currentUser.id }
-            }) 
+            })
         });
 
         if (!response.ok) throw new Error("Search failed");
 
         const data = await response.json();
-        console.log("🕵️ BACKEND RESPONSE:", data); 
-
-        let results = data.results || [];
+        const results = data.results || [];
 
         if (results.length > 0) {
-            const smartSearchBoxEl = document.getElementById('smartSearchBox');
-            smartSearchBoxEl.classList.remove('open');
-            smartSearchBoxEl.style.display = 'none';
+            smartSearchActiveQuery = rawQuery;
             allListingsCache = results;
             currentDisplayedItems = results;
             hasMorePages = false; // Smart Search returns its full ranked set - nothing left to page through
             hideLoadMoreButton();
-            renderListings(results); 
-            
-            Swal.fire({ 
-                title: 'Smart Search', 
-                text: `Found ${results.length} matches!`, 
-                icon: 'success', 
-                toast: true, 
-                position: 'top-end', 
-                timer: 3000, 
-                showConfirmButton: false 
+            clearAvailabilityFilterState();
+            clearCategoryFilterState();
+            await renderListings(results);
+
+            Swal.fire({
+                title: 'Smart Search',
+                text: `Found ${results.length} match${results.length === 1 ? '' : 'es'}!`,
+                icon: 'success',
+                toast: true,
+                position: 'top-end',
+                timer: 3000,
+                showConfirmButton: false
             });
         } else {
-            Swal.fire({ 
-                title: 'No matches', 
-                text: `We couldn't find exactly "${rawQuery}". Try simpler keywords like "apartment" or "eu".`, 
-                icon: 'info' 
+            Swal.fire({
+                title: 'No matches',
+                text: `We couldn't find "${rawQuery}". Try simpler words like "apartment" or a place name.`,
+                icon: 'info'
             });
         }
     } catch (error) {
         console.error("Smart Search Error:", error);
         Swal.fire('Error', 'Something went wrong with the smart search.', 'error');
-    } finally {
-        searchBtn.disabled = false;
-        searchBtn.innerHTML = originalBtnContent;
-        document.getElementById('smartInput').value = "";
     }
 }
 
@@ -849,6 +773,8 @@ async function loadListings() {
     clearCategoryFilterState();
     renderSkeletonCards();
     hideLoadMoreButton();
+
+    smartSearchActiveQuery = null;
 
     // Reset pagination every time the grid is fully reloaded (Browse click,
     // Clear filters, initial page load).
@@ -1555,7 +1481,7 @@ function highlightMatch(rawText, rawTerm) {
 }
 
 function filterListings() {
-    const searchTerm = document.getElementById('searchLoc').value.toLowerCase();
+    const searchTerm = smartSearchActiveQuery ? '' : document.getElementById('searchLoc').value.toLowerCase();
     const normalizedSearchTerm = normalizeForSearch(searchTerm);
     const maxPriceValue = document.getElementById('maxPrice').value;
     const maxPrice = maxPriceValue === "Infinity" ? Infinity : parseInt(maxPriceValue);
@@ -1623,27 +1549,26 @@ function updateFilterEmptyState(hasActiveSearch, visibleCount, totalCount) {
 }
 
 function looksLikeNaturalLanguageQuery(term) {
-    const words = term.trim().split(/\s+/).filter(Boolean);
+    const lower = (term || '').toLowerCase().trim();
+    const words = lower.split(/\s+/).filter(Boolean);
+    if (words.length < 2) return false; // one word is a plain keyword search
+
+    // Short queries that are still clearly "smart" (sort or price intent)
+    const intentWords = [
+        'cheapest', 'pinakamura', 'mura', 'murang', 'affordable', 'budget',
+        'expensive', 'mahal', 'pinakamahal', 'biggest', 'malaki', 'pinakamalaki',
+        'pababa', 'pataas', 'under', 'below', 'above', 'over'
+    ];
+    if (words.some(w => intentWords.includes(w))) return true;
+
     if (words.length < 3) return false;
     const connectorWords = [
         'malapit', 'sa', 'na', 'may', 'meron', 'gusto', 'kong',
-        'under', 'near', 'with', 'around', 'less', 'than', 'below', 'over', 'above',
-        'pababa', 'pataas'
+        'near', 'with', 'around', 'less', 'than'
     ];
-    const lower = term.toLowerCase();
-    return connectorWords.some(w => lower.includes(w));
+    return words.some(w => connectorWords.includes(w));
 }
 
-function openSmartSearchWithQuery(term) {
-    const smartBox = document.getElementById('smartSearchBox');
-    const smartInput = document.getElementById('smartInput');
-    if (!smartBox || !smartInput) return;
-    smartInput.value = term;
-    smartBox.style.display = 'flex';
-    requestAnimationFrame(() => smartBox.classList.add('open'));
-    smartInput.focus();
-    closeSearchSuggestions();
-}
 
 function updateSearchMetaRow(searchTerm, visibleCount, totalCount, hasActiveSearch) {
     const metaRow = document.getElementById('searchMetaRow');
@@ -1657,9 +1582,8 @@ function updateSearchMetaRow(searchTerm, visibleCount, totalCount, hasActiveSear
 
     let html = `<span id="resultCountText"><strong>${visibleCount}</strong> of ${totalCount} ${totalCount === 1 ? 'stay' : 'stays'} shown</span>`;
 
-    const smartBoxExists = document.getElementById('smartSearchBox');
-    if (smartBoxExists && looksLikeNaturalLanguageQuery(searchTerm)) {
-        html += `<span class="smart-search-hint-link" id="smartSearchHintLink"><i class="fas fa-wand-magic-sparkles"></i> Try Smart Search for this</span>`;
+    if (isSmartSearchAvailable() && looksLikeNaturalLanguageQuery(searchTerm)) {
+        html += `<span class="smart-search-hint-link" id="smartSearchHintLink"><i class="fas fa-wand-magic-sparkles"></i> Press Enter for Smart Search</span>`;
     }
 
     metaRow.innerHTML = html;
@@ -1667,7 +1591,7 @@ function updateSearchMetaRow(searchTerm, visibleCount, totalCount, hasActiveSear
 
     const hintLink = document.getElementById('smartSearchHintLink');
     if (hintLink) {
-        hintLink.onclick = () => openSmartSearchWithQuery(document.getElementById('searchLoc').value);
+        hintLink.onclick = () => runSmartSearch(document.getElementById('searchLoc').value);
     }
 }
 
@@ -1823,10 +1747,15 @@ function setupSearchBarEnhancements() {
 
     if (clearBtn) {
         clearBtn.onclick = () => {
+            const wasSmart = !!smartSearchActiveQuery;
             input.value = "";
             updateClearButtonVisibility();
-            filterListings();
             closeSearchSuggestions();
+            if (wasSmart) {
+                loadListings(); // grid currently holds Smart Search results - bring the full list back
+            } else {
+                filterListings();
+            }
             input.focus();
         };
     }
@@ -1872,6 +1801,7 @@ function setupStickySearchBar() {
 
     stickyInput.addEventListener('input', () => {
         mainInput.value = stickyInput.value;
+        smartSearchActiveQuery = null;
         updateClearButtonVisibility();
         filterListings();
     });
@@ -1938,7 +1868,7 @@ function resetFilters() {
     loadListings();
 }
 
-if(document.getElementById('searchLoc')) document.getElementById('searchLoc').addEventListener('input', filterListings);
+if(document.getElementById('searchLoc')) document.getElementById('searchLoc').addEventListener('input', () => { smartSearchActiveQuery = null; filterListings(); });
 if(document.getElementById('maxPrice')) document.getElementById('maxPrice').addEventListener('change', filterListings);
 if(document.getElementById('roomFilter')) document.getElementById('roomFilter').addEventListener('change', filterListings);
 if(document.getElementById('locFilter')) document.getElementById('locFilter').addEventListener('input', filterListings);
