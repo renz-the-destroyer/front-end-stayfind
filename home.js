@@ -32,6 +32,16 @@ let suggestionHighlightIndex = -1;
 let currentDisplayedItems = [];
 let currentSortOption = 'newest';
 
+// NEW: pagination state for the Browse view. /api/view now returns listings
+// one page at a time (see getAllListings in userController.js), so home.js
+// tracks which page it's on, whether the server says more exist, and
+// whether a "Load More" fetch is already in flight (to block double-clicks).
+const LISTINGS_PAGE_SIZE = 12;
+let currentPage = 1;
+let hasMorePages = false;
+let totalListingsCount = 0;
+let isLoadingMorePages = false;
+
 // NEW: Tracks a snapshot of the Post/Edit Listing form so we can warn the user
 // before they lose unsaved changes (Cancel button, clicking outside, closing the tab).
 let originalFormSnapshot = null;
@@ -277,6 +287,7 @@ window.onload = () => {
     console.log("Welcome back, " + (currentUser.full_name || currentUser.name || "User"));
 
     setupHeroGreeting(); // NEW: personalized hero header
+    setupLoadMoreButton(); // NEW: pagination control under the grid
     loadListings();
     setupSettingsLogic(); 
     setupPostListingLogic(); 
@@ -654,6 +665,8 @@ async function processSmartSearch() {
             smartSearchBoxEl.style.display = 'none';
             allListingsCache = results;
             currentDisplayedItems = results;
+            hasMorePages = false; // Smart Search returns its full ranked set - nothing left to page through
+            hideLoadMoreButton();
             renderListings(results); 
             
             Swal.fire({ 
@@ -818,46 +831,62 @@ function updateCachedListingRating(listingId, avg, totalCount) {
 }
 
 // --- 2. FETCH LISTINGS FROM MYSQL ---
+// NEW: builds the query string for GET /api/view. Landlords are scoped
+// server-side now via role/user_id (getAllListings already supported this -
+// home.js just never sent them before and filtered client-side instead, which
+// meant every landlord downloaded every listing only to throw most away).
+function buildListingsQuery(extraParams = '') {
+    const roleParams = (currentUser && currentUser.role === 'landlord')
+        ? `&role=landlord&user_id=${encodeURIComponent(currentUser.id)}`
+        : '';
+    return `${API_BASE}/view?${extraParams}${roleParams}`;
+}
+
 async function loadListings() {
     if (!listingsGrid) return;
 
     clearAvailabilityFilterState();
     clearCategoryFilterState();
     renderSkeletonCards();
-    
+    hideLoadMoreButton();
+
+    // Reset pagination every time the grid is fully reloaded (Browse click,
+    // Clear filters, initial page load).
+    currentPage = 1;
+    hasMorePages = false;
+    totalListingsCount = 0;
+    isLoadingMorePages = false;
+
     try {
-        const response = await fetch(`${API_BASE}/view`);
+        const response = await fetch(buildListingsQuery(`page=1&limit=${LISTINGS_PAGE_SIZE}`));
         const data = await response.json();
+        const listings = Array.isArray(data.listings) ? data.listings : [];
 
-        if (!data || data.length === 0) {
+        if (!response.ok) throw new Error(data.error || 'Failed to load listings');
+
+        totalListingsCount = Number(data.total) || listings.length;
+        hasMorePages = !!data.hasMore;
+
+        if (listings.length === 0) {
             hideResultsHeader();
-            listingsGrid.innerHTML = emptyStateHTML('fa-house-circle-xmark', 'No listings yet', 'Check back soon — new stays are added regularly.');
+            if (currentUser && currentUser.role === 'landlord') {
+                listingsGrid.innerHTML = emptyStateHTML(
+                    'fa-clipboard-list',
+                    "You haven't posted anything yet",
+                    'Tap the button below to publish your first listing.',
+                    `<button class="empty-state-cta" onclick="document.getElementById('postBtn').click()">Post a Listing</button>`
+                );
+            } else {
+                listingsGrid.innerHTML = emptyStateHTML('fa-house-circle-xmark', 'No listings yet', 'Check back soon — new stays are added regularly.');
+            }
             return;
         }
 
-        const dataToShow = (currentUser && currentUser.role === 'landlord') 
-            ? data.filter(item => {
-                const itemOwner = String(item.user_id || item.landlord_id || "");
-                const currentId = String(currentUser.id || "");
-                return itemOwner === currentId;
-            })
-            : data;
+        allListingsCache = listings;
+        currentDisplayedItems = listings;
 
-        allListingsCache = dataToShow;
-        currentDisplayedItems = dataToShow;
-
-        if (dataToShow.length === 0 && currentUser.role === 'landlord') {
-            hideResultsHeader();
-            listingsGrid.innerHTML = emptyStateHTML(
-                'fa-clipboard-list',
-                "You haven't posted anything yet",
-                'Tap the button below to publish your first listing.',
-                `<button class="empty-state-cta" onclick="document.getElementById('postBtn').click()">Post a Listing</button>`
-            );
-            return;
-        }
-
-        renderListings(dataToShow);
+        renderListings(listings);
+        updateLoadMoreButton();
     } catch (error) {
         console.error("Error fetching listings:", error);
         hideResultsHeader();
@@ -865,11 +894,112 @@ async function loadListings() {
     }
 }
 
+// --- NEW: LOAD MORE (pagination) ---
+// The button is created once and injected right after the listings grid, so
+// home.html doesn't need any changes. It's shown/hidden/relabelled by the
+// helpers below depending on whether the server reported more pages.
+function setupLoadMoreButton() {
+    if (document.getElementById('loadMoreWrap') || !listingsGrid) return;
+
+    if (!document.getElementById('loadMoreStyles')) {
+        const styleTag = document.createElement('style');
+        styleTag.id = 'loadMoreStyles';
+        styleTag.textContent = `
+            .load-more-wrap { display: none; text-align: center; padding: 0 5% 60px; margin-top: -40px; }
+            .load-more-btn {
+                border: 1.5px solid var(--accent); background: #fff; color: var(--primary);
+                padding: 13px 30px; border-radius: 999px; font-weight: 700; font-size: 14px;
+                cursor: pointer; transition: background 0.15s, color 0.15s, transform 0.15s, opacity 0.15s;
+            }
+            .load-more-btn:hover { background: var(--accent); color: #fff; transform: translateY(-1px); }
+            .load-more-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+            .load-more-count { display: block; margin-top: 10px; font-size: 12px; color: var(--muted); font-weight: 600; }
+        `;
+        document.head.appendChild(styleTag);
+    }
+
+    const wrap = document.createElement('div');
+    wrap.id = 'loadMoreWrap';
+    wrap.className = 'load-more-wrap';
+    wrap.innerHTML = `
+        <button type="button" id="loadMoreBtn" class="load-more-btn">Load more stays</button>
+        <span id="loadMoreCount" class="load-more-count"></span>
+    `;
+    listingsGrid.insertAdjacentElement('afterend', wrap);
+
+    document.getElementById('loadMoreBtn').onclick = loadMoreListings;
+}
+
+function updateLoadMoreButton() {
+    const wrap = document.getElementById('loadMoreWrap');
+    const btn = document.getElementById('loadMoreBtn');
+    const countEl = document.getElementById('loadMoreCount');
+    if (!wrap || !btn) return;
+
+    if (!hasMorePages) {
+        wrap.style.display = 'none';
+        return;
+    }
+
+    wrap.style.display = 'block';
+    btn.disabled = isLoadingMorePages;
+    btn.innerText = isLoadingMorePages ? 'Loading...' : 'Load more stays';
+    if (countEl) countEl.innerText = `Showing ${currentDisplayedItems.length} of ${totalListingsCount} stays`;
+}
+
+function hideLoadMoreButton() {
+    const wrap = document.getElementById('loadMoreWrap');
+    if (wrap) wrap.style.display = 'none';
+}
+
+async function loadMoreListings() {
+    if (isLoadingMorePages || !hasMorePages) return;
+
+    isLoadingMorePages = true;
+    updateLoadMoreButton();
+
+    try {
+        const nextPage = currentPage + 1;
+        const response = await fetch(buildListingsQuery(`page=${nextPage}&limit=${LISTINGS_PAGE_SIZE}`));
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to load more listings');
+
+        const newListings = Array.isArray(data.listings) ? data.listings : [];
+
+        currentPage = nextPage;
+        hasMorePages = !!data.hasMore;
+        totalListingsCount = Number(data.total) || totalListingsCount;
+
+        allListingsCache = allListingsCache.concat(newListings);
+        currentDisplayedItems = currentDisplayedItems.concat(newListings);
+
+        // Re-render everything loaded so far (respecting the current sort),
+        // then re-apply any active search/category/availability filters so
+        // freshly loaded cards don't ignore what the person already set.
+        renderListings(sortListings(currentDisplayedItems, currentSortOption)).then(() => {
+            const hasActiveFilter = (document.getElementById('searchLoc')?.value || '').trim() !== ''
+                || currentCategoryFilter !== '' || !!currentAvailabilityFilter
+                || (document.getElementById('locFilter')?.value || '').trim() !== ''
+                || (document.getElementById('roomFilter')?.value || 'all') !== 'all'
+                || (document.getElementById('maxPrice')?.value || 'Infinity') !== 'Infinity';
+            if (hasActiveFilter) filterListings();
+        });
+    } catch (err) {
+        console.error("Load more error:", err);
+        Swal.fire({ title: 'Error', text: 'Could not load more listings. Please try again.', icon: 'error', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false });
+    } finally {
+        isLoadingMorePages = false;
+        updateLoadMoreButton();
+    }
+}
+
 // --- 3. RENDER HTML CARDS ---
 async function renderListings(items) {
     listingsGrid.innerHTML = ""; 
     
-    updateResultsHeaderCount(items.length);
+    // With pagination, items.length is only what's loaded so far - show the
+    // server's real total while more pages remain.
+    updateResultsHeaderCount(hasMorePages ? totalListingsCount : items.length);
     showResultsHeader();
 
     let savedListings = JSON.parse(localStorage.getItem('bookmarks')) || [];
@@ -2093,32 +2223,26 @@ function setupBookmarkToggles() {
 
     if (!viewAllBtn || !viewSavedBtn) return;
 
-    viewSavedBtn.onclick = () => {
+    // UPDATED: the Saved view used to filter whichever cards were already in
+    // the DOM. That only worked because every listing was always loaded at
+    // once - with pagination, a saved listing sitting on page 2 would
+    // silently be missing. It now fetches the complete list (all=true) and
+    // filters that by the bookmarked ids, so Saved is always correct
+    // regardless of how many pages the Browse view has loaded.
+    viewSavedBtn.onclick = async () => {
         clearAvailabilityFilterState();
         clearCategoryFilterState();
-        const savedIds = JSON.parse(localStorage.getItem('bookmarks')) || [];
-        const allCards = document.querySelectorAll('.listing-card');
-        
         viewSavedBtn.classList.add('nav-active');
         viewAllBtn.classList.remove('nav-active');
+        hideLoadMoreButton();
+        hasMorePages = false;
 
-        let found = 0;
-        allCards.forEach(card => {
-            const id = parseInt(card.getAttribute('data-id'));
-            if (savedIds.includes(id)) {
-                card.style.display = "block";
-                found++;
-            } else {
-                card.style.display = "none";
-            }
-        });
-        
-        updateResultsHeaderCount(found);
-        if (found === 0) hideResultsHeader(); else showResultsHeader();
+        const savedIds = (JSON.parse(localStorage.getItem('bookmarks')) || []).map(Number);
 
-        if (found === 0) {
-            const msgText = (currentUser.role === 'landlord') 
-                ? "You haven't saved any of your own listings yet." 
+        const showEmptySaved = () => {
+            hideResultsHeader();
+            const msgText = (currentUser.role === 'landlord')
+                ? "You haven't saved any of your own listings yet."
                 : "You haven't saved any listings yet.";
             listingsGrid.innerHTML = `<div id="no-saved-msg">${emptyStateHTML(
                 'fa-heart-crack',
@@ -2126,6 +2250,36 @@ function setupBookmarkToggles() {
                 msgText,
                 `<button class="empty-state-cta" onclick="document.getElementById('viewAllBtn').click()">Browse Listings</button>`
             )}</div>`;
+        };
+
+        if (savedIds.length === 0) {
+            showEmptySaved();
+            return;
+        }
+
+        renderSkeletonCards(Math.min(savedIds.length, 8));
+
+        try {
+            const response = await fetch(buildListingsQuery('all=true'));
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to load saved listings');
+
+            const everything = Array.isArray(data.listings) ? data.listings : [];
+            const savedListings = everything.filter(item => savedIds.includes(Number(item.id)));
+
+            allListingsCache = everything;
+            currentDisplayedItems = savedListings;
+
+            if (savedListings.length === 0) {
+                showEmptySaved();
+                return;
+            }
+
+            renderListings(savedListings);
+        } catch (err) {
+            console.error("Saved view error:", err);
+            hideResultsHeader();
+            listingsGrid.innerHTML = emptyStateHTML('fa-triangle-exclamation', 'Something went wrong', "We couldn't load your saved listings. Please try again.");
         }
     };
 
