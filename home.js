@@ -447,8 +447,11 @@ function applyAvailabilityFilter(status, clickedBtn, otherBtn) {
 
 // --- REDESIGNED: SMART SEARCH UI INJECTION ---
 function injectSmartSearchUI() {
-    // The launcher's own CSS (needs a real stylesheet for the hover state and
-    // the pulsing ring - inline style attributes can't do either).
+    // The launcher's own CSS, plus the popup panel it opens. Kept as one
+    // injected <style> tag (same approach as before) so home.html needs no
+    // changes. NOTE: no shortcut chips this time around - just the launcher,
+    // a short usage tip, and a dedicated input + button, separate from the
+    // main search bar's own input.
     if (!document.getElementById('smartSearchStyles')) {
         const styleTag = document.createElement('style');
         styleTag.id = 'smartSearchStyles';
@@ -475,12 +478,83 @@ function injectSmartSearchUI() {
                 0% { transform: scale(1); opacity: 0.8; }
                 100% { transform: scale(1.35); opacity: 0; }
             }
+            .ss-panel {
+                display: none; position: fixed; bottom: 90px; right: 20px; z-index: 1001;
+                width: 340px; max-width: calc(100vw - 40px);
+                background: #ffffff; border-radius: 22px; overflow: hidden;
+                box-shadow: 0 24px 60px rgba(16,24,40,0.22);
+                border: 1px solid rgba(13,71,161,0.08);
+                font-family: 'Plus Jakarta Sans', 'Montserrat', sans-serif;
+                opacity: 0; transform: translateY(16px) scale(0.97);
+                transition: opacity 0.22s ease, transform 0.22s ease;
+                flex-direction: column;
+            }
+            .ss-panel.open { display: flex; opacity: 1; transform: translateY(0) scale(1); }
+            .ss-panel-header {
+                background: linear-gradient(135deg, #0d47a1, #1565c0 55%, #1e88e5);
+                padding: 20px 20px 22px; display: flex; align-items: flex-start;
+                justify-content: space-between; position: relative; overflow: hidden;
+            }
+            .ss-panel-header::after {
+                content: ""; position: absolute; width: 140px; height: 140px;
+                background: rgba(255,255,255,0.08); border-radius: 50%; top: -60px; right: -40px;
+            }
+            .ss-panel-eyebrow {
+                display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+                text-transform: uppercase; color: rgba(255,255,255,0.75); margin-bottom: 4px;
+            }
+            .ss-panel-title { margin: 0; color: #fff; font-size: 19px; font-weight: 800; letter-spacing: -0.3px; }
+            .ss-close-btn {
+                background: rgba(255,255,255,0.16); border: none; color: #fff;
+                width: 30px; height: 30px; border-radius: 9px; cursor: pointer; font-size: 13px;
+                flex-shrink: 0; position: relative; z-index: 2; transition: background 0.15s;
+            }
+            .ss-close-btn:hover { background: rgba(255,255,255,0.3); }
+            .ss-panel-body { padding: 18px 20px 20px; }
+            .ss-panel-intro { margin: 0 0 12px; font-size: 12.5px; color: #64748b; line-height: 1.55; }
+            .ss-examples {
+                background: #f4f8fd; border: 1px solid #e3f2fd; border-radius: 12px;
+                padding: 10px 13px; margin-bottom: 14px; font-size: 12px; color: #475569; line-height: 1.7;
+            }
+            .ss-examples strong { color: #0d47a1; }
+            .ss-input-row { position: relative; margin-bottom: 12px; }
+            .ss-input-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 13px; }
+            .ss-input {
+                width: 100%; padding: 12px 14px 12px 38px; border-radius: 12px;
+                border: 1.5px solid #e5e9f0; background: #fbfcfe; font-size: 13.5px;
+                font-family: inherit; outline: none; box-sizing: border-box;
+                transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+            }
+            .ss-input:focus { border-color: #42a5f5; box-shadow: 0 0 0 4px rgba(66,165,245,0.14); background: #fff; }
+            .ss-submit-btn {
+                width: 100%; padding: 13px; border: none; border-radius: 13px;
+                background: linear-gradient(135deg, #0d47a1, #1565c0); color: #fff;
+                font-weight: 700; font-size: 13.5px; cursor: pointer;
+                box-shadow: 0 10px 22px rgba(13,71,161,0.28);
+                transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+                display: flex; align-items: center; justify-content: center; gap: 8px;
+                font-family: inherit;
+            }
+            .ss-submit-btn:hover { transform: translateY(-1px); box-shadow: 0 14px 28px rgba(13,71,161,0.35); }
+            .ss-submit-btn:disabled { opacity: 0.75; cursor: not-allowed; transform: none; }
+            .ss-dot {
+                width: 6px; height: 6px; border-radius: 50%; background: #fff;
+                display: inline-block; margin: 0 2px; animation: ss-bounce 1.2s infinite ease-in-out;
+            }
+            .ss-dot:nth-child(2) { animation-delay: 0.15s; }
+            .ss-dot:nth-child(3) { animation-delay: 0.3s; }
+            @keyframes ss-bounce {
+                0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+                40% { transform: scale(1); opacity: 1; }
+            }
             @media (max-width: 480px) {
+                .ss-panel { width: calc(100vw - 32px); right: 16px; }
                 .ss-launcher-label { display: none; }
                 .ss-launcher { padding: 14px; }
             }
             @media (prefers-reduced-motion: reduce) {
-                .ss-launcher-pulse { animation: none; }
+                .ss-launcher-pulse, .ss-dot { animation: none; }
+                .ss-panel { transition: none; }
             }
         `;
         document.head.appendChild(styleTag);
@@ -489,7 +563,7 @@ function injectSmartSearchUI() {
     const btn = document.createElement('button');
     btn.id = "smartSearchBtn";
     btn.className = "ss-launcher";
-    btn.setAttribute('aria-label', 'How to use Smart Search');
+    btn.setAttribute('aria-label', 'Open Smart Search');
     btn.innerHTML = `
         <span class="ss-launcher-pulse"></span>
         <i class="fas fa-wand-magic-sparkles"></i>
@@ -497,43 +571,97 @@ function injectSmartSearchUI() {
     `;
     document.body.appendChild(btn);
 
-    // The old floating panel (input, suggestion chips, "Find Stays" button)
-    // is gone. Tapping the launcher now just explains how Smart Search
-    // works; the actual searching happens in the main search bar.
-    btn.onclick = showSmartSearchTips;
-}
-
-// NEW: the how-to popup shown when the Smart Search button is tapped.
-function showSmartSearchTips() {
-    const examples = [
-        'bahay malapit sa UP',
-        'apartment na may wifi',
-        'room under 5000',
-        '5k pababa na bedspace',
-        'cheapest condo',
-        '3 bedrooms with parking'
-    ];
-
-    Swal.fire({
-        title: 'Smart Search',
-        html: `
-            <div style="text-align:left; font-size:14px; color:#475569; line-height:1.6;">
-                <p style="margin:0 0 14px;">Search the way you'd normally talk, in English or Tagalog. Type a sentence in the <strong>search bar</strong> and press <strong>Enter</strong>.</p>
-                <div style="background:#f4f8fd; border:1px solid #e3f2fd; border-radius:12px; padding:12px 14px;">
-                    <div style="font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#0d47a1; margin-bottom:8px;">Try typing</div>
-                    ${examples.map(e => `<div style="padding:4px 0; font-weight:600; color:#1a2332;">&ldquo;${e}&rdquo;</div>`).join('')}
-                </div>
-                <p style="margin:12px 0 0; font-size:12.5px; color:#90a4ae;">It understands property types, prices, room counts, amenities and words like &ldquo;cheapest&rdquo; or &ldquo;malapit sa&rdquo;.</p>
+    const panel = document.createElement('div');
+    panel.id = "smartSearchPanel";
+    panel.className = "ss-panel";
+    panel.innerHTML = `
+        <div class="ss-panel-header">
+            <div>
+                <span class="ss-panel-eyebrow">AI-Assisted</span>
+                <h3 class="ss-panel-title">Smart Finder</h3>
             </div>
-        `,
-        confirmButtonText: 'Got it, let me try',
-        confirmButtonColor: '#0d47a1'
-    }).then((result) => {
-        if (result.isConfirmed) focusMainSearchBar();
+            <button type="button" id="smartSearchCloseBtn" class="ss-close-btn" aria-label="Close"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="ss-panel-body">
+            <p class="ss-panel-intro">Search naturally, in English or Tagalog - it understands property types, prices, rooms, amenities, and words like "cheapest" or "malapit sa".</p>
+            <div class="ss-examples">
+                Try: <strong>"house near EU"</strong> &middot; <strong>"apartment na may wifi"</strong> &middot; <strong>"room under 5000"</strong>
+            </div>
+            <div class="ss-input-row">
+                <i class="fas fa-magnifying-glass ss-input-icon"></i>
+                <input type="text" id="smartInput" class="ss-input" placeholder="e.g. bahay malapit sa EU...">
+            </div>
+            <button type="button" id="executeSmartSearch" class="ss-submit-btn">
+                <span class="ss-submit-label"><i class="fas fa-wand-magic-sparkles"></i> Find Stays</span>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(panel);
+
+    btn.onclick = () => {
+        const isOpen = panel.classList.contains('open');
+        if (isOpen) closeSmartSearchPanel(); else openSmartSearchPanel();
+    };
+    document.getElementById('smartSearchCloseBtn').onclick = closeSmartSearchPanel;
+    document.getElementById('executeSmartSearch').onclick = submitSmartSearchFromPanel;
+    document.getElementById('smartInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') submitSmartSearchFromPanel();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && panel.classList.contains('open')) closeSmartSearchPanel();
     });
 }
 
+// NEW: opens the Smart Finder panel. Optionally pre-fills its input (used by
+// the "Press Enter for Smart Search" hint in the main search bar) without
+// running the search automatically - actually running Smart Search always
+// happens through this panel's own button/Enter key, keeping it fully
+// separate from the main search bar as requested, rather than the main bar
+// silently triggering it on its own.
+function openSmartSearchPanel(prefillQuery) {
+    const panel = document.getElementById('smartSearchPanel');
+    const input = document.getElementById('smartInput');
+    if (!panel || !input) return;
+    if (typeof prefillQuery === 'string' && prefillQuery.trim()) input.value = prefillQuery.trim();
+    panel.style.display = 'flex';
+    requestAnimationFrame(() => panel.classList.add('open'));
+    setTimeout(() => input.focus(), 120);
+}
+
+function closeSmartSearchPanel() {
+    const panel = document.getElementById('smartSearchPanel');
+    if (!panel) return;
+    panel.classList.remove('open');
+    setTimeout(() => {
+        if (!panel.classList.contains('open')) panel.style.display = 'none';
+    }, 220);
+}
+
+// NEW: the panel's own submit path - shows an inline "thinking" animation on
+// its own button (rather than a blocking overlay), then hands off to
+// runSmartSearch() to do the actual fetch/render/toast, and closes the panel
+// once results are in.
+async function submitSmartSearchFromPanel() {
+    const input = document.getElementById('smartInput');
+    const query = (input?.value || '').trim();
+    if (!query) return;
+
+    const submitBtn = document.getElementById('executeSmartSearch');
+    const originalContent = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="ss-dot"></span><span class="ss-dot"></span><span class="ss-dot"></span>';
+
+    const found = await runSmartSearch(query, { showLoadingOverlay: false });
+
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalContent;
+    if (found) closeSmartSearchPanel();
+}
+
 // Scrolls back up to the main search bar and puts the cursor in it.
+// LEGACY: no longer called now that clicking the launcher opens the Smart
+// Finder panel directly instead of a "how to use it" tip dialog. Left in
+// place rather than deleted, per project convention.
 function focusMainSearchBar() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => {
@@ -556,21 +684,29 @@ let smartSearchActiveQuery = null;
 
 // Called by the main search form. Sentence-like queries go to Smart Search;
 // short keyword queries keep filtering the loaded cards live, as before.
+// UPDATED: the main search bar no longer runs Smart Search on its own -
+// that only happens through the dedicated Smart Finder panel now, so the
+// two stay fully separate as requested. Pressing Enter here always does the
+// normal keyword filter; updateSearchMetaRow() below still offers a link to
+// open the Smart Finder panel (pre-filled) when what's typed looks like a
+// natural-language query.
 function handleMainSearchSubmit() {
-    const term = (document.getElementById('searchLoc')?.value || '').trim();
-    if (isSmartSearchAvailable() && looksLikeNaturalLanguageQuery(term)) {
-        runSmartSearch(term);
-    } else {
-        filterListings();
-    }
+    filterListings();
 }
 
-async function runSmartSearch(rawQuery) {
+// UPDATED: now takes an options object ({ showLoadingOverlay }) and returns
+// true/false so callers know whether it actually found something. The
+// dedicated Smart Finder panel passes showLoadingOverlay: false since it
+// shows its own inline "thinking" dots on its button instead - the blocking
+// full-screen spinner is kept as the default for any other caller.
+async function runSmartSearch(rawQuery, { showLoadingOverlay = true } = {}) {
     rawQuery = (rawQuery || '').trim();
-    if (!rawQuery) return;
+    if (!rawQuery) return false;
 
     closeSearchSuggestions();
-    Swal.fire({ title: 'Searching...', allowOutsideClick: false, showConfirmButton: false, didOpen: () => Swal.showLoading() });
+    if (showLoadingOverlay) {
+        Swal.fire({ title: 'Searching...', allowOutsideClick: false, showConfirmButton: false, didOpen: () => Swal.showLoading() });
+    }
 
     try {
         const response = await fetch(`${API_BASE}/smart-search`, {
@@ -597,6 +733,7 @@ async function runSmartSearch(rawQuery) {
             clearCategoryFilterState();
             await renderListings(results);
 
+            if (showLoadingOverlay) Swal.close();
             Swal.fire({
                 title: 'Smart Search',
                 text: `Found ${results.length} match${results.length === 1 ? '' : 'es'}!`,
@@ -606,16 +743,21 @@ async function runSmartSearch(rawQuery) {
                 timer: 3000,
                 showConfirmButton: false
             });
+            return true;
         } else {
+            if (showLoadingOverlay) Swal.close();
             Swal.fire({
                 title: 'No matches',
                 text: `We couldn't find "${rawQuery}". Try simpler words like "apartment" or a place name.`,
                 icon: 'info'
             });
+            return false;
         }
     } catch (error) {
         console.error("Smart Search Error:", error);
+        if (showLoadingOverlay) Swal.close();
         Swal.fire('Error', 'Something went wrong with the smart search.', 'error');
+        return false;
     }
 }
 
@@ -1583,7 +1725,7 @@ function updateSearchMetaRow(searchTerm, visibleCount, totalCount, hasActiveSear
     let html = `<span id="resultCountText"><strong>${visibleCount}</strong> of ${totalCount} ${totalCount === 1 ? 'stay' : 'stays'} shown</span>`;
 
     if (isSmartSearchAvailable() && looksLikeNaturalLanguageQuery(searchTerm)) {
-        html += `<span class="smart-search-hint-link" id="smartSearchHintLink"><i class="fas fa-wand-magic-sparkles"></i> Press Enter for Smart Search</span>`;
+        html += `<span class="smart-search-hint-link" id="smartSearchHintLink"><i class="fas fa-wand-magic-sparkles"></i> Try Smart Finder for this</span>`;
     }
 
     metaRow.innerHTML = html;
@@ -1591,7 +1733,11 @@ function updateSearchMetaRow(searchTerm, visibleCount, totalCount, hasActiveSear
 
     const hintLink = document.getElementById('smartSearchHintLink');
     if (hintLink) {
-        hintLink.onclick = () => runSmartSearch(document.getElementById('searchLoc').value);
+        // NEW: opens the dedicated Smart Finder panel pre-filled with what's
+        // typed, rather than running the AI search directly from the main
+        // bar - the person still presses "Find Stays" (or Enter) inside the
+        // panel to actually run it, keeping the two search paths separate.
+        hintLink.onclick = () => openSmartSearchPanel(document.getElementById('searchLoc').value);
     }
 }
 
