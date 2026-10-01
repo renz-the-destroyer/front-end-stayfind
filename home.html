@@ -757,6 +757,14 @@
         .comment-name { font-size: 13px; font-weight: 700; color: var(--ink); }
         .comment-stars { color: #ffb300; font-size: 11px; letter-spacing: 1px; }
         .comment-text { margin: 5px 0 0; font-size: 13px; color: #4b5769; line-height: 1.5; }
+        /* NEW: the "Reply" link a landlord sees under a tenant's review
+           (see .comment-reply-link usage in home.js's loadComments()). */
+        .comment-reply-link {
+            display: inline-block; margin-top: 7px; background: none; border: none;
+            padding: 0; color: var(--primary); font-size: 12px; font-weight: 700;
+            cursor: pointer;
+        }
+        .comment-reply-link:hover { text-decoration: underline; }
         .comment-empty { text-align: center; padding: 26px 10px; color: var(--muted); font-size: 13px; }
         .comment-empty i { display: block; font-size: 22px; margin-bottom: 8px; color: #cbd5e1; }
 
