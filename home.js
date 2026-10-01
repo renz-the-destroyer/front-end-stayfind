@@ -7,6 +7,12 @@ const listingsGrid = document.getElementById('listingsGrid');
 // Global variable to track selected stars
 let selectedRating = 0;
 
+// NEW: tracks whether the comment box is currently in "reply mode" for a
+// landlord replying to a specific tenant review - { parentId, targetName }
+// while active, null otherwise. Reset every time the details modal opens
+// for a (possibly different) listing.
+let replyContext = null;
+
 // NEW: Tracks which Available/Occupied filter is currently active, so it
 // can be cleared cleanly when switching to Browse/Saved and vice versa.
 let currentAvailabilityFilter = null; // 'available' | 'occupied' | null
@@ -1250,11 +1256,17 @@ function showFullDetails(item) {
     selectedRating = 0;
     resetStars();
     document.getElementById('commentText').value = "";
+    cancelReply(); // NEW: never carry reply mode over from a previously opened listing
 
-    loadComments(item.id);
+    loadComments(item.id, isOwner);
 
     const postCommentBtn = document.getElementById('postCommentBtn');
     postCommentBtn.onclick = () => submitComment(item.id, isOwner);
+
+    // NEW: wires the Cancel Reply Mode button that already existed in
+    // home.html but was never hooked up to anything.
+    const cancelReplyBtn = document.getElementById('cancelReplyBtn');
+    if (cancelReplyBtn) cancelReplyBtn.onclick = cancelReply;
 
     const delContainer = document.getElementById('deleteBtnContainer');
     if (delContainer) {
@@ -1405,7 +1417,12 @@ function resetStars() {
 // summary box above the list (#commentsSummaryBox) is also filled in here,
 // computed from whatever rated reviews (rating > 0) came back for this
 // listing - no separate network call needed.
-async function loadComments(listingId) {
+// UPDATED: now takes isOwner so it can show a "Reply" link on each
+// top-level tenant review when the viewer is this listing's landlord, and
+// threads any landlord replies (rows with parent_review_id set) directly
+// underneath the review they answer, instead of relying on created_at
+// ordering to land them nearby.
+async function loadComments(listingId, isOwner) {
     const list = document.getElementById('commentsDisplayList');
     const revCountBadge = document.getElementById('revCount'); 
     
@@ -1460,18 +1477,35 @@ async function loadComments(listingId) {
             return;
         }
 
-        list.innerHTML = reviews.map(rev => {
-            const isReply = Number(rev.is_reply) === 1;
-            const starsHTML = (!isReply && rev.rating)
+        // NEW: group replies under their parent instead of rendering every
+        // row as one flat chronological list. Any row with no matching
+        // parent still in the dataset (parent_review_id null, or pointing at
+        // something deleted) is treated as top-level so nothing ever
+        // silently disappears.
+        const byId = new Map(reviews.map(r => [r.id, r]));
+        const topLevel = reviews.filter(r => !r.parent_review_id || !byId.has(r.parent_review_id));
+        const repliesByParent = new Map();
+        reviews.forEach(r => {
+            if (r.parent_review_id && byId.has(r.parent_review_id)) {
+                if (!repliesByParent.has(r.parent_review_id)) repliesByParent.set(r.parent_review_id, []);
+                repliesByParent.get(r.parent_review_id).push(r);
+            }
+        });
+
+        function renderCommentRow(rev, { isReplyRow, canReply }) {
+            const starsHTML = (!isReplyRow && rev.rating)
                 ? `<span class="comment-stars">${buildStarString(rev.rating)}</span>`
                 : "";
-            const nameLabel = isReply
+            const nameLabel = isReplyRow
                 ? `${rev.user_name} <span class="landlord-reply-badge">Landlord</span>`
                 : rev.user_name;
             const initial = (rev.user_name || "?").trim().charAt(0).toUpperCase() || "?";
+            const replyLinkHTML = canReply
+                ? `<button type="button" class="comment-reply-link" data-parent-id="${rev.id}" data-target-name="${escapeHtmlAttr(rev.user_name || 'this reviewer')}">Reply</button>`
+                : "";
 
             return `
-                <div class="comment-item${isReply ? ' reply-item' : ''}">
+                <div class="comment-item${isReplyRow ? ' reply-item' : ''}">
                     <div class="comment-avatar">${initial}</div>
                     <div class="comment-body">
                         <div class="comment-top-row">
@@ -1479,25 +1513,81 @@ async function loadComments(listingId) {
                             ${starsHTML}
                         </div>
                         <p class="comment-text">${rev.comment || ""}</p>
+                        ${replyLinkHTML}
                     </div>
                 </div>
             `;
+        }
+
+        list.innerHTML = topLevel.map(rev => {
+            const replies = repliesByParent.get(rev.id) || [];
+            const isReplyRow = Number(rev.is_reply) === 1;
+            // Only a landlord can reply, only to an actual tenant review (not
+            // to another reply), and only once - if a reply already exists
+            // for this comment, don't offer a second one.
+            const canReply = !!isOwner && !isReplyRow && replies.length === 0;
+            return renderCommentRow(rev, { isReplyRow, canReply })
+                + replies.map(reply => renderCommentRow(reply, { isReplyRow: true, canReply: false })).join('');
         }).join('');
+
+        // Wire the Reply links now that they're in the DOM.
+        list.querySelectorAll('.comment-reply-link').forEach(linkEl => {
+            linkEl.onclick = () => startReply(linkEl.getAttribute('data-parent-id'), linkEl.getAttribute('data-target-name'));
+        });
     } catch (err) {
         list.innerHTML = "<p style='color:red; text-align:center;'>Error loading reviews.</p>";
         if (revCountBadge) revCountBadge.innerText = "0";
     }
 }
 
+// NEW: puts the comment box into "reply mode" for a specific tenant review -
+// updates the placeholder/button text, reveals the existing (previously
+// unwired) Cancel Reply Mode button, and focuses the textarea.
+function startReply(parentId, targetName) {
+    replyContext = { parentId, targetName };
+
+    const commentTextEl = document.getElementById('commentText');
+    const postCommentBtn = document.getElementById('postCommentBtn');
+    const cancelReplyBtn = document.getElementById('cancelReplyBtn');
+
+    if (commentTextEl) {
+        commentTextEl.placeholder = `Replying to ${targetName}...`;
+        commentTextEl.focus();
+    }
+    if (postCommentBtn) postCommentBtn.innerText = 'Post Reply';
+    if (cancelReplyBtn) cancelReplyBtn.style.display = 'block';
+}
+
+// NEW: leaves reply mode and restores the comment box to its normal state.
+function cancelReply() {
+    replyContext = null;
+
+    const commentTextEl = document.getElementById('commentText');
+    const postCommentBtn = document.getElementById('postCommentBtn');
+    const cancelReplyBtn = document.getElementById('cancelReplyBtn');
+
+    if (commentTextEl) commentTextEl.placeholder = 'Write a comment...';
+    if (postCommentBtn) postCommentBtn.innerText = 'Post Comment';
+    if (cancelReplyBtn) cancelReplyBtn.style.display = 'none';
+}
+
 async function submitComment(listingId, isOwner) {
     const commentText = document.getElementById('commentText').value.trim();
-    
+    const isReplying = isOwner && replyContext !== null;
+
     if (!currentUser || !currentUser.id) {
         Swal.fire({ title: 'Session Error', text: 'User ID not found.', icon: 'error', target: '#detailsModal' });
         return;
     }
 
-    if (!commentText && selectedRating === 0) {
+    // NEW: a reply needs actual text (there's no rating to fall back on -
+    // ratingInputArea is already hidden for landlords entirely).
+    if (isReplying && !commentText) {
+        Swal.fire({ title: 'Empty reply', text: 'Please write a reply before posting.', icon: 'warning', target: '#detailsModal' });
+        return;
+    }
+
+    if (!isReplying && !commentText && selectedRating === 0) {
         Swal.fire({ title: 'Empty', text: 'Please add a rating or a comment.', icon: 'warning', target: '#detailsModal' });
         return;
     }
@@ -1507,7 +1597,11 @@ async function submitComment(listingId, isOwner) {
         user_id: currentUser.id,
         user_name: currentUser.full_name || currentUser.name || "User",
         comment: commentText,
-        rating: isOwner ? null : selectedRating 
+        rating: isOwner ? null : selectedRating,
+        // NEW: when replying, mark this row as a reply and link it to the
+        // specific review it answers.
+        is_reply: isReplying,
+        parent_review_id: isReplying ? replyContext.parentId : null
     };
 
     try {
@@ -1521,7 +1615,8 @@ async function submitComment(listingId, isOwner) {
             document.getElementById('commentText').value = "";
             selectedRating = 0;
             resetStars();
-            loadComments(listingId);
+            if (isReplying) cancelReply(); // NEW: leave reply mode once the reply is posted
+            loadComments(listingId, isOwner);
         } else {
             const errData = await response.json();
             Swal.fire({ title: 'Error', text: errData.message || 'Failed to post review.', icon: 'error', target: '#detailsModal' });
