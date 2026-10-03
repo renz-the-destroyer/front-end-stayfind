@@ -13,6 +13,15 @@ let selectedRating = 0;
 // for a (possibly different) listing.
 let replyContext = null;
 
+// NEW: Messaging state - which conversation thread is currently open (if
+// any) and the two polling intervals that stand in for real-time updates
+// (there's no websocket/push infra in this app, so plain polling is the
+// simplest reliable approach): one refreshes an open thread every 5s, the
+// other refreshes the drawer's unread badge every 30s for the whole session.
+let activeConversationId = null;
+let messagePollInterval = null;
+let unreadBadgePollInterval = null;
+
 // NEW: Tracks which Available/Occupied filter is currently active, so it
 // can be cleared cleanly when switching to Browse/Saved and vice versa.
 let currentAvailabilityFilter = null; // 'available' | 'occupied' | null
@@ -306,6 +315,7 @@ window.onload = () => {
     setupSearchBarEnhancements(); // NEW: autocomplete, recent searches, clear button, live count
     setupStickySearchBar(); // NEW: compact search bar that slides in once you scroll past the real one
     setupFooter(); // NEW: footer year + Settings link
+    setupMessaging(); // NEW: Messages inbox, thread view, and unread badge
 
     // NEW: check for a landlord approval/rejection outcome to notify the user about
     checkLandlordStatusUpdate();
@@ -1267,6 +1277,26 @@ function showFullDetails(item) {
     // home.html but was never hooked up to anything.
     const cancelReplyBtn = document.getElementById('cancelReplyBtn');
     if (cancelReplyBtn) cancelReplyBtn.onclick = cancelReply;
+
+    // NEW: "Message Landlord" button - only for a non-owner viewing this
+    // listing (a tenant, or anyone else who isn't the listing's own
+    // landlord). Built as a real <button> wired with .onclick rather than
+    // an inline onclick with the listing's data serialized into the
+    // attribute, so nothing here has to round-trip through HTML.
+    const messageLandlordContainer = document.getElementById('messageLandlordContainer');
+    if (messageLandlordContainer) {
+        if (!isOwner && item.user_id) {
+            messageLandlordContainer.innerHTML = `
+                <button type="button" id="messageLandlordBtn" class="message-landlord-btn">
+                    <i class="fas fa-comment-dots"></i> Message Landlord
+                </button>
+            `;
+            document.getElementById('messageLandlordBtn').onclick = () =>
+                startConversationWithLandlord(item.id, item.user_id, item.title, item.landlord_name || 'Landlord');
+        } else {
+            messageLandlordContainer.innerHTML = "";
+        }
+    }
 
     const delContainer = document.getElementById('deleteBtnContainer');
     if (delContainer) {
@@ -2470,6 +2500,11 @@ window.onclick = (event) => {
     if (event.target.classList.contains('modal')) {
         if (event.target.id === 'postModal') {
             closePostModalSafely();
+        } else if (event.target.id === 'messagesModal') {
+            // NEW: makes sure the thread polling interval actually stops
+            // when the modal is dismissed by clicking its dark background,
+            // not just via the X button (closeMessagesModal()).
+            closeMessagesModal();
         } else {
             event.target.style.display = "none";
         }
@@ -2539,3 +2574,284 @@ window.addEventListener('beforeunload', function (e) {
         return '';
     }
 });
+
+// ============================================================================
+// NEW: MESSAGING (Messages inbox + conversation thread)
+// ============================================================================
+
+function setupMessaging() {
+    const messagesBtn = document.getElementById('messagesBtn');
+    const messagesBackBtn = document.getElementById('messagesBackBtn');
+    const threadSendBtn = document.getElementById('threadSendBtn');
+    const threadMessageInput = document.getElementById('threadMessageInput');
+
+    if (messagesBtn) {
+        messagesBtn.onclick = (e) => {
+            e.preventDefault();
+            openMessagesModal();
+        };
+    }
+    if (messagesBackBtn) messagesBackBtn.onclick = showConversationsListView;
+    if (threadSendBtn) threadSendBtn.onclick = sendThreadMessage;
+    if (threadMessageInput) {
+        threadMessageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendThreadMessage();
+        });
+    }
+
+    // Keep the drawer's unread badge current without the person needing to
+    // open Messages - refreshed now and then every 30s for the rest of the
+    // session.
+    refreshUnreadBadge();
+    unreadBadgePollInterval = setInterval(refreshUnreadBadge, 30000);
+}
+
+function openMessagesModal() {
+    const modal = document.getElementById('messagesModal');
+    if (!modal) return;
+    modal.style.display = 'block';
+    showConversationsListView();
+}
+
+function closeMessagesModal() {
+    const modal = document.getElementById('messagesModal');
+    if (modal) modal.style.display = 'none';
+    stopThreadPolling();
+    activeConversationId = null;
+}
+
+function stopThreadPolling() {
+    if (messagePollInterval) {
+        clearInterval(messagePollInterval);
+        messagePollInterval = null;
+    }
+}
+
+// Switches the modal back to the inbox view and refreshes it - also updates
+// the drawer badge, since reading a thread just cleared its unread count
+// server-side (see getMessages() marking messages read in userController.js).
+function showConversationsListView() {
+    stopThreadPolling();
+    activeConversationId = null;
+
+    const listView = document.getElementById('conversationsListView');
+    const threadView = document.getElementById('conversationThreadView');
+    const backBtn = document.getElementById('messagesBackBtn');
+    const title = document.getElementById('messagesHeaderTitle');
+    const subtitle = document.getElementById('messagesHeaderSubtitle');
+
+    if (listView) listView.style.display = 'block';
+    if (threadView) threadView.style.display = 'none';
+    if (backBtn) backBtn.style.display = 'none';
+    if (title) title.innerText = 'Messages';
+    if (subtitle) subtitle.style.display = 'none';
+
+    loadConversationsList();
+    refreshUnreadBadge();
+}
+
+// NEW: formats a timestamp as a short relative label for the inbox/thread.
+function formatMessageTime(isoString) {
+    const date = new Date(isoString);
+    const diffMs = Date.now() - date.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'Just now';
+    if (diffMin < 60) return `${diffMin}m`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h`;
+    const diffDay = Math.floor(diffHr / 24);
+    if (diffDay < 7) return `${diffDay}d`;
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+async function loadConversationsList() {
+    const listView = document.getElementById('conversationsListView');
+    if (!listView || !currentUser) return;
+
+    listView.innerHTML = `<p style="text-align:center; color:#94a3b8; font-size:13px; padding:30px 0;">Loading conversations...</p>`;
+
+    try {
+        const res = await fetch(`${API_BASE}/conversations/${currentUser.id}`);
+        const conversations = await res.json();
+
+        if (!Array.isArray(conversations) || conversations.length === 0) {
+            listView.innerHTML = `
+                <div class="empty-state" style="padding:50px 20px;">
+                    <div class="empty-state-icon"><i class="fas fa-envelope-open-text"></i></div>
+                    <h3>No messages yet</h3>
+                    <p>${currentUser.role === 'landlord' ? 'Messages from tenants will show up here.' : 'Tap "Message Landlord" on any listing to start a conversation.'}</p>
+                </div>
+            `;
+            return;
+        }
+
+        listView.innerHTML = conversations.map(conv => {
+            const initial = (conv.other_user_name || '?').trim().charAt(0).toUpperCase() || '?';
+            const preview = conv.last_message ? escapeHtml(conv.last_message) : 'Say hello!';
+            const unread = Number(conv.unread_count) || 0;
+            return `
+                <div class="conversation-item" data-conv-id="${conv.id}">
+                    <div class="conversation-avatar">${initial}</div>
+                    <div class="conversation-body">
+                        <div class="conversation-top-row">
+                            <span class="conversation-name">${escapeHtml(conv.other_user_name || 'Unknown')}</span>
+                            <span class="conversation-time">${formatMessageTime(conv.last_message_at)}</span>
+                        </div>
+                        <div class="conversation-listing"><i class="fas fa-house"></i> ${escapeHtml(conv.listing_title || 'Listing')}</div>
+                        <div class="conversation-preview">${preview}</div>
+                    </div>
+                    ${unread > 0 ? `<span class="conversation-unread-dot">${unread > 9 ? '9+' : unread}</span>` : ''}
+                </div>
+            `;
+        }).join('');
+
+        listView.querySelectorAll('.conversation-item').forEach(el => {
+            el.onclick = () => {
+                const conv = conversations.find(c => String(c.id) === el.getAttribute('data-conv-id'));
+                if (conv) openConversationThread(conv);
+            };
+        });
+    } catch (err) {
+        console.error("Load conversations error:", err);
+        listView.innerHTML = `<p style="text-align:center; color:#ff5252; font-size:13px; padding:30px 0;">Couldn't load your messages.</p>`;
+    }
+}
+
+function openConversationThread(conv) {
+    stopThreadPolling();
+    activeConversationId = conv.id;
+
+    const listView = document.getElementById('conversationsListView');
+    const threadView = document.getElementById('conversationThreadView');
+    const backBtn = document.getElementById('messagesBackBtn');
+    const title = document.getElementById('messagesHeaderTitle');
+    const subtitle = document.getElementById('messagesHeaderSubtitle');
+
+    if (listView) listView.style.display = 'none';
+    if (threadView) threadView.style.display = 'flex';
+    if (backBtn) backBtn.style.display = 'flex';
+    if (title) title.innerText = conv.other_user_name || 'Conversation';
+    if (subtitle) {
+        subtitle.innerText = conv.listing_title || '';
+        subtitle.style.display = conv.listing_title ? 'block' : 'none';
+    }
+
+    const inputEl = document.getElementById('threadMessageInput');
+    if (inputEl) inputEl.value = '';
+
+    loadThreadMessages();
+    messagePollInterval = setInterval(loadThreadMessages, 5000);
+}
+
+async function loadThreadMessages() {
+    if (!activeConversationId || !currentUser) return;
+
+    const listEl = document.getElementById('threadMessagesList');
+    if (!listEl) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/messages/${activeConversationId}?user_id=${currentUser.id}`);
+        const messages = await res.json();
+        if (!Array.isArray(messages)) return;
+
+        const wasNearBottom = (listEl.scrollHeight - listEl.scrollTop - listEl.clientHeight) < 80;
+
+        listEl.innerHTML = messages.map(msg => {
+            const isMine = String(msg.sender_id) === String(currentUser.id);
+            return `
+                <div class="msg-bubble ${isMine ? 'msg-bubble-sent' : 'msg-bubble-received'}">
+                    ${escapeHtml(msg.message)}
+                    <span class="msg-bubble-time">${formatMessageTime(msg.created_at)}</span>
+                </div>
+            `;
+        }).join('');
+
+        // Only auto-scroll if the person was already near the bottom (or
+        // this is the first load) - avoids yanking them down mid-read
+        // every time the 5s poll refreshes the thread.
+        if (wasNearBottom || messages.length <= 1) {
+            listEl.scrollTop = listEl.scrollHeight;
+        }
+    } catch (err) {
+        console.error("Load messages error:", err);
+    }
+}
+
+async function sendThreadMessage() {
+    const input = document.getElementById('threadMessageInput');
+    const sendBtn = document.getElementById('threadSendBtn');
+    const message = (input?.value || '').trim();
+    if (!message || !activeConversationId || !currentUser) return;
+
+    if (sendBtn) sendBtn.disabled = true;
+    input.value = '';
+
+    try {
+        const res = await fetch(`${API_BASE}/messages/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ conversation_id: activeConversationId, sender_id: currentUser.id, message })
+        });
+        if (!res.ok) throw new Error('Failed to send');
+        await loadThreadMessages();
+    } catch (err) {
+        console.error("Send message error:", err);
+        Swal.fire({ title: 'Error', text: 'Message failed to send. Please try again.', icon: 'error', toast: true, position: 'top-end', timer: 2500, showConfirmButton: false });
+        input.value = message; // give the text back so it isn't lost
+    } finally {
+        if (sendBtn) sendBtn.disabled = false;
+        input.focus();
+    }
+}
+
+// NEW: called by the "Message Landlord" button in the details modal. Starts
+// (or resumes) the conversation on the server, then opens straight into it.
+async function startConversationWithLandlord(listingId, landlordId, listingTitle, landlordName) {
+    if (!currentUser) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/conversations/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ listing_id: listingId, tenant_id: currentUser.id, landlord_id: landlordId })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Could not start conversation');
+
+        closeDetails();
+        openMessagesModal();
+        openConversationThread({
+            id: data.conversation_id,
+            other_user_name: landlordName,
+            listing_title: listingTitle
+        });
+    } catch (err) {
+        console.error("Start conversation error:", err);
+        Swal.fire({ title: 'Error', text: err.message || 'Could not start a conversation right now.', icon: 'error', target: '#detailsModal' });
+    }
+}
+
+// NEW: sums unread_count across every conversation this user has, and
+// updates the small red badge next to "Messages" in the drawer.
+async function refreshUnreadBadge() {
+    if (!currentUser) return;
+    const badge = document.getElementById('messagesUnreadBadge');
+    if (!badge) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/conversations/${currentUser.id}`);
+        const conversations = await res.json();
+        if (!Array.isArray(conversations)) return;
+
+        const totalUnread = conversations.reduce((sum, c) => sum + (Number(c.unread_count) || 0), 0);
+        if (totalUnread > 0) {
+            badge.innerText = totalUnread > 99 ? '99+' : String(totalUnread);
+            badge.style.display = 'inline-flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    } catch (err) {
+        // Silent fail - this is a background badge refresh, shouldn't interrupt the page
+        console.log("Unread badge refresh failed silently:", err);
+    }
+}
