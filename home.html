@@ -765,6 +765,94 @@
             cursor: pointer;
         }
         .comment-reply-link:hover { text-decoration: underline; }
+
+        /* ============ NEW: MESSAGING (Messages inbox + conversation thread) ============ */
+        .drawer-msg-badge {
+            background: var(--danger); color: #fff; font-size: 10px; font-weight: 800;
+            min-width: 17px; height: 17px; border-radius: 999px; padding: 0 5px;
+            display: inline-flex; align-items: center; justify-content: center;
+            margin-left: auto;
+        }
+
+        #messagesModal .modal-content {
+            max-width: 480px; padding: 0; overflow: hidden;
+            display: flex; flex-direction: column; max-height: 82vh;
+        }
+        .messages-header {
+            background: linear-gradient(135deg, #0d47a1, #1e88e5); color: #fff;
+            padding: 18px 20px; display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+        }
+        .msg-icon-btn {
+            background: rgba(255,255,255,0.18); border: none; color: #fff;
+            width: 32px; height: 32px; border-radius: 9px; cursor: pointer; font-size: 13px;
+            flex-shrink: 0; transition: background 0.15s;
+        }
+        .msg-icon-btn:hover { background: rgba(255,255,255,0.3); }
+        .messages-header-text { flex: 1; min-width: 0; }
+        .messages-header-title { font-weight: 800; font-size: 16px; line-height: 1.3; }
+        .messages-header-subtitle {
+            font-size: 11.5px; opacity: 0.85; display: none;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+
+        .conversations-list { overflow-y: auto; flex: 1; padding: 8px; }
+        .conversation-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px; border-radius: 14px; cursor: pointer;
+            transition: background 0.15s;
+        }
+        .conversation-item:hover { background: #f4f8fd; }
+        .conversation-avatar {
+            width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+            background: linear-gradient(135deg, var(--accent-soft), #d3e9fc);
+            color: var(--primary); font-weight: 800; font-size: 15px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .conversation-body { flex: 1; min-width: 0; }
+        .conversation-top-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .conversation-name { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+        .conversation-time { font-size: 10.5px; color: var(--muted); flex-shrink: 0; }
+        .conversation-listing { font-size: 11px; color: var(--primary); font-weight: 600; margin: 1px 0 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .conversation-preview {
+            font-size: 12.5px; color: var(--ink-soft);
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .conversation-unread-dot {
+            background: var(--danger); color: #fff; font-size: 10px; font-weight: 800;
+            min-width: 18px; height: 18px; border-radius: 999px; padding: 0 5px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+
+        .conversation-thread-view { display: none; flex-direction: column; flex: 1; min-height: 0; }
+        .thread-messages-list { flex: 1; overflow-y: auto; padding: 16px; background: #f6f8fb; display: flex; flex-direction: column; gap: 10px; }
+        .msg-bubble { max-width: 75%; padding: 10px 14px; border-radius: 16px; font-size: 13px; line-height: 1.45; }
+        .msg-bubble-sent { align-self: flex-end; background: var(--primary); color: #fff; border-bottom-right-radius: 4px; }
+        .msg-bubble-received { align-self: flex-start; background: #fff; color: var(--ink); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+        .msg-bubble-time { display: block; margin-top: 4px; font-size: 9.5px; opacity: 0.7; }
+
+        .thread-compose-row { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); flex-shrink: 0; background: #fff; }
+        .thread-input {
+            flex: 1; border: 1.5px solid var(--border); border-radius: 999px;
+            padding: 11px 16px; font-size: 13.5px; outline: none; background: #fbfcfe;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .thread-input:focus { border-color: var(--accent); background: #fff; }
+        .thread-send-btn {
+            background: var(--primary); color: #fff; border: none;
+            width: 42px; height: 42px; border-radius: 50%; cursor: pointer; flex-shrink: 0;
+            transition: background 0.15s, transform 0.15s;
+        }
+        .thread-send-btn:hover { background: var(--primary-light); transform: scale(1.05); }
+        .thread-send-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .message-landlord-btn {
+            width: 100%; margin-top: 14px; padding: 11px; border: none; border-radius: 10px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: #fff;
+            font-weight: 700; font-size: 12.5px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: transform 0.15s;
+        }
+        .message-landlord-btn:hover { transform: translateY(-1px); }
         .comment-empty { text-align: center; padding: 26px 10px; color: var(--muted); font-size: 13px; }
         .comment-empty i { display: block; font-size: 22px; margin-bottom: 8px; color: #cbd5e1; }
 
@@ -831,6 +919,10 @@
             <a id="viewAllBtn" class="drawer-link nav-active"><i class="fas fa-compass"></i> Browse</a>
             <a id="landlordDashboardBtn" class="drawer-link" style="display:none;"><i class="fas fa-chart-line"></i> My Dashboard</a>
             <a id="viewSavedBtn" class="drawer-link"><i class="fas fa-heart"></i> Saved</a>
+            <!-- NEW: Messages inbox - visible to tenants and landlords alike,
+                 since landlords need to read/reply too. Badge is filled in by
+                 refreshUnreadBadge() in home.js and stays hidden at 0. -->
+            <a id="messagesBtn" class="drawer-link"><i class="fas fa-envelope"></i> Messages <span id="messagesUnreadBadge" class="drawer-msg-badge" style="display:none;">0</span></a>
             <a href="#" class="drawer-link post-drawer-link" id="postBtn" style="display:none;"><i class="fas fa-plus"></i> Post a Listing</a>
 
             <div class="drawer-section-label">Account</div>
@@ -967,6 +1059,11 @@
                 <h4><i class="fas fa-id-card"></i> Landlord Contact Info</h4>
                 <p><strong>Name:</strong> <span id="detLandlord"></span></p>
                 <p><strong>Contact:</strong> <span id="detContact"></span></p>
+                <!-- NEW: filled in by showFullDetails() in home.js - only
+                     shown to a non-owner (a tenant, or anyone viewing a
+                     listing that isn't theirs), same gating as the Edit/
+                     Delete buttons further down use for the opposite case. -->
+                <div id="messageLandlordContainer"></div>
             </div>
 
             <!-- ===== RESTYLED SECTION: Reviews & Comments =====
@@ -1012,6 +1109,33 @@
             <div id="deleteBtnContainer"></div>
 
             <button onclick="closeDetails()" style="width:100%; margin-top:20px; padding:13px; background:#f1f5f9; border:none; border-radius:12px; cursor:pointer; font-weight:700; color:#475569;">Close</button>
+        </div>
+    </div>
+
+    <!-- ============ NEW: MESSAGES MODAL (inbox + conversation thread) ============
+         Two inner views toggle inside the same modal: #conversationsListView
+         (the inbox) and #conversationThreadView (one open thread). home.js
+         fills both in and switches between them - this markup never changes. -->
+    <div id="messagesModal" class="modal">
+        <div class="modal-content">
+            <div class="messages-header">
+                <button type="button" id="messagesBackBtn" class="msg-icon-btn" style="display:none;" aria-label="Back to conversations"><i class="fas fa-arrow-left"></i></button>
+                <div class="messages-header-text">
+                    <div class="messages-header-title" id="messagesHeaderTitle">Messages</div>
+                    <div class="messages-header-subtitle" id="messagesHeaderSubtitle"></div>
+                </div>
+                <button type="button" class="msg-icon-btn" onclick="closeMessagesModal()" aria-label="Close"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div id="conversationsListView" class="conversations-list"></div>
+
+            <div id="conversationThreadView" class="conversation-thread-view">
+                <div id="threadMessagesList" class="thread-messages-list"></div>
+                <div class="thread-compose-row">
+                    <input type="text" id="threadMessageInput" class="thread-input" placeholder="Type a message..." autocomplete="off">
+                    <button type="button" id="threadSendBtn" class="thread-send-btn" aria-label="Send"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
         </div>
     </div>
 
