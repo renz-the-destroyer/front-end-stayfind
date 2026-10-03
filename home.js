@@ -1,6 +1,16 @@
 // REPLACE THIS with your Render URL
 const API_BASE = "https://stayfind-app-system.onrender.com/api";
 
+// NEW: Cloudinary config for client-side photo uploads (see the big comment
+// above uploadImagesToCloudinary() below for full setup steps). Photos are
+// uploaded straight from the browser to Cloudinary - never through our own
+// Express server - so only the resulting short URLs ever get sent to
+// /api/add-listing or /api/update-listing and stored in MySQL, instead of
+// multi-megabyte base64 blobs. REPLACE both placeholders with your own
+// values from your Cloudinary dashboard before this works.
+const CLOUDINARY_CLOUD_NAME = "YOUR_CLOUD_NAME";
+const CLOUDINARY_UPLOAD_PRESET = "YOUR_UNSIGNED_UPLOAD_PRESET";
+
 const currentUser = JSON.parse(localStorage.getItem('user'));
 const listingsGrid = document.getElementById('listingsGrid');
 
@@ -164,6 +174,51 @@ function compressImageFile(file) {
             };
         };
     });
+}
+
+// NEW: uploads one already-compressed base64 image straight to Cloudinary
+// and resolves with its hosted URL. Setup (one-time, in your Cloudinary
+// dashboard at cloudinary.com - free tier is plenty for this app):
+//   1. Sign up / log in, copy your "Cloud name" from the dashboard home
+//      page, and paste it into CLOUDINARY_CLOUD_NAME above.
+//   2. Go to Settings -> Upload -> Upload presets -> Add upload preset.
+//      Set "Signing Mode" to Unsigned, save, and paste its name into
+//      CLOUDINARY_UPLOAD_PRESET above. An unsigned preset is what lets the
+//      browser upload directly without exposing your Cloudinary API secret
+//      anywhere in this frontend code.
+// Nothing on the server (server.js, userController.js, your .env) needs to
+// change for this - the listing/edit endpoints already just store whatever
+// string is sent as `images`/`thumbnail`, which will now be short Cloudinary
+// URLs instead of base64 data, with zero other code changes required there.
+async function uploadImageToCloudinary(base64Image) {
+    if (CLOUDINARY_CLOUD_NAME === "YOUR_CLOUD_NAME" || CLOUDINARY_UPLOAD_PRESET === "YOUR_UNSIGNED_UPLOAD_PRESET") {
+        throw new Error("Cloudinary isn't configured yet - set CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET at the top of home.js.");
+    }
+
+    const formData = new FormData();
+    formData.append('file', base64Image);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+        method: 'POST',
+        body: formData
+    });
+
+    if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}));
+        throw new Error(errBody?.error?.message || 'Photo upload failed.');
+    }
+
+    const data = await response.json();
+    return data.secure_url;
+}
+
+// NEW: uploads a whole batch of compressed base64 images in parallel and
+// returns their Cloudinary URLs in the same order. Used by both "Post a
+// Listing" and "Edit Listing" right before the listing itself is saved.
+async function uploadImagesToCloudinary(base64Images) {
+    if (!base64Images || base64Images.length === 0) return [];
+    return Promise.all(base64Images.map(img => uploadImageToCloudinary(img)));
 }
 
 // NEW: Shared helper used by both "New Listing" and "Edit Listing" right
@@ -1362,13 +1417,23 @@ function openEditModal(item) {
         submitBtn.disabled = true;
         submitBtn.innerText = "Saving...";
 
+        // UPDATED: same Cloudinary swap as Post a Listing - only upload (and
+        // only overwrite the listing's photos) when new files were actually
+        // picked. `newImages` ends up holding Cloudinary URLs, not base64.
         let newImages = [];
         if (selectedListingFiles.length > 0) {
             try {
-                newImages = await Promise.all(selectedListingFiles.map(file => compressImageFile(file)));
-                warnIfImagesTooLarge(newImages);
+                const compressed = await Promise.all(selectedListingFiles.map(file => compressImageFile(file)));
+                warnIfImagesTooLarge(compressed);
+                submitBtn.innerText = "Uploading photos...";
+                newImages = await uploadImagesToCloudinary(compressed);
+                submitBtn.innerText = "Saving...";
             } catch (e) {
-                console.error("Image conversion error (edit):", e);
+                console.error("Image upload error (edit):", e);
+                Swal.fire('Photo upload failed', e.message || 'Could not upload your photos. Please try again.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Save Changes";
+                return;
             }
         }
 
@@ -2324,12 +2389,25 @@ function setupPostListingLogic() {
         submitPostBtn.disabled = true;
         submitPostBtn.innerText = "Processing...";
 
+        // UPDATED: photos now go to Cloudinary (uploadImagesToCloudinary(),
+        // defined near compressImageFile() above) instead of being sent as
+        // raw base64 - `uploadedImageUrls` holds the short hosted URLs that
+        // actually get saved on the listing.
         let base64Images = [];
+        let uploadedImageUrls = [];
         try {
             base64Images = await Promise.all(imageFiles.map(file => compressImageFile(file)));
             warnIfImagesTooLarge(base64Images);
+            if (base64Images.length > 0) {
+                submitPostBtn.innerText = "Uploading photos...";
+                uploadedImageUrls = await uploadImagesToCloudinary(base64Images);
+            }
         } catch (e) {
-            console.error("Image conversion error", e);
+            console.error("Image upload error", e);
+            Swal.fire({ title: 'Photo upload failed', text: e.message || 'Could not upload your photos. Please try again.', icon: 'error', target: '#postModal' });
+            submitPostBtn.disabled = false;
+            submitPostBtn.innerText = "Publish Listing";
+            return;
         }
 
         const listingData = {
@@ -2342,8 +2420,8 @@ function setupPostListingLogic() {
             size: parseFloat(document.getElementById('postSize').value) || 0,
             amenities: document.getElementById('postAmenities')?.value || "",
             status: document.getElementById('postStatus')?.value || 'available',
-            images: base64Images.join('|||'), 
-            thumbnail: base64Images.length > 0 ? base64Images[0] : "" 
+            images: uploadedImageUrls.join('|||'), 
+            thumbnail: uploadedImageUrls.length > 0 ? uploadedImageUrls[0] : "" 
         };
 
         if (!listingData.title || !listingData.price || !listingData.location) {
@@ -2353,6 +2431,7 @@ function setupPostListingLogic() {
             return;
         }
 
+        submitPostBtn.innerText = "Publishing...";
         try {
             const response = await fetch(`${API_BASE}/add-listing`, {
                 method: 'POST',
