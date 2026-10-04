@@ -360,3 +360,144 @@ async function loadConversationsList() {
         listView.innerHTML = `<p style="text-align:center; color:#ff5252; font-size:13px; padding:30px 0;">Couldn't load your messages.</p>`;
     }
 }
+
+// ===================== v3 additions =====================
+
+// 12-hour clock everywhere (e.g. "2:35 PM"), never 24-hour or "14h".
+function formatBubbleTime(iso) {
+    return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+function formatDayLabel(iso) {
+    const d = new Date(iso), t = new Date(), y = new Date();
+    y.setDate(t.getDate() - 1);
+    if (d.toDateString() === t.toDateString()) return 'Today';
+    if (d.toDateString() === y.toDateString()) return 'Yesterday';
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(d.getFullYear() !== t.getFullYear() ? { year: 'numeric' } : {}) });
+}
+
+// Replaces home.js's relative "14h" label (inbox rows) with a real time/date.
+function formatMessageTime(iso) {
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    const now = new Date(), y = new Date();
+    y.setDate(now.getDate() - 1);
+    if (d.toDateString() === now.toDateString()) return formatBubbleTime(iso);
+    if (d.toDateString() === y.toDateString()) return 'Yesterday';
+    if (now - d < 6 * 86400000) return d.toLocaleDateString('en-US', { weekday: 'short' });
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(d.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}) });
+}
+
+function fullDateTime(iso) {
+    return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+// Makes links and PH mobile numbers tappable. Input must already be HTML-escaped.
+function linkifyMessage(escaped) {
+    return escaped
+        .replace(/(https?:\/\/[^\s<]+)/g, '<a class="msg-link" href="$1" target="_blank" rel="noopener noreferrer">$1</a>')
+        .replace(/(^|[\s>])(09\d{9})(?=$|[\s<.,!?])/g, '$1<a class="msg-link" href="tel:$2">$2</a>');
+}
+
+let threadDividerState = { convId: null, msgId: null, captured: false };
+
+const _openThreadV2 = openConversationThread;
+openConversationThread = function (conv) {
+    threadDividerState = { convId: conv.id, msgId: null, captured: false };
+    const ep = document.getElementById('emojiPanel');
+    if (ep) ep.style.display = 'none';
+    _openThreadV2(conv);
+};
+
+const _renderInboxV1 = renderInbox;
+renderInbox = function () {
+    _renderInboxV1();
+    const unreadTotal = cachedConversations.filter(c => Number(c.unread_count) > 0).length;
+    const tab = document.querySelector('#inboxToolbar .inbox-tab[data-filter="unread"]');
+    if (tab) tab.innerHTML = `Unread${unreadTotal > 0 ? `<span class="inbox-tab-count">${unreadTotal}</span>` : ''}`;
+};
+
+(function injectEmojiPicker() {
+    const threadView = document.getElementById('conversationThreadView');
+    const row = threadView && threadView.querySelector('.thread-compose-row');
+    const input = document.getElementById('threadMessageInput');
+    if (!row || !input || document.getElementById('emojiBtn')) return;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'emojiBtn';
+    btn.className = 'emoji-btn';
+    btn.setAttribute('aria-label', 'Insert emoji');
+    btn.textContent = '😊';
+    row.insertBefore(btn, input);
+
+    const panel = document.createElement('div');
+    panel.id = 'emojiPanel';
+    panel.className = 'emoji-panel';
+    panel.innerHTML = ['😊', '👍', '🙏', '😅', '😂', '❤️', '🏠', '📍', '💰', '📅', '✅', '🙌']
+        .map(e => `<button type="button">${e}</button>`).join('');
+    threadView.insertBefore(panel, row);
+
+    btn.onclick = () => { panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex'; };
+    panel.querySelectorAll('button').forEach(b => b.onclick = () => {
+        const start = input.selectionStart ?? input.value.length;
+        const end = input.selectionEnd ?? input.value.length;
+        input.value = input.value.slice(0, start) + b.textContent + input.value.slice(end);
+        input.focus();
+        input.setSelectionRange(start + b.textContent.length, start + b.textContent.length);
+        input.dispatchEvent(new Event('input')); // re-enables the Send button
+    });
+})();
+
+async function loadThreadMessages() {
+    if (!activeConversationId || !currentUser) return;
+    const listEl = document.getElementById('threadMessagesList');
+    if (!listEl) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/messages/${activeConversationId}?user_id=${currentUser.id}`);
+        const messages = await res.json();
+        if (!Array.isArray(messages)) return;
+
+        const wasNearBottom = (listEl.scrollHeight - listEl.scrollTop - listEl.clientHeight) < 80;
+
+        if (messages.length === 0) {
+            listEl.innerHTML = `<div class="thread-empty"><i class="fas fa-comments" style="font-size:26px; display:block; margin-bottom:8px; color:#cbd5e1;"></i>No messages yet. Say hello!</div>`;
+            return;
+        }
+
+        // The server marks messages read right after this fetch, so remember the first
+        // unread one from the person on the FIRST load and keep the divider there.
+        if (!threadDividerState.captured || threadDividerState.convId !== activeConversationId) {
+            const firstUnread = messages.find(m => String(m.sender_id) !== String(currentUser.id) && Number(m.is_read) === 0);
+            threadDividerState = { convId: activeConversationId, msgId: firstUnread ? firstUnread.id : null, captured: true };
+        }
+
+        let html = '', prev = null;
+        messages.forEach((msg, i) => {
+            const isMine = String(msg.sender_id) === String(currentUser.id);
+            const newDay = !prev || new Date(prev.created_at).toDateString() !== new Date(msg.created_at).toDateString();
+            if (newDay) html += `<div class="msg-day-sep">${formatDayLabel(msg.created_at)}</div>`;
+            if (threadDividerState.msgId !== null && msg.id === threadDividerState.msgId) {
+                html += `<div class="msg-new-divider">New messages</div>`;
+            }
+            const grouped = prev && !newDay && prev.sender_id === msg.sender_id
+                && (new Date(msg.created_at) - new Date(prev.created_at)) < 5 * 60000
+                && !(threadDividerState.msgId !== null && msg.id === threadDividerState.msgId);
+            html += `
+                <div class="msg-bubble ${isMine ? 'msg-bubble-sent' : 'msg-bubble-received'}${grouped ? ' msg-grouped' : ''}" title="${fullDateTime(msg.created_at)}">
+                    ${linkifyMessage(escapeHtml(msg.message))}
+                    <span class="msg-bubble-time">${formatBubbleTime(msg.created_at)}</span>
+                </div>`;
+            if (i === messages.length - 1 && isMine && Number(msg.is_read) === 1) {
+                html += `<div class="msg-seen"><i class="fas fa-check-double"></i> Seen</div>`;
+            }
+            prev = msg;
+        });
+        listEl.innerHTML = html;
+
+        if (wasNearBottom || messages.length <= 1) listEl.scrollTop = listEl.scrollHeight;
+    } catch (err) {
+        console.error("Load messages error:", err);
+    }
+}
