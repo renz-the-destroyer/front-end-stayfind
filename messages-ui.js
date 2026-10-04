@@ -225,3 +225,138 @@ async function sendThreadMessage() {
         input.focus();
     }
 }
+
+// ===================== v2 additions (wrap/override the functions above) =====================
+let inboxFilter = 'all', inboxQuery = '', cachedConversations = [];
+const QUICK_REPLIES = ['Is this still available?', 'Can I schedule a viewing?', 'What is the deposit?', 'Are utilities included?'];
+
+(function injectV2Chrome() {
+    const modal = document.querySelector('#messagesModal .modal-content');
+    const listView = document.getElementById('conversationsListView');
+    const threadView = document.getElementById('conversationThreadView');
+    const msgList = document.getElementById('threadMessagesList');
+    if (!modal || !listView || !threadView || !msgList) return;
+
+    const tb = document.createElement('div');
+    tb.id = 'inboxToolbar';
+    tb.className = 'inbox-toolbar';
+    tb.innerHTML = `
+        <div class="inbox-search"><i class="fas fa-search"></i>
+            <input type="text" id="inboxSearchInput" placeholder="Search people, listings, messages..." autocomplete="off"></div>
+        <div class="inbox-tabs">
+            <button type="button" class="inbox-tab active" data-filter="all">All</button>
+            <button type="button" class="inbox-tab" data-filter="unread">Unread</button>
+        </div>`;
+    modal.insertBefore(tb, listView);
+    tb.querySelector('#inboxSearchInput').oninput = (e) => { inboxQuery = e.target.value.trim().toLowerCase(); renderInbox(); };
+    tb.querySelectorAll('.inbox-tab').forEach(btn => btn.onclick = () => {
+        inboxFilter = btn.dataset.filter;
+        tb.querySelectorAll('.inbox-tab').forEach(x => x.classList.toggle('active', x === btn));
+        renderInbox();
+    });
+
+    const qr = document.createElement('div');
+    qr.id = 'quickReplies';
+    qr.className = 'quick-replies';
+    qr.style.display = 'none';
+    qr.innerHTML = QUICK_REPLIES.map(t => `<button type="button" class="quick-reply-chip">${t}</button>`).join('');
+    threadView.insertBefore(qr, threadView.querySelector('.thread-compose-row'));
+    qr.querySelectorAll('button').forEach(b => b.onclick = () => {
+        document.getElementById('threadMessageInput').value = b.textContent;
+        sendThreadMessage();
+    });
+
+    const jb = document.createElement('button');
+    jb.id = 'jumpLatestBtn';
+    jb.type = 'button';
+    jb.className = 'jump-latest-btn';
+    jb.style.display = 'none';
+    jb.setAttribute('aria-label', 'Jump to latest message');
+    jb.innerHTML = '<i class="fas fa-arrow-down"></i>';
+    threadView.appendChild(jb);
+    jb.onclick = () => msgList.scrollTo({ top: msgList.scrollHeight, behavior: 'smooth' });
+    msgList.addEventListener('scroll', () => {
+        jb.style.display = (msgList.scrollHeight - msgList.scrollTop - msgList.clientHeight > 160) ? 'flex' : 'none';
+    });
+})();
+
+function setV2Visibility(inThread) {
+    const tb = document.getElementById('inboxToolbar');
+    const qr = document.getElementById('quickReplies');
+    const jb = document.getElementById('jumpLatestBtn');
+    if (tb) tb.style.display = inThread ? 'none' : 'flex';
+    if (qr) qr.style.display = (inThread && currentUser && currentUser.role === 'tenant') ? 'flex' : 'none';
+    if (jb) jb.style.display = 'none';
+}
+
+const _showListV1 = showConversationsListView;
+showConversationsListView = function () { _showListV1(); setV2Visibility(false); };
+
+const _openThreadV1 = openConversationThread;
+openConversationThread = function (conv) { _openThreadV1(conv); setV2Visibility(true); };
+
+const _sendV1 = sendThreadMessage;
+sendThreadMessage = async function () {
+    await _sendV1();
+    const qr = document.getElementById('quickReplies');
+    if (qr) qr.style.display = 'none'; // chips are only for opening the conversation
+};
+
+function buildConversationRow(conv) {
+    const name = conv.other_user_name || 'Unknown';
+    const unread = Number(conv.unread_count) || 0;
+    const hasThumb = /^(https?:|data:image)/.test(conv.listing_thumbnail || '');
+    const listingIcon = hasThumb ? `<img src="${escapeHtmlAttr(conv.listing_thumbnail)}" alt="">` : '<i class="fas fa-house"></i>';
+    return `
+        <div class="conversation-item${unread > 0 ? ' is-unread' : ''}" data-conv-id="${conv.id}">
+            <div class="conversation-avatar" style="${avatarStyle(name)}">${name.trim().charAt(0).toUpperCase() || '?'}</div>
+            <div class="conversation-body">
+                <div class="conversation-top-row">
+                    <span class="conversation-name">${escapeHtml(name)}</span>
+                    <span class="conversation-time">${formatMessageTime(conv.last_message_at)}</span>
+                </div>
+                <div class="conversation-listing">${listingIcon} ${escapeHtml(conv.listing_title || 'Listing')}</div>
+                <div class="conversation-preview">${conv.last_message ? escapeHtml(conv.last_message) : 'Say hello!'}</div>
+            </div>
+            ${unread > 0 ? `<span class="conversation-unread-dot">${unread > 9 ? '9+' : unread}</span>` : ''}
+        </div>`;
+}
+
+function renderInbox() {
+    const listView = document.getElementById('conversationsListView');
+    if (!listView) return;
+    const rows = cachedConversations.filter(c => {
+        if (inboxFilter === 'unread' && !(Number(c.unread_count) > 0)) return false;
+        if (!inboxQuery) return true;
+        return [c.other_user_name, c.listing_title, c.last_message].some(v => (v || '').toLowerCase().includes(inboxQuery));
+    });
+    if (rows.length === 0) {
+        const msg = cachedConversations.length === 0
+            ? (currentUser.role === 'landlord' ? 'Messages from tenants will show up here.' : 'Tap "Message Landlord" on any listing to start a conversation.')
+            : 'No conversations match.';
+        listView.innerHTML = `<div class="thread-empty" style="padding:50px 20px;"><i class="fas fa-inbox" style="font-size:26px; display:block; margin-bottom:8px; color:#cbd5e1;"></i>${msg}</div>`;
+        return;
+    }
+    listView.innerHTML = rows.map(buildConversationRow).join('');
+    listView.querySelectorAll('.conversation-item').forEach(el => {
+        el.onclick = () => {
+            const conv = cachedConversations.find(c => String(c.id) === el.getAttribute('data-conv-id'));
+            if (conv) openConversationThread(conv);
+        };
+    });
+}
+
+async function loadConversationsList() {
+    const listView = document.getElementById('conversationsListView');
+    if (!listView || !currentUser) return;
+    listView.innerHTML = '<div class="skeleton-block conv-skeleton"></div>'.repeat(3);
+    try {
+        const res = await fetch(`${API_BASE}/conversations/${currentUser.id}`);
+        const data = await res.json();
+        cachedConversations = Array.isArray(data) ? data : [];
+        renderInbox();
+    } catch (err) {
+        console.error("Load conversations error:", err);
+        listView.innerHTML = `<p style="text-align:center; color:#ff5252; font-size:13px; padding:30px 0;">Couldn't load your messages.</p>`;
+    }
+}
