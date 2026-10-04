@@ -1,4 +1,4 @@
-/* messages-ui.css — polished Messages modal. Load AFTER home.html's own <style> ndasih. */
+/* messages-ui.css — polished Messages modal. Load AFTER home.html's own <style>. */
 #messagesModal { background: rgba(8,16,32,.55); backdrop-filter: blur(6px); }
 #messagesModal .modal-content {
   width: 94%; max-width: 540px; height: min(80vh, 660px); max-height: none;
@@ -89,13 +89,69 @@
   align-items:center; justify-content:center; z-index:3; }
 
 /* ===== v3 additions: emoji picker, "New messages" divider, links, unread count ===== */
-.emoji-btn { background:none; border:none; font-size:22px; cursor:pointer; padding:0 2px; flex-shrink:0; line-height:1; transition:transform .15s; }
-.emoji-btn:hover { transform:scale(1.15); }
-.emoji-panel { display:none; flex-wrap:wrap; gap:4px; padding:10px 14px; background:#fff; border-top:1px solid var(--border); flex-shrink:0; }
-.emoji-panel button { border:none; background:#f4f7fb; border-radius:10px; width:38px; height:38px; font-size:20px; cursor:pointer; transition:transform .12s, background .12s; }
-.emoji-panel button:hover { background:var(--accent-soft); transform:scale(1.12); }
 .msg-new-divider { align-self:stretch; display:flex; align-items:center; gap:10px; margin:12px 0 6px; font-size:10.5px; font-weight:800; color:var(--danger); text-transform:uppercase; letter-spacing:.05em; }
 .msg-new-divider::before, .msg-new-divider::after { content:""; flex:1; height:1px; background:rgba(255,82,82,.35); }
 .msg-link { color:inherit; text-decoration:underline; text-underline-offset:2px; font-weight:700; }
 .inbox-tab-count { display:inline-block; min-width:16px; padding:0 5px; margin-left:6px; border-radius:999px; background:var(--danger); color:#fff; font-size:10px; font-weight:800; line-height:16px; text-align:center; }
 .inbox-tab.active .inbox-tab-count { background:#fff; color:var(--primary); }
+
+/* ===== v4: Messenger-style redesign ===== */
+.messages-header { background:#fff; color:var(--ink); border-bottom:1px solid var(--border); padding:12px 16px; gap:12px; }
+.messages-header::after { display:none; }
+.messages-header-title { color:var(--ink); font-size:17px; font-weight:800; }
+.messages-header-avatar { background:linear-gradient(135deg,var(--av1,#1e88e5),var(--av2,#0d47a1)); color:#fff; box-shadow:none; }
+.msg-icon-btn { background:#f0f2f5; color:#1e88e5; }
+.msg-icon-btn:hover { background:#e4e6eb; }
+
+.inbox-toolbar { background:#fff; padding:12px 14px 6px; }
+.inbox-search input { background:#f0f2f5; border-color:transparent; }
+.inbox-search input:focus { background:#fff; border-color:var(--accent); }
+.inbox-tab { background:#f0f2f5; border-color:transparent; }
+.inbox-tab.active { background:#e7f1ff; border-color:transparent; color:#1e88e5; }
+.inbox-tab.active .inbox-tab-count { background:#1e88e5; color:#fff; }
+
+.conversations-list { background:#fff; padding:6px 8px; }
+.conversation-item, .conversation-item.is-unread { background:transparent; border:none; box-shadow:none; margin-bottom:2px; padding:10px; border-radius:14px; }
+.conversation-item:hover, .conversation-item.is-unread:hover { background:#f0f2f5; transform:none; box-shadow:none; border:none; }
+.conversation-avatar { width:54px; height:54px; font-size:20px; box-shadow:none; }
+.conversation-preview-row { display:flex; gap:6px; align-items:baseline; font-size:13px; color:var(--ink-soft); min-width:0; margin-top:1px; }
+.conversation-preview-row .conversation-preview { min-width:0; flex:0 1 auto; }
+.conversation-preview-row .conversation-time { flex-shrink:0; font-size:12px; }
+.conversation-listing { background:none; padding:0; margin-top:2px; font-size:11px; font-weight:600; color:#8a94a6; }
+.conversation-item.is-unread .conversation-time { color:#1e88e5; font-weight:800; }
+.conversation-unread-dot { background:#1e88e5; min-width:20px; height:20px; }
+
+.thread-context-bar { background:#f7f8fa; border-bottom:none; justify-content:center; padding:8px 16px; font-size:11.5px; }
+.thread-messages-list { background:#fff; padding:14px 12px; gap:2px; }
+.msg-time-sep { align-self:center; text-align:center; font-size:11px; color:#8a94a6; margin:14px 0 8px; }
+.msg-time-sep b { font-weight:800; color:#65708a; }
+.msg-row { display:flex; align-items:flex-end; gap:8px; max-width:100%; }
+.msg-row.row-start { margin-top:8px; }
+.msg-row-sent { justify-content:flex-end; padding-left:44px; }
+.msg-row-received { justify-content:flex-start; padding-right:44px; }
+.msg-avatar, .msg-avatar-spacer { width:28px; height:28px; flex-shrink:0; }
+.msg-avatar { border-radius:50%; color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg,var(--av1,#1e88e5),var(--av2,#0d47a1)); }
+.msg-bubble { margin-top:0; max-width:100%; border-radius:20px; box-shadow:none; padding:9px 14px; }
+.msg-bubble-received { background:#f0f2f5; color:var(--ink); border:none; }
+.msg-bubble-sent.grp-first { border-bottom-right-radius:5px; }
+.msg-bubble-sent.grp-mid { border-top-right-radius:5px; border-bottom-right-radius:5px; }
+.msg-bubble-sent.grp-last { border-top-right-radius:5px; }
+.msg-bubble-received.grp-first { border-bottom-left-radius:5px; }
+.msg-bubble-received.grp-mid { border-top-left-radius:5px; border-bottom-left-radius:5px; }
+.msg-bubble-received.grp-last { border-top-left-radius:5px; }
+.msg-bubble.grp-single { border-radius:20px; }
+.msg-seen-row { display:flex; justify-content:flex-end; padding-right:4px; margin-top:2px; }
+.msg-seen-avatar { width:16px; height:16px; border-radius:50%; font-size:8px; font-weight:800; color:#fff; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg,var(--av1,#1e88e5),var(--av2,#0d47a1)); }
+
+.quick-replies { padding-bottom:6px; }
+.quick-reply-chip { background:#fff; border-color:#1e88e5; color:#1e88e5; }
+.quick-reply-chip:hover { background:#1e88e5; color:#fff; }
+
+.thread-compose-row { background:#fff; border-top:none; padding:8px 12px calc(10px + env(safe-area-inset-bottom)); gap:6px; }
+.thread-input { background:#f0f2f5; border:none; padding:11px 18px; }
+.thread-input:focus { background:#e9ecef; box-shadow:none; }
+.thread-send-btn { background:transparent; box-shadow:none; color:#1e88e5; width:42px; height:42px; font-size:19px; }
+.thread-send-btn:hover:not(:disabled) { background:#f0f2f5; transform:none; }
+.thread-send-btn:disabled { background:transparent; color:#bcc0c4; box-shadow:none; }
