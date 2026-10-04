@@ -87,3 +87,15 @@
 .jump-latest-btn { position:absolute; right:18px; bottom:84px; width:38px; height:38px; border-radius:50%; border:none;
   background:#fff; color:var(--primary); box-shadow:0 8px 20px rgba(16,24,40,.2); cursor:pointer;
   align-items:center; justify-content:center; z-index:3; }
+
+/* ===== v3 additions: emoji picker, "New messages" divider, links, unread count ===== */
+.emoji-btn { background:none; border:none; font-size:22px; cursor:pointer; padding:0 2px; flex-shrink:0; line-height:1; transition:transform .15s; }
+.emoji-btn:hover { transform:scale(1.15); }
+.emoji-panel { display:none; flex-wrap:wrap; gap:4px; padding:10px 14px; background:#fff; border-top:1px solid var(--border); flex-shrink:0; }
+.emoji-panel button { border:none; background:#f4f7fb; border-radius:10px; width:38px; height:38px; font-size:20px; cursor:pointer; transition:transform .12s, background .12s; }
+.emoji-panel button:hover { background:var(--accent-soft); transform:scale(1.12); }
+.msg-new-divider { align-self:stretch; display:flex; align-items:center; gap:10px; margin:12px 0 6px; font-size:10.5px; font-weight:800; color:var(--danger); text-transform:uppercase; letter-spacing:.05em; }
+.msg-new-divider::before, .msg-new-divider::after { content:""; flex:1; height:1px; background:rgba(255,82,82,.35); }
+.msg-link { color:inherit; text-decoration:underline; text-underline-offset:2px; font-weight:700; }
+.inbox-tab-count { display:inline-block; min-width:16px; padding:0 5px; margin-left:6px; border-radius:999px; background:var(--danger); color:#fff; font-size:10px; font-weight:800; line-height:16px; text-align:center; }
+.inbox-tab.active .inbox-tab-count { background:#fff; color:var(--primary); }
