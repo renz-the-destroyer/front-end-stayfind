@@ -64,3 +64,26 @@
     top:auto; bottom:0; left:0; transform:none; border-radius:24px 24px 0 0; }
 }
 @media (prefers-reduced-motion:reduce) { .msg-bubble { animation:none; } }
+
+/* ===== v2 additions: inbox search + tabs, quick replies, jump-to-latest, skeletons ===== */
+.inbox-toolbar { padding:12px 14px 4px; background:#f6f8fb; display:flex; flex-direction:column; gap:10px; flex-shrink:0; }
+.inbox-search { position:relative; }
+.inbox-search i { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:13px; }
+.inbox-search input { width:100%; padding:11px 14px 11px 38px; border:1.5px solid var(--border); border-radius:999px;
+  font-size:13.5px; background:#fff; outline:none; transition:border-color .2s, box-shadow .2s; }
+.inbox-search input:focus { border-color:var(--accent); box-shadow:0 0 0 4px rgba(66,165,245,.15); }
+.inbox-tabs { display:flex; gap:6px; }
+.inbox-tab { border:1.5px solid var(--border); background:#fff; color:var(--ink-soft); padding:6px 16px;
+  border-radius:999px; font-size:12px; font-weight:700; cursor:pointer; transition:background .15s, color .15s; }
+.inbox-tab.active { background:var(--primary); border-color:var(--primary); color:#fff; }
+.conversation-listing img { width:18px; height:18px; border-radius:5px; object-fit:cover; }
+.conv-skeleton { height:76px; border-radius:18px; margin-bottom:8px; }
+.quick-replies { display:flex; gap:8px; overflow-x:auto; padding:10px 14px 0; background:#fff; flex-shrink:0; scrollbar-width:none; }
+.quick-replies::-webkit-scrollbar { display:none; }
+.quick-reply-chip { flex-shrink:0; border:1.5px solid #cfe3fb; background:#f1f8ff; color:var(--primary);
+  padding:7px 14px; border-radius:999px; font-size:12px; font-weight:700; cursor:pointer; transition:background .15s, color .15s; }
+.quick-reply-chip:hover { background:var(--primary); color:#fff; }
+#conversationThreadView { position:relative; }
+.jump-latest-btn { position:absolute; right:18px; bottom:84px; width:38px; height:38px; border-radius:50%; border:none;
+  background:#fff; color:var(--primary); box-shadow:0 8px 20px rgba(16,24,40,.2); cursor:pointer;
+  align-items:center; justify-content:center; z-index:3; }
