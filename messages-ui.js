@@ -404,8 +404,6 @@ let threadDividerState = { convId: null, msgId: null, captured: false };
 const _openThreadV2 = openConversationThread;
 openConversationThread = function (conv) {
     threadDividerState = { convId: conv.id, msgId: null, captured: false };
-    const ep = document.getElementById('emojiPanel');
-    if (ep) ep.style.display = 'none';
     _openThreadV2(conv);
 };
 
@@ -416,38 +414,6 @@ renderInbox = function () {
     const tab = document.querySelector('#inboxToolbar .inbox-tab[data-filter="unread"]');
     if (tab) tab.innerHTML = `Unread${unreadTotal > 0 ? `<span class="inbox-tab-count">${unreadTotal}</span>` : ''}`;
 };
-
-(function injectEmojiPicker() {
-    const threadView = document.getElementById('conversationThreadView');
-    const row = threadView && threadView.querySelector('.thread-compose-row');
-    const input = document.getElementById('threadMessageInput');
-    if (!row || !input || document.getElementById('emojiBtn')) return;
-
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.id = 'emojiBtn';
-    btn.className = 'emoji-btn';
-    btn.setAttribute('aria-label', 'Insert emoji');
-    btn.textContent = '😊';
-    row.insertBefore(btn, input);
-
-    const panel = document.createElement('div');
-    panel.id = 'emojiPanel';
-    panel.className = 'emoji-panel';
-    panel.innerHTML = ['😊', '👍', '🙏', '😅', '😂', '❤️', '🏠', '📍', '💰', '📅', '✅', '🙌']
-        .map(e => `<button type="button">${e}</button>`).join('');
-    threadView.insertBefore(panel, row);
-
-    btn.onclick = () => { panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex'; };
-    panel.querySelectorAll('button').forEach(b => b.onclick = () => {
-        const start = input.selectionStart ?? input.value.length;
-        const end = input.selectionEnd ?? input.value.length;
-        input.value = input.value.slice(0, start) + b.textContent + input.value.slice(end);
-        input.focus();
-        input.setSelectionRange(start + b.textContent.length, start + b.textContent.length);
-        input.dispatchEvent(new Event('input')); // re-enables the Send button
-    });
-})();
 
 async function loadThreadMessages() {
     if (!activeConversationId || !currentUser) return;
@@ -493,6 +459,108 @@ async function loadThreadMessages() {
                 html += `<div class="msg-seen"><i class="fas fa-check-double"></i> Seen</div>`;
             }
             prev = msg;
+        });
+        listEl.innerHTML = html;
+
+        if (wasNearBottom || messages.length <= 1) listEl.scrollTop = listEl.scrollHeight;
+    } catch (err) {
+        console.error("Load messages error:", err);
+    }
+}
+
+// ===================== v4: Messenger-style rendering =====================
+let threadOtherName = '';
+
+const _openThreadV3 = openConversationThread;
+openConversationThread = function (conv) {
+    threadOtherName = conv.other_user_name || '';
+    _openThreadV3(conv);
+    const av = document.getElementById('messagesHeaderAvatar');
+    if (av) av.setAttribute('style', 'display:flex;' + avatarStyle(threadOtherName));
+};
+
+const _showListV3 = showConversationsListView;
+showConversationsListView = function () {
+    _showListV3();
+    const t = document.getElementById('messagesHeaderTitle');
+    if (t) t.innerText = 'Chats';
+};
+
+function buildConversationRow(conv) {
+    const name = conv.other_user_name || 'Unknown';
+    const unread = Number(conv.unread_count) || 0;
+    const hasThumb = /^(https?:|data:image)/.test(conv.listing_thumbnail || '');
+    const listingIcon = hasThumb ? `<img src="${escapeHtmlAttr(conv.listing_thumbnail)}" alt="">` : '<i class="fas fa-house"></i>';
+    return `
+        <div class="conversation-item${unread > 0 ? ' is-unread' : ''}" data-conv-id="${conv.id}">
+            <div class="conversation-avatar" style="${avatarStyle(name)}">${name.trim().charAt(0).toUpperCase() || '?'}</div>
+            <div class="conversation-body">
+                <div class="conversation-top-row"><span class="conversation-name">${escapeHtml(name)}</span></div>
+                <div class="conversation-preview-row">
+                    <span class="conversation-preview">${conv.last_message ? escapeHtml(conv.last_message) : 'Say hello!'}</span>
+                    <span class="conversation-time">· ${formatMessageTime(conv.last_message_at)}</span>
+                </div>
+                <div class="conversation-listing">${listingIcon} ${escapeHtml(conv.listing_title || 'Listing')}</div>
+            </div>
+            ${unread > 0 ? `<span class="conversation-unread-dot">${unread > 9 ? '9+' : unread}</span>` : ''}
+        </div>`;
+}
+
+async function loadThreadMessages() {
+    if (!activeConversationId || !currentUser) return;
+    const listEl = document.getElementById('threadMessagesList');
+    if (!listEl) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/messages/${activeConversationId}?user_id=${currentUser.id}`);
+        const messages = await res.json();
+        if (!Array.isArray(messages)) return;
+
+        const wasNearBottom = (listEl.scrollHeight - listEl.scrollTop - listEl.clientHeight) < 80;
+
+        if (messages.length === 0) {
+            listEl.innerHTML = `<div class="thread-empty"><i class="fas fa-comments" style="font-size:26px; display:block; margin-bottom:8px; color:#cbd5e1;"></i>No messages yet. Say hello!</div>`;
+            return;
+        }
+
+        if (!threadDividerState.captured || threadDividerState.convId !== activeConversationId) {
+            const firstUnread = messages.find(m => String(m.sender_id) !== String(currentUser.id) && Number(m.is_read) === 0);
+            threadDividerState = { convId: activeConversationId, msgId: firstUnread ? firstUnread.id : null, captured: true };
+        }
+
+        const GAP = 15 * 60000, GROUP = 5 * 60000;
+        const initial = (threadOtherName || '?').trim().charAt(0).toUpperCase() || '?';
+        const otherStyle = avatarStyle(threadOtherName);
+        const isDivider = (m) => threadDividerState.msgId !== null && m && m.id === threadDividerState.msgId;
+        const linked = (a, b) => a && b && a.sender_id === b.sender_id && !isDivider(b)
+            && (new Date(b.created_at) - new Date(a.created_at)) < GROUP
+            && new Date(a.created_at).toDateString() === new Date(b.created_at).toDateString();
+
+        let html = '';
+        messages.forEach((msg, i) => {
+            const prev = messages[i - 1], next = messages[i + 1];
+            const isMine = String(msg.sender_id) === String(currentUser.id);
+            const t = new Date(msg.created_at);
+
+            const newStamp = !prev || (t - new Date(prev.created_at)) > GAP || new Date(prev.created_at).toDateString() !== t.toDateString();
+            if (newStamp) html += `<div class="msg-time-sep"><b>${formatDayLabel(msg.created_at)}</b> ${formatBubbleTime(msg.created_at)}</div>`;
+            if (isDivider(msg)) html += `<div class="msg-new-divider">New messages</div>`;
+
+            const lp = linked(prev, msg), ln = linked(msg, next);
+            const pos = lp && ln ? 'mid' : lp ? 'last' : ln ? 'first' : 'single';
+            const showAvatar = !isMine && (pos === 'last' || pos === 'single');
+
+            html += `
+                <div class="msg-row ${isMine ? 'msg-row-sent' : 'msg-row-received'}${(pos === 'single' || pos === 'first') ? ' row-start' : ''}">
+                    ${isMine ? '' : (showAvatar ? `<div class="msg-avatar" style="${otherStyle}">${initial}</div>` : '<div class="msg-avatar-spacer"></div>')}
+                    <div class="msg-bubble ${isMine ? 'msg-bubble-sent' : 'msg-bubble-received'} grp-${pos}" title="${fullDateTime(msg.created_at)}">
+                        ${linkifyMessage(escapeHtml(msg.message))}
+                    </div>
+                </div>`;
+
+            if (i === messages.length - 1 && isMine && Number(msg.is_read) === 1) {
+                html += `<div class="msg-seen-row"><div class="msg-seen-avatar" style="${otherStyle}" title="Seen">${initial}</div></div>`;
+            }
         });
         listEl.innerHTML = html;
 
