@@ -1,0 +1,66 @@
+/* messages-ui.css — polished Messages modal. Load AFTER home.html's own <style>. */
+#messagesModal { background: rgba(8,16,32,.55); backdrop-filter: blur(6px); }
+#messagesModal .modal-content {
+  width: 94%; max-width: 540px; height: min(80vh, 660px); max-height: none;
+  border-radius: 26px; padding: 0; overflow: hidden; display: flex; flex-direction: column;
+  box-shadow: 0 30px 80px rgba(8,24,60,.35);
+}
+.messages-header { position: relative; overflow: hidden; padding: 20px 22px; gap: 14px;
+  background: linear-gradient(135deg,#0b3d91,#1565c0 55%,#2196f3); }
+.messages-header::after { content:""; position:absolute; width:180px; height:180px; border-radius:50%;
+  background: rgba(255,255,255,.09); top:-90px; right:-50px; pointer-events:none; }
+.messages-header > * { position: relative; z-index: 1; }
+.messages-header-avatar { width:40px; height:40px; border-radius:50%; background:#fff; color:#0d47a1;
+  font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  box-shadow:0 4px 12px rgba(0,0,0,.2); }
+.messages-header-title { font-size:17px; letter-spacing:-.2px; }
+.msg-icon-btn { width:34px; height:34px; border-radius:50%; }
+
+/* Inbox */
+.conversations-list { padding:10px; background:#f6f8fb; }
+.conversation-item { background:#fff; border:1px solid var(--border); margin-bottom:8px; padding:13px 14px;
+  border-radius:18px; box-shadow:0 2px 8px rgba(16,24,40,.04);
+  transition: transform .15s, box-shadow .15s, border-color .15s; }
+.conversation-item:hover { transform:translateY(-2px); background:#fff; border-color:#cfe3fb;
+  box-shadow:0 10px 24px rgba(13,71,161,.12); }
+.conversation-item.is-unread { border-color:#bcdcfb; background:linear-gradient(90deg,#f1f8ff,#fff); }
+.conversation-item.is-unread .conversation-name,
+.conversation-item.is-unread .conversation-preview { color:var(--ink); font-weight:800; }
+.conversation-avatar { width:46px; height:46px; font-size:16px; color:#fff;
+  background:linear-gradient(135deg,var(--av1,#1e88e5),var(--av2,#0d47a1));
+  box-shadow:0 6px 14px rgba(13,71,161,.25); }
+.conversation-listing { display:inline-flex; align-items:center; gap:5px; max-width:100%;
+  background:var(--accent-soft); padding:2px 9px; border-radius:999px; }
+
+/* Thread */
+.thread-context-bar { display:flex; align-items:center; gap:10px; padding:10px 16px; background:#fff;
+  border-bottom:1px solid var(--border); font-size:12px; color:var(--ink-soft); flex-shrink:0; }
+.thread-context-bar i { color:var(--primary); }
+.thread-context-bar strong { color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.thread-messages-list { padding:18px 16px; gap:3px; scroll-behavior:smooth;
+  background: radial-gradient(circle at 1px 1px, rgba(13,71,161,.06) 1px, transparent 0) 0 0/18px 18px, #f4f7fb; }
+.msg-bubble { max-width:78%; padding:9px 14px; margin-top:6px; border-radius:18px; font-size:13.5px;
+  overflow-wrap:anywhere; animation: msgIn .22s ease both; }
+.msg-bubble.msg-grouped { margin-top:0; }
+.msg-bubble-sent { background:linear-gradient(135deg,#1565c0,#0d47a1); border-bottom-right-radius:6px;
+  box-shadow:0 6px 14px rgba(13,71,161,.25); }
+.msg-bubble-received { border-bottom-left-radius:6px; box-shadow:0 2px 8px rgba(16,24,40,.06); }
+.msg-bubble-time { text-align:right; font-size:10px; margin-top:3px; }
+.msg-seen { align-self:flex-end; font-size:10.5px; font-weight:700; color:var(--muted); margin:2px 4px 0; }
+.msg-day-sep { align-self:center; font-size:10.5px; font-weight:700; color:var(--ink-soft);
+  background:rgba(255,255,255,.92); border:1px solid var(--border); padding:4px 12px;
+  border-radius:999px; margin:12px 0 6px; }
+.thread-empty { margin:auto; text-align:center; color:var(--muted); font-size:13px; }
+.thread-compose-row { padding:12px 14px calc(12px + env(safe-area-inset-bottom)); gap:10px; align-items:center; }
+.thread-input { padding:12px 18px; font-size:14px; }
+.thread-input:focus { box-shadow:0 0 0 4px rgba(66,165,245,.15); }
+.thread-send-btn { width:44px; height:44px; background:linear-gradient(135deg,#1e88e5,#0d47a1);
+  box-shadow:0 8px 18px rgba(13,71,161,.35); }
+.thread-send-btn:disabled { background:#cbd5e1; box-shadow:none; }
+@keyframes msgIn { from{opacity:0; transform:translateY(8px) scale(.98)} to{opacity:1; transform:none} }
+
+@media (max-width:480px) {
+  #messagesModal .modal-content { position:absolute; width:100%; max-width:none; height:92vh;
+    top:auto; bottom:0; left:0; transform:none; border-radius:24px 24px 0 0; }
+}
+@media (prefers-reduced-motion:reduce) { .msg-bubble { animation:none; } }
