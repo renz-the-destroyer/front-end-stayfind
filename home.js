@@ -913,6 +913,16 @@ function getListingRatingInfo(item) {
     return { avg, count };
 }
 
+// NEW: small checkmark badge shown next to a landlord's name wherever it's
+// displayed (card + details modal), when that listing's landlord_status is
+// 'approved' - the same status the admin panel's Landlord Requests approval
+// flow sets. Returns "" for anything else (pending/rejected/none/missing),
+// so it's always safe to drop straight into innerHTML.
+function buildVerifiedBadgeHTML(landlordStatus) {
+    if (landlordStatus !== 'approved') return '';
+    return `<span class="verified-badge" title="Verified landlord"><i class="fas fa-circle-check"></i> Verified</span>`;
+}
+
 // NEW: patches the star-average pill (.card-rating) and the comment-count
 // badge (.card-comment-btn .comment-count-dot) on the grid card matching
 // this listing, in place - called right after loadComments() fetches fresh
@@ -1228,7 +1238,7 @@ async function renderListings(items) {
                 </div>
                 <div class="title-text">${item.title || 'Cozy Room'}</div>
                 <div class="landlord-name">
-                    <i class="fas fa-user-tie"></i> ${item.landlord_name || 'Owner'}
+                    <i class="fas fa-user-tie"></i> ${item.landlord_name || 'Owner'}${buildVerifiedBadgeHTML(item.landlord_status)}
                     ${ratingBadgeHTML}
                 </div>
                 <div class="location"><i class="fas fa-map-marker-alt"></i> <span class="location-text">${item.location || 'Unknown'}</span></div>
@@ -1302,6 +1312,10 @@ function showFullDetails(item) {
     document.getElementById('detSize').innerText = item.size;
     document.getElementById('detAmenities').innerText = item.amenities || "None listed";
     document.getElementById('detLandlord').innerText = item.landlord_name || "N/A";
+    // NEW: verified-landlord badge next to the name in the Landlord Contact
+    // Info box - same approved-status check as the card badge above.
+    const detLandlordVerifiedEl = document.getElementById('detLandlordVerified');
+    if (detLandlordVerifiedEl) detLandlordVerifiedEl.innerHTML = buildVerifiedBadgeHTML(item.landlord_status);
     document.getElementById('detContact').innerText = item.landlord_contact || "No contact provided";
     document.getElementById('detType').innerText = item.category || "Apartment";
 
