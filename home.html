@@ -669,6 +669,20 @@
         }
         .card-rating.card-rating-empty i { color: var(--muted); }
 
+        /* NEW: small checkmark badge shown next to a landlord's name when
+           their landlord_status is 'approved' (the same admin-approval flow
+           dashboard.js/home.js's landlord-request flow already produces) -
+           appears both on the card (.landlord-name) and in the details
+           modal (next to #detLandlord). See .verified-badge usage in
+           home.js's renderListings() and showFullDetails(). */
+        .verified-badge {
+            display: inline-flex; align-items: center; gap: 3px;
+            color: var(--primary); font-size: 11px; font-weight: 700;
+            background: var(--accent-soft); border-radius: 999px;
+            padding: 1px 7px 1px 6px; margin-left: 5px; white-space: nowrap;
+        }
+        .verified-badge i { font-size: 10px; }
+
         .card-comment-btn {
             position: absolute; top: 14px; right: 58px; background: rgba(255,255,255,0.92); border-radius: 50%;
             width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
@@ -1058,7 +1072,7 @@
 
             <div class="landlord-info-box">
                 <h4><i class="fas fa-id-card"></i> Landlord Contact Info</h4>
-                <p><strong>Name:</strong> <span id="detLandlord"></span></p>
+                <p><strong>Name:</strong> <span id="detLandlord"></span><span id="detLandlordVerified"></span></p>
                 <p><strong>Contact:</strong> <span id="detContact"></span></p>
                 <!-- NEW: filled in by showFullDetails() in home.js - only
                      shown to a non-owner (a tenant, or anyone viewing a
