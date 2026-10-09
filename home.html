@@ -328,6 +328,11 @@
 
         /* CAROUSEL */
         .carousel-container { position: relative; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; background: #eef1f5; }
+        .carousel-container:not(.loaded) {
+            background: linear-gradient(90deg, #edf1f6 25%, #e2e8f0 37%, #edf1f6 63%);
+            background-size: 400% 100%;
+            animation: shimmer 1.4s ease infinite;
+        }
         .carousel-container.carousel-standalone { border-radius: 14px; margin-bottom: 16px; }
         .carousel-track { display: flex; transition: transform 0.4s ease-in-out; height: 100%; }
         .carousel-img { min-width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
