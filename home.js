@@ -139,7 +139,7 @@ function buildCarouselHTML(imagesField, carouselKey) {
     return `
         <div class="carousel-container ${isStandalone ? 'carousel-standalone' : ''}" id="carousel-${carouselKey}">
             <div class="carousel-track" style="transform: translateX(0px);">
-                ${imgArray.map(img => `<img src="${img}" class="carousel-img" onerror="this.src='https://via.placeholder.com/400x200?text=No+Image'">`).join('')}
+                ${imgArray.map(img => `<img src="${img}" class="carousel-img" onload="this.closest('.carousel-container').classList.add('loaded')" onerror="this.src='https://via.placeholder.com/400x200?text=No+Image'">`).join('')}
             </div>
             ${imgArray.length > 1 ? `
                 <button class="carousel-btn prev-btn" onclick="moveCarousel(event, '${carouselKey}', -1)"><i class="fas fa-chevron-left"></i></button>
@@ -618,6 +618,16 @@ function injectSmartSearchUI() {
                 0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
                 40% { transform: scale(1); opacity: 1; }
             }
+            .ss-nudge-list { display: flex; flex-direction: column; gap: 8px; }
+            .ss-nudge-btn {
+                display: flex; align-items: center; justify-content: space-between; gap: 12px;
+                width: 100%; padding: 12px 14px; border-radius: 12px;
+                border: 1.5px solid #cfe3fb; background: #f4f8fd; color: #0d47a1;
+                font-family: inherit; font-size: 13.5px; font-weight: 700; text-align: left;
+                cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+            }
+            .ss-nudge-btn:hover { background: #0d47a1; border-color: #0d47a1; color: #fff; }
+            .ss-nudge-count { font-size: 11.5px; font-weight: 600; opacity: 0.75; flex-shrink: 0; }
             @media (max-width: 480px) {
                 .ss-panel { width: calc(100vw - 32px); right: 16px; }
                 .ss-launcher-label { display: none; }
@@ -817,11 +827,7 @@ async function runSmartSearch(rawQuery, { showLoadingOverlay = true } = {}) {
             return true;
         } else {
             if (showLoadingOverlay) Swal.close();
-            Swal.fire({
-                title: 'No matches',
-                text: `We couldn't find "${rawQuery}". Try simpler words like "apartment" or a place name.`,
-                icon: 'info'
-            });
+            await showNoResultsWithSuggestions(rawQuery);
             return false;
         }
     } catch (error) {
@@ -830,6 +836,70 @@ async function runSmartSearch(rawQuery, { showLoadingOverlay = true } = {}) {
         Swal.fire('Error', 'Something went wrong with the smart search.', 'error');
         return false;
     }
+}
+
+// NEW: zero-result nudge. Asks the server which loosened versions of the
+// query WOULD find something, and shows them as one-tap buttons. If there
+// are none (or the request fails), falls back to the plain "No matches" popup.
+async function showNoResultsWithSuggestions(rawQuery) {
+    let suggestions = [];
+    try {
+        const res = await fetch(`${API_BASE}/smart-search/suggestions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: rawQuery.toLowerCase(),
+                userContext: { role: currentUser.role, id: currentUser.id }
+            })
+        });
+        const data = await res.json();
+        if (res.ok && Array.isArray(data.suggestions)) suggestions = data.suggestions;
+    } catch (err) {
+        console.log("Suggestions fetch failed silently:", err);
+    }
+
+    if (suggestions.length === 0) {
+        Swal.fire({
+            title: 'No matches',
+            text: `We couldn't find "${rawQuery}". Try simpler words like "apartment" or a place name.`,
+            icon: 'info'
+        });
+        return;
+    }
+
+    const html = `
+        <p style="font-size:13.5px; color:#5c6b7a; margin:0 0 14px; line-height:1.55;">
+            Nothing matched <strong>"${escapeHtml(rawQuery)}"</strong>. Try one of these instead:
+        </p>
+        <div class="ss-nudge-list">
+            ${suggestions.map((s, i) => `
+                <button type="button" class="ss-nudge-btn" data-idx="${i}">
+                    <span>${escapeHtml(s.label)}</span>
+                    <span class="ss-nudge-count">${s.count} ${s.count === 1 ? 'stay' : 'stays'}</span>
+                </button>
+            `).join('')}
+        </div>
+    `;
+
+    Swal.fire({
+        title: 'No exact matches',
+        html,
+        icon: 'info',
+        showConfirmButton: false,
+        showCloseButton: true,
+        didOpen: (popup) => {
+            popup.querySelectorAll('.ss-nudge-btn').forEach(btn => {
+                btn.onclick = async () => {
+                    const picked = suggestions[Number(btn.getAttribute('data-idx'))];
+                    Swal.close();
+                    const input = document.getElementById('smartInput');
+                    if (input) input.value = picked.query;
+                    const found = await runSmartSearch(picked.query, { showLoadingOverlay: false });
+                    if (found) closeSmartSearchPanel();
+                };
+            });
+        }
+    });
 }
 
 // --- NEW: SHARED UI HELPERS (empty states + skeleton loaders) ---
@@ -1535,7 +1605,15 @@ async function loadComments(listingId, isOwner) {
     const list = document.getElementById('commentsDisplayList');
     const revCountBadge = document.getElementById('revCount'); 
     
-    list.innerHTML = "<p style='font-size:12px; color:gray; text-align:center; padding:14px 0;'>Loading reviews...</p>";
+    list.innerHTML = Array.from({ length: 3 }).map(() => `
+        <div class="comment-item">
+            <div class="skeleton-block" style="width:34px; height:34px; border-radius:50%; flex-shrink:0;"></div>
+            <div class="comment-body">
+                <div class="skeleton-block skeleton-line" style="width:40%;"></div>
+                <div class="skeleton-block skeleton-line" style="width:90%; margin-top:9px;"></div>
+            </div>
+        </div>
+    `).join('');
 
     try {
         const res = await fetch(`${API_BASE}/get-reviews/${listingId}`);
