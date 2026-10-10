@@ -63,6 +63,12 @@ let currentSortOption = 'newest';
 // whether a "Load More" fetch is already in flight (to block double-clicks).
 const LISTINGS_PAGE_SIZE = 12;
 let currentPage = 1;
+// NEW: the search bar and filters work on the cards in the DOM, so with
+// pagination they used to miss listings on pages that weren't loaded yet. The
+// first time any search/filter is used, the FULL list is fetched once (the
+// server caches it) and rendered, so results are complete. Reset on every
+// full reload (see loadListings).
+let fullLoadAttempted = false;
 let hasMorePages = false;
 let totalListingsCount = 0;
 let isLoadingMorePages = false;
@@ -1068,6 +1074,7 @@ async function loadListings() {
     hideLoadMoreButton();
 
     smartSearchActiveQuery = null;
+    fullLoadAttempted = false;
 
     // Reset pagination every time the grid is fully reloaded (Browse click,
     // Clear filters, initial page load).
@@ -1871,6 +1878,7 @@ if (logoutLink) {
     logoutLink.onclick = (e) => {
         e.preventDefault();
         localStorage.removeItem('user');
+        localStorage.removeItem('token');
         localStorage.removeItem('bookmarks');
         window.location.href = "index.html";
     };
@@ -1904,7 +1912,43 @@ function highlightMatch(rawText, rawTerm) {
     return rawText.replace(re, '<mark class="search-highlight">$1</mark>');
 }
 
+// NEW: true when anything that narrows the grid (search text, category pill,
+// availability pill, location, rooms, price) is currently active.
+function hasActiveFilters() {
+    const q = smartSearchActiveQuery ? '' : (document.getElementById('searchLoc')?.value || '').trim();
+    return q !== '' || currentCategoryFilter !== '' || !!currentAvailabilityFilter ||
+        (document.getElementById('locFilter')?.value || '').trim() !== '' ||
+        (document.getElementById('roomFilter')?.value || 'all') !== 'all' ||
+        (document.getElementById('maxPrice')?.value || 'Infinity') !== 'Infinity';
+}
+
+// NEW: loads every listing once (all=true) so filtering covers more than the
+// pages loaded so far. Only tries once per grid load; if it fails, filtering
+// just continues on whatever is already loaded.
+async function ensureAllListingsLoaded() {
+    if (!hasMorePages || fullLoadAttempted) return;
+    fullLoadAttempted = true;
+    try {
+        const response = await fetch(buildListingsQuery('all=true'));
+        const data = await response.json();
+        if (!response.ok) return;
+        const everything = Array.isArray(data.listings) ? data.listings : [];
+        allListingsCache = everything;
+        currentDisplayedItems = everything;
+        totalListingsCount = everything.length;
+        hasMorePages = false;
+        hideLoadMoreButton();
+        await renderListings(sortListings(everything, currentSortOption));
+    } catch (err) {
+        console.log("Full listing load for search failed, filtering loaded cards only:", err);
+    }
+}
+
 function filterListings() {
+    if (hasMorePages && !fullLoadAttempted && hasActiveFilters()) {
+        ensureAllListingsLoaded().then(() => filterListings());
+        return;
+    }
     const searchTerm = smartSearchActiveQuery ? '' : document.getElementById('searchLoc').value.toLowerCase();
     const normalizedSearchTerm = normalizeForSearch(searchTerm);
     const maxPriceValue = document.getElementById('maxPrice').value;
