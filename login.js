@@ -1,7 +1,6 @@
 // Initialize EmailJS with your User ID
 emailjs.init("Y7oJ_Er1PJ59eTUfI"); 
 
-// FIXED: Added /api to the base URL to match your server.js prefix
 const API_BASE = "https://stayfind-app-system.onrender.com/api";
 
 let generatedOtp = null;
@@ -81,29 +80,25 @@ document.getElementById('verifyOtpBtn').addEventListener('click', async () => {
                 body: JSON.stringify(signUpData)
             });
             
-            const result = await response.json();
+            const result = await response.json().catch(() => ({}));
 
             if (response.ok) {
                 localStorage.clear();
-                
-                // --- ENHANCED ID CAPTURE ---
-                let finalUserId = result.id || result.userId || result.insertId;
 
-                // FALLBACK: If the server didn't return the ID in the result, 
-                // we fetch the user list to find the ID of the email we just registered.
+                // The server returns the new user's id. (The old fallback that
+                // downloaded the whole users table to find it is gone - that
+                // endpoint no longer exists.)
+                const finalUserId = result.id || result.userId || result.insertId;
                 if (!finalUserId) {
-                    const userFetch = await fetch(`${API_BASE}/users`);
-                    const allUsers = await userFetch.json();
-                    const justCreated = allUsers.find(u => u.email.toLowerCase() === signUpData.email.toLowerCase());
-                    if (justCreated) finalUserId = justCreated.id;
+                    throw new Error("Account created, but we couldn't start your session. Please sign in.");
                 }
-                
+
                 const userToSave = {
                     ...signUpData,
-                    id: finalUserId // Now we are 99% sure we have an ID
+                    id: finalUserId
                 };
 
-                // Remove password for security
+                // Never keep the password in the browser
                 delete userToSave.password;
 
                 localStorage.setItem('user', JSON.stringify(userToSave));
@@ -112,53 +107,55 @@ document.getElementById('verifyOtpBtn').addEventListener('click', async () => {
                     window.location.href = "dashboard.html";
                 });
             } else {
-                throw new Error(result.error || "Could not register account");
+                throw new Error(result.message || result.error || "Could not register account");
             }
         } catch (error) {
             btn.disabled = false;
             btn.innerText = "Verify & Create Account";
             console.error("Signup Error:", error);
-            Swal.fire('Database Error', error.message, 'error');
+            Swal.fire('Sign Up Failed', error.message, 'error');
         }
     } else {
         Swal.fire('Invalid OTP', 'The code you entered is incorrect.', 'error');
     }
 });
 
-// --- 3. SIGN IN: Authenticate via Node.js ---
+// --- 3. SIGN IN: the SERVER checks the password now ---
 document.getElementById('signInForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('signInBtn');
     
     const email = document.getElementById('loginEmail').value.trim().toLowerCase();
-    const password = document.getElementById('loginPassword').value.trim();
+    const password = document.getElementById('loginPassword').value;
+
+    if (!email || !password) {
+        return Swal.fire('Missing Info', 'Please enter your email and password.', 'warning');
+    }
 
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner"></div> Signing in...';
 
     try {
-        const response = await fetch(`${API_BASE}/users?t=${Date.now()}`);
-        
-        if (!response.ok) throw new Error("Server reached but returned an error.");
-        
-        const users = await response.json();
-        
-        const user = users.find(u => 
-            u.email.toLowerCase().trim() === email && 
-            u.password.toString().trim() === password
-        );
+        const response = await fetch(`${API_BASE}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
 
-        if (user) {
-            localStorage.clear(); 
-            localStorage.setItem('user', JSON.stringify(user));
-            
-            if (user.role && user.role.toLowerCase() === 'pending') {
-                window.location.href = "dashboard.html";
-            } else {
-                window.location.href = "home.html";
-            }
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || "Invalid email or password.");
+        }
+
+        const user = result.user; // already has no password / documents
+        localStorage.clear(); 
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        if (user.role && user.role.toLowerCase() === 'pending') {
+            window.location.href = "dashboard.html";
         } else {
-            throw new Error("Invalid email or password.");
+            window.location.href = "home.html";
         }
     } catch (error) {
         btn.disabled = false;
