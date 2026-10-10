@@ -102,6 +102,7 @@ document.getElementById('verifyOtpBtn').addEventListener('click', async () => {
                 delete userToSave.password;
 
                 localStorage.setItem('user', JSON.stringify(userToSave));
+                if (result.token) localStorage.setItem('token', result.token);
                 
                 Swal.fire('Success!', 'Account created successfully.', 'success').then(() => {
                     window.location.href = "dashboard.html";
@@ -151,6 +152,7 @@ document.getElementById('signInForm').addEventListener('submit', async (e) => {
         const user = result.user; // already has no password / documents
         localStorage.clear(); 
         localStorage.setItem('user', JSON.stringify(user));
+        if (result.token) localStorage.setItem('token', result.token);
         
         if (user.role && user.role.toLowerCase() === 'pending') {
             window.location.href = "dashboard.html";
