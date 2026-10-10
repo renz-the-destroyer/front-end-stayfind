@@ -8,8 +8,8 @@ const API_BASE = "https://stayfind-app-system.onrender.com/api";
 // /api/add-listing or /api/update-listing and stored in MySQL, instead of
 // multi-megabyte base64 blobs. REPLACE both placeholders with your own
 // values from your Cloudinary dashboard before this works.
-const CLOUDINARY_CLOUD_NAME = "YOUR_CLOUD_NAME";
-const CLOUDINARY_UPLOAD_PRESET = "YOUR_UNSIGNED_UPLOAD_PRESET";
+const CLOUDINARY_CLOUD_NAME = "nep3vrt2";
+const CLOUDINARY_UPLOAD_PRESET = "stayfind_unsigned";
 
 const currentUser = JSON.parse(localStorage.getItem('user'));
 const listingsGrid = document.getElementById('listingsGrid');
