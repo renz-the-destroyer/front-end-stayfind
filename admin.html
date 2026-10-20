@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- NEW: keeps the admin login page out of search engines -->
+<meta name="robots" content="noindex, nofollow">
 <title>StayFind — Admin Panel</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -311,6 +313,9 @@
         * { animation: none !important; transition: none !important; }
     }
 </style>
+<!-- NEW: styles for the admin panel upgrade (charts, filters, pagination, review modal, etc.).
+     Keep this AFTER the <style> block above so it can build on its variables. -->
+<link rel="stylesheet" href="admin-extras.css">
 </head>
 <body>
 
@@ -344,6 +349,7 @@
                 <a data-panel="users"><i class="fas fa-users"></i> <span>Users</span></a>
                 <a data-panel="listings"><i class="fas fa-home"></i> <span>Listings</span></a>
                 <a data-panel="reviews"><i class="fas fa-comments"></i> <span>Reviews</span></a>
+                <!-- NOTE: the "Activity Log" link is added here automatically by admin-extras.js -->
                 <a data-panel="settings"><i class="fas fa-cog"></i> <span>Settings</span></a>
             </nav>
             <div class="logout">
@@ -358,6 +364,7 @@
                 <h1>Overview</h1>
                 <div class="subtitle">Snapshot of your StayFind platform</div>
                 <div class="stats-grid" id="statsGrid"></div>
+                <!-- NOTE: charts + recent activity are added under the stat cards by admin-extras.js -->
             </div>
 
             <!-- LANDLORD REQUESTS -->
@@ -431,6 +438,8 @@
                     </div>
                 </div>
             </div>
+
+            <!-- NOTE: the "Activity Log" panel is added here automatically by admin-extras.js -->
 
             <!-- SETTINGS (Admin Account Management) -->
             <div class="panel" id="panel-settings">
@@ -515,6 +524,8 @@
     </div>
 
     <!-- VIEW LANDLORD DOCUMENTS MODAL -->
+    <!-- NOTE: admin-extras.js fills the body of this modal with the document
+         review (applicant info, documents, checklist, Approve/Reject buttons). -->
     <div class="modal" id="viewDocsModal">
         <div class="modal-box" style="max-width: 600px;">
             <h3>Landlord Verification Documents</h3>
@@ -544,5 +555,8 @@
     </div>
 
     <script src="admin.js"></script>
+    <!-- NEW: the admin panel upgrade. Must stay AFTER admin.js (it overrides
+         some of admin.js's functions with safer / richer versions). -->
+    <script src="admin-extras.js"></script>
 </body>
 </html>
