@@ -1,0 +1,117 @@
+/* admin-extras.css — load AFTER admin.html's own <style>. Adds styles only; nothing is removed. */
+
+/* SweetAlert dialogs must sit ABOVE the admin modals (they were appearing behind them) */
+.swal2-container { z-index: 5000 !important; }
+
+/* ===================== TOOLBAR FILTERS ===================== */
+.toolbar-select {
+    padding: 11px 13px; border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+    background: #fff; font-size: 13px; font-weight: 700; color: var(--ink); outline: none; cursor: pointer;
+    transition: border-color .2s ease;
+}
+.toolbar-select:focus { border-color: var(--accent); }
+.btn-export {
+    background: #fff; color: var(--primary); border: 1.5px solid #c3e0fb; padding: 11px 16px;
+    border-radius: var(--radius-sm); font-weight: 800; font-size: 12.5px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px; transition: background .15s ease, color .15s ease;
+}
+.btn-export:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+/* ===================== PAGINATION ===================== */
+.pager { display: none; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin: 14px 2px 0; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.pager-btns { display: flex; align-items: center; gap: 10px; }
+.pager-btns button {
+    width: 34px; height: 34px; border-radius: 10px; border: 1.5px solid var(--line); background: #fff;
+    color: var(--primary); cursor: pointer; transition: background .15s ease, color .15s ease;
+}
+.pager-btns button:hover:not(:disabled) { background: var(--primary); color: #fff; border-color: var(--primary); }
+.pager-btns button:disabled { color: #b8c0cc; cursor: not-allowed; }
+.pager-page { color: var(--ink); font-weight: 700; }
+
+/* ===================== OVERVIEW ===================== */
+.stat-card.clickable { cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
+.stat-card.clickable:hover { transform: translateY(-2px); box-shadow: 0 16px 30px -14px rgba(13,71,161,.3); }
+
+.alert-banner {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: #fff4e0; border: 1px solid #ffe0a3; color: #8a5a00;
+    padding: 14px 16px; border-radius: var(--radius-md); margin: 18px 0 4px; font-size: 13px; font-weight: 700;
+}
+.alert-banner i { color: var(--amber-deep); }
+.alert-banner button { margin-left: auto; }
+
+.insight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin-top: 22px; }
+.insight-card {
+    background: #fff; border: 1px solid var(--line); border-radius: var(--radius-md);
+    padding: 20px; box-shadow: 0 10px 26px -14px rgba(13,71,161,.18);
+}
+.insight-card h3 { margin: 0 0 14px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.muted-note { margin: 0; font-size: 13px; color: #a9b3c2; font-weight: 600; }
+
+.bar-row { display: grid; grid-template-columns: 96px 1fr 34px; align-items: center; gap: 10px; margin-bottom: 11px; font-size: 12.5px; }
+.bar-row:last-child { margin-bottom: 0; }
+.bar-label { font-weight: 700; color: var(--ink); text-transform: capitalize; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { height: 10px; background: #eef2f8; border-radius: 999px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--primary)); }
+.bar-value { text-align: right; font-weight: 800; color: var(--primary); }
+
+.activity-list { list-style: none; margin: 0; padding: 0; }
+.activity-list li { padding: 10px 0; border-bottom: 1px dashed var(--line); font-size: 12.5px; }
+.activity-list li:last-child { border-bottom: none; padding-bottom: 0; }
+.act-text { display: block; font-weight: 700; color: var(--ink); }
+.act-meta { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
+
+/* ===================== TABLE CELLS ===================== */
+.cell-user { display: flex; align-items: center; gap: 10px; text-align: left; }
+.avatar {
+    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #e3f2fd, #d3e9fc); color: var(--primary);
+    font-weight: 800; font-size: 12.5px; display: inline-flex; align-items: center; justify-content: center;
+}
+.cell-listing { display: flex; align-items: center; gap: 10px; text-align: left; }
+.cell-listing strong { display: block; font-size: 13px; }
+.thumb { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; flex-shrink: 0; border: 1px solid var(--line); }
+.thumb-empty { display: inline-flex; align-items: center; justify-content: center; background: var(--canvas); color: #b3bdcb; }
+
+/* ===================== DOCUMENT REVIEW MODAL ===================== */
+#viewDocsModal .modal-box { max-width: 640px; }
+.review-head {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start;
+    background: #f7f9fc; border: 1px solid var(--line); border-radius: var(--radius-md); padding: 14px 16px;
+}
+.review-head strong { display: block; font-size: 13.5px; }
+.review-head small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+.review-label { display: block; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 4px; }
+.review-checklist { background: #f8fbff; border: 1px solid #e3f2fd; border-radius: var(--radius-md); padding: 14px 16px; }
+.modal-box .check-row {
+    display: flex; align-items: flex-start; gap: 10px; margin: 8px 0 0;
+    text-transform: none; letter-spacing: 0; font-size: 12.5px; font-weight: 600; color: var(--ink); cursor: pointer;
+}
+.modal-box .review-check { width: 17px; height: 17px; padding: 0; margin: 1px 0 0; flex-shrink: 0; accent-color: var(--primary); }
+.review-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.review-actions .btn { margin: 0; padding: 11px 18px; font-size: 12.5px; }
+
+/* ===================== LIGHTBOX (image zoom) ===================== */
+.lightbox {
+    display: none; position: fixed; inset: 0; z-index: 3000; background: rgba(5,10,20,.9);
+    align-items: center; justify-content: center; padding: 24px; cursor: zoom-out;
+}
+.lightbox img { max-width: 100%; max-height: 100%; border-radius: 10px; box-shadow: 0 30px 70px rgba(0,0,0,.5); }
+.lightbox-close {
+    position: absolute; top: 18px; right: 18px; width: 40px; height: 40px; border-radius: 50%;
+    border: none; background: rgba(255,255,255,.15); color: #fff; font-size: 16px; cursor: pointer;
+}
+.lightbox-close:hover { background: rgba(255,255,255,.3); }
+
+/* ===================== MOBILE ===================== */
+@media (max-width: 700px) {
+    .review-head { grid-template-columns: 1fr; }
+    .bar-row { grid-template-columns: 80px 1fr 30px; }
+    .toolbar-select, .btn-export { width: 100%; justify-content: center; }
+    .pager { justify-content: center; }
+
+    /* Activity Log table → cards (same approach as the other tables) */
+    #activityTableBody td:nth-child(1)::before { content: "When"; }
+    #activityTableBody td:nth-child(2)::before { content: "Admin"; }
+    #activityTableBody td:nth-child(3)::before { content: "Action"; }
+}
