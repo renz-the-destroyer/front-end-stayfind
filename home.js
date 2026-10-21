@@ -145,7 +145,7 @@ function buildCarouselHTML(imagesField, carouselKey) {
     return `
         <div class="carousel-container ${isStandalone ? 'carousel-standalone' : ''}" id="carousel-${carouselKey}">
             <div class="carousel-track" style="transform: translateX(0px);">
-                ${imgArray.map(img => `<img src="${img}" class="carousel-img" onload="this.closest('.carousel-container').classList.add('loaded')" onerror="this.src='https://via.placeholder.com/400x200?text=No+Image'">`).join('')}
+                ${imgArray.map(img => `<img src="${escapeHtmlAttr(safeImageUrl(img))}" class="carousel-img" onload="this.closest('.carousel-container').classList.add('loaded')" onerror="this.src='https://via.placeholder.com/400x200?text=No+Image'">`).join('')}
             </div>
             ${imgArray.length > 1 ? `
                 <button class="carousel-btn prev-btn" onclick="moveCarousel(event, '${carouselKey}', -1)"><i class="fas fa-chevron-left"></i></button>
@@ -283,7 +283,7 @@ async function checkLandlordStatusUpdate() {
         } else if (oldStatus === 'pending' && newStatus === 'rejected') {
             Swal.fire({
                 title: 'Landlord Request Rejected',
-                html: `<p style="text-align:left; font-size:14px; color:#555; margin:0;">${freshUser.landlord_rejection_reason || 'Your submitted documents did not meet our requirements.'}</p>
+                html: `<p style="text-align:left; font-size:14px; color:#555; margin:0;">${escapeHtml(freshUser.landlord_rejection_reason || 'Your submitted documents did not meet our requirements.')}</p>
                        <p style="text-align:left; font-size:12px; color:#90a4ae; margin-top:12px;">You can update your documents and try again anytime from <strong>Settings</strong>.</p>`,
                 icon: 'info',
                 confirmButtonText: 'Got it'
@@ -422,7 +422,7 @@ function setupSideDrawer() {
         drawerUserInfo.innerHTML = `
             <div class="drawer-avatar">${initial}</div>
             <div>
-                <div class="drawer-user-name">${name}</div>
+                <div class="drawer-user-name">${escapeHtml(name)}</div>
                 <div class="drawer-user-role">${currentUser.role === 'landlord' ? 'Landlord' : 'Tenant'}</div>
             </div>
         `;
@@ -1253,7 +1253,7 @@ async function renderListings(items) {
         const statusValue = (item.status || 'available').toLowerCase() === 'occupied' ? 'occupied' : 'available';
         const cardBadgesHTML = `
             <div class="card-badges">
-                <span class="category-badge ${getCategoryBadgeClass(item.category)}">${item.category || 'Apartment'}</span>
+                <span class="category-badge ${getCategoryBadgeClass(item.category)}">${escapeHtml(item.category || 'Apartment')}</span>
                 <span class="status-chip status-chip-${statusValue}"><span class="status-dot"></span>${statusValue === 'occupied' ? 'Occupied' : 'Available'}</span>
             </div>
         `;
@@ -1313,15 +1313,15 @@ async function renderListings(items) {
                 <div class="price-row">
                     <span class="price">₱${Number(item.price || 0).toLocaleString()}</span><span class="price-suffix">&nbsp;/mo</span>
                 </div>
-                <div class="title-text">${item.title || 'Cozy Room'}</div>
+                <div class="title-text">${escapeHtml(item.title || 'Cozy Room')}</div>
                 <div class="landlord-name">
-                    <i class="fas fa-user-tie"></i> ${item.landlord_name || 'Owner'}${buildVerifiedBadgeHTML(item.landlord_status)}
+                    <i class="fas fa-user-tie"></i> ${escapeHtml(item.landlord_name || 'Owner')}${buildVerifiedBadgeHTML(item.landlord_status)}
                     ${ratingBadgeHTML}
                 </div>
-                <div class="location"><i class="fas fa-map-marker-alt"></i> <span class="location-text">${item.location || 'Unknown'}</span></div>
+                <div class="location"><i class="fas fa-map-marker-alt"></i> <span class="location-text">${escapeHtml(item.location || 'Unknown')}</span></div>
                 <div class="details">
-                    <span><i class="fas fa-bed"></i> ${item.rooms || 0} Rooms</span>
-                    <span><i class="fas fa-expand"></i> ${item.size || 0} sqm</span>
+                    <span><i class="fas fa-bed"></i> ${Number(item.rooms) || 0} Rooms</span>
+                    <span><i class="fas fa-expand"></i> ${Number(item.size) || 0} sqm</span>
                 </div>
             </div>
         `;
@@ -1497,7 +1497,7 @@ function openEditModal(item) {
             previewDivEl.innerHTML =
                 `<p style="width:100%; font-size:11px; color:#777; margin:0 0 5px 0;">Current photos (choose new photos below to replace all of them):</p>` +
                 existingImgs.map(img =>
-                    `<img src="${img}" style="width:60px; height:60px; object-fit:cover; border-radius:5px; border:1px solid #ddd;" onerror="this.src='https://via.placeholder.com/60?text=No+Img'">`
+                    `<img src="${escapeHtmlAttr(safeImageUrl(img))}" style="width:60px; height:60px; object-fit:cover; border-radius:5px; border:1px solid #ddd;" onerror="this.src='https://via.placeholder.com/60?text=No+Img'">`
                 ).join('');
         }
     }
@@ -1691,8 +1691,8 @@ async function loadComments(listingId, isOwner) {
                 ? `<span class="comment-stars">${buildStarString(rev.rating)}</span>`
                 : "";
             const nameLabel = isReplyRow
-                ? `${rev.user_name} <span class="landlord-reply-badge">Landlord</span>`
-                : rev.user_name;
+                ? `${escapeHtml(rev.user_name)} <span class="landlord-reply-badge">Landlord</span>`
+                : escapeHtml(rev.user_name);
             const initial = (rev.user_name || "?").trim().charAt(0).toUpperCase() || "?";
             const replyLinkHTML = canReply
                 ? `<button type="button" class="comment-reply-link" data-parent-id="${rev.id}" data-target-name="${escapeHtmlAttr(rev.user_name || 'this reviewer')}">Reply</button>`
@@ -1706,7 +1706,7 @@ async function loadComments(listingId, isOwner) {
                             <span class="comment-name">${nameLabel}</span>
                             ${starsHTML}
                         </div>
-                        <p class="comment-text">${rev.comment || ""}</p>
+                        <p class="comment-text">${escapeHtml(rev.comment || "")}</p>
                         ${replyLinkHTML}
                     </div>
                 </div>
@@ -1890,15 +1890,28 @@ function normalizeForSearch(str) {
     return (str || '').toString().toLowerCase().replace(/\s+/g, '');
 }
 
+// UPDATED: now also escapes " and ' so text is safe inside HTML attributes
+// (like the href of a chat link) as well as inside normal HTML.
 function escapeHtml(str) {
     return (str || '').toString()
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function escapeHtmlAttr(str) {
     return escapeHtml(str).replace(/"/g, '&quot;');
+}
+
+// NEW: only lets https links or real base64 images into <img src="...">.
+// Anything else (javascript:, broken quotes, etc.) becomes a placeholder.
+function safeImageUrl(url) {
+    const u = (url || '').toString().trim();
+    return /^(https:\/\/|data:image\/(jpeg|png|webp|gif);base64,)/i.test(u)
+        ? u
+        : 'https://via.placeholder.com/400x200?text=No+Image';
 }
 
 function escapeRegExp(str) {
