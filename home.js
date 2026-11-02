@@ -671,11 +671,11 @@ function injectSmartSearchUI() {
         <div class="ss-panel-body">
             <p class="ss-panel-intro">Search naturally, in English or Tagalog - it understands property types, prices, rooms, amenities, and words like "cheapest" or "malapit sa".</p>
             <div class="ss-examples">
-                Try: <strong>"house near EU"</strong> &middot; <strong>"apartment na may wifi"</strong> &middot; <strong>"room under 5000"</strong>
+                Try: <strong>"house near Bayan"</strong> &middot; <strong>"apartment na may wifi"</strong> &middot; <strong>"room under 5000"</strong>
             </div>
             <div class="ss-input-row">
                 <i class="fas fa-magnifying-glass ss-input-icon"></i>
-                <input type="text" id="smartInput" class="ss-input" placeholder="e.g. bahay malapit sa EU...">
+                <input type="text" id="smartInput" class="ss-input" placeholder="e.g. bahay malapit sa ...">
             </div>
             <button type="button" id="executeSmartSearch" class="ss-submit-btn">
                 <span class="ss-submit-label"><i class="fas fa-wand-magic-sparkles"></i> Find Stays</span>
