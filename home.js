@@ -664,8 +664,7 @@ function injectSmartSearchUI() {
     panel.innerHTML = `
         <div class="ss-panel-header">
             <div>
-                <span class="ss-panel-eyebrow">AI-Assisted</span>
-                <h3 class="ss-panel-title">Smart Finder</h3>
+                <h3 class="ss-panel-title">Smart Search</h3>
             </div>
             <button type="button" id="smartSearchCloseBtn" class="ss-close-btn" aria-label="Close"><i class="fas fa-xmark"></i></button>
         </div>
