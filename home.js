@@ -2364,8 +2364,16 @@ function setupSettingsLogic() {
     const saveBtn = document.getElementById('saveSettingsBtn');
     const editRoleSelect = document.getElementById('editRole');
     const docsSection = document.getElementById('settingsLandlordDocsSection');
+    const contactInput = document.getElementById('editContact');
 
     if (!settingsBtn || !modal) return;
+
+    // NEW: only digits allowed, max 11 characters (PH mobile format: 09XXXXXXXXX)
+    if (contactInput) {
+        contactInput.addEventListener('input', () => {
+            contactInput.value = contactInput.value.replace(/\D/g, '').slice(0, 11);
+        });
+    }
 
     function toggleDocsSection() {
         if (!docsSection || !editRoleSelect) return;
@@ -2396,6 +2404,17 @@ function setupSettingsLogic() {
     };
 
     saveBtn.onclick = async () => {
+        // NEW: validate the contact number before anything else
+        const contactVal = document.getElementById('editContact').value.trim();
+        if (!/^09\d{9}$/.test(contactVal)) {
+            return Swal.fire({
+                title: 'Invalid number',
+                text: 'Enter an 11-digit mobile number starting with 09 (e.g. 09123456789).',
+                icon: 'warning',
+                target: '#settingsModal'
+            });
+        }
+
         const chosenRole = document.getElementById('editRole').value;
         const alreadyApproved = currentUser.landlord_status === 'approved';
         const isNewLandlordRequest = (chosenRole === 'landlord' && !alreadyApproved);
@@ -2442,7 +2461,7 @@ function setupSettingsLogic() {
         const updatedData = {
             full_name: document.getElementById('editName').value.trim(),
             address: document.getElementById('editAddress').value.trim(),
-            contact: document.getElementById('editContact').value.trim(),
+            contact: contactVal,
             role: chosenRole,
             email: currentUser.email,
             landlord_documents: landlordDocuments,
