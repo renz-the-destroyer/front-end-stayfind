@@ -97,11 +97,26 @@ function setRole(role) {
 }
 
 // --- 3. SAVE PROFILE TO DATABASE ---
+
+// NEW: contact field only accepts digits, max 11 (PH mobile format: 09XXXXXXXXX)
+const contactField = document.getElementById('contact');
+if (contactField) {
+    contactField.addEventListener('input', () => {
+        contactField.value = contactField.value.replace(/\D/g, '').slice(0, 11);
+    });
+}
+
 document.getElementById('profileForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
     if (!userRole) {
         return Swal.fire('Wait!', 'Please select if you are a Tenant or Landlord', 'warning');
+    }
+
+    // NEW: validate the contact number (11 digits, starts with 09)
+    const contactVal = document.getElementById('contact').value.trim();
+    if (!/^09\d{9}$/.test(contactVal)) {
+        return Swal.fire('Invalid number', 'Enter an 11-digit mobile number starting with 09 (e.g. 09123456789).', 'warning');
     }
 
     // UPDATED: Require all 4 verification items before allowing a landlord
@@ -158,7 +173,7 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
     const profileData = {
         full_name: document.getElementById('fullName').value.trim(),
         address: document.getElementById('address').value.trim(),
-        contact: document.getElementById('contact').value.trim(),
+        contact: contactVal,
         role: userRole,
         email: currentUser.email,
         // NEW: only included when requesting landlord status
