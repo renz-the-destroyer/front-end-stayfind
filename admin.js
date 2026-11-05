@@ -16,6 +16,14 @@ function adminHeaders() {
     return { 'Content-Type': 'application/json', 'x-admin-key': adminKey };
 }
 
+// NEW: tiny HTML escaper used by the reject dialog (named escHtml on purpose,
+// so it can't clash with the `esc` helper declared in admin-extras.js).
+function escHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, (ch) => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+    ));
+}
+
 // NEW: Simple normalized-string name-match helper. Compares a user's
 // registered full_name against the landlord_doc_name they typed as "printed
 // on their Proof of Ownership document". This is plain text comparison only
@@ -267,11 +275,17 @@ async function approveLandlord(id) {
     }
 }
 
-// UPDATED: rejection reasons are now picked from a template dropdown instead
-// of a free-text-only box, so wording stays consistent across admins. An
-// "Other" option still allows a fully custom reason when none of the
-// templates fit. The backend endpoint and its `reason` field are unchanged —
-// this only changes how that string gets built on the frontend.
+// REDESIGNED: the reject dialog. The old version used a <select> + textarea
+// inside SweetAlert's default layout, which left the dropdown and textarea
+// indented/misaligned (SweetAlert gives those elements big side margins) and
+// the huge warning icon made it feel cluttered. Now:
+//   - a compact icon + clean title, with the applicant's name underneath
+//   - the reasons are tappable option cards (radio buttons) instead of a dropdown
+//   - choosing "Other" reveals a full-width textarea that gets focus
+//   - Cancel on the left, "Reject & Notify" on the right, equal width
+// The backend endpoint and its `reason` field are unchanged — this only
+// changes how that string gets built on the frontend. Styles for the
+// .reject-* classes live in admin-extras.css.
 async function rejectLandlord(id) {
     const templates = [
         "The Proof of Ownership document was blurry or unreadable.",
@@ -279,43 +293,75 @@ async function rejectLandlord(id) {
         "The Local Permits (Barangay/Mayor's) appear expired or invalid.",
         "The BIR Registration document is missing or unreadable.",
         "The selfie doesn't clearly show your face together with the ID.",
-        "Other (write below)"
+        "Other (write your own reason)"
     ];
     const OTHER_INDEX = templates.length - 1;
 
-    const { value: formValues, isConfirmed } = await Swal.fire({
+    // `ex` (declared in admin-extras.js) caches the pending requests, so the
+    // dialog can show who is being rejected. Safe fallback if it isn't there.
+    let applicantName = '';
+    try {
+        const req = (typeof ex !== 'undefined' && ex.requests) ? ex.requests.get(Number(id)) : null;
+        applicantName = req ? (req.full_name || '') : '';
+    } catch (e) { /* ignore */ }
+
+    const { value: reason, isConfirmed } = await Swal.fire({
         title: 'Reject this request?',
+        iconHtml: '<i class="fas fa-user-xmark"></i>',
         html: `
-            <p style="font-size:13px;color:#78909c;margin-bottom:10px; text-align:left;">Pick a reason, or choose "Other" to write your own.</p>
-            <select id="rejectTemplateSelect" class="swal2-select" style="width:100%; margin-bottom:10px;">
-                ${templates.map((t, i) => `<option value="${i}">${t}</option>`).join('')}
-            </select>
-            <textarea id="rejectCustomReason" class="swal2-textarea" placeholder="Write a custom reason..." style="display:none; width:100%;"></textarea>
+            ${applicantName ? `<p class="reject-applicant">Applicant: <strong>${escHtml(applicantName)}</strong></p>` : ''}
+            <span class="reject-label">Reason for rejection</span>
+            <div class="reject-options" id="rejectOptions">
+                ${templates.map((t, i) => `
+                    <label class="reject-option">
+                        <input type="radio" name="rejectReason" value="${i}" ${i === 0 ? 'checked' : ''}>
+                        <span>${escHtml(t)}</span>
+                    </label>
+                `).join('')}
+            </div>
+            <textarea id="rejectCustomReason" class="reject-textarea" placeholder="Write a custom reason..." maxlength="300"></textarea>
+            <p class="reject-note"><i class="fas fa-circle-info"></i> The applicant will see this reason the next time they visit the site.</p>
         `,
-        icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Reject & Notify',
-        confirmButtonColor: '#ff5252',
-        didOpen: () => {
-            const select = document.getElementById('rejectTemplateSelect');
-            const textarea = document.getElementById('rejectCustomReason');
-            const toggleCustom = () => {
-                const isOther = select.value === String(OTHER_INDEX);
-                textarea.style.display = isOther ? 'block' : 'none';
-            };
-            select.addEventListener('change', toggleCustom);
-            toggleCustom();
+        cancelButtonText: 'Cancel',
+        reverseButtons: true,
+        focusConfirm: false,
+        buttonsStyling: false,
+        customClass: {
+            popup: 'reject-popup',
+            icon: 'reject-icon',
+            title: 'reject-title',
+            htmlContainer: 'reject-html',
+            actions: 'reject-actions',
+            confirmButton: 'reject-confirm',
+            cancelButton: 'reject-cancel'
+        },
+        didOpen: (popup) => {
+            const textarea = popup.querySelector('#rejectCustomReason');
+            const radios = popup.querySelectorAll('input[name="rejectReason"]');
+            radios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    const isOther = radio.checked && radio.value === String(OTHER_INDEX);
+                    textarea.classList.toggle('show', isOther);
+                    if (isOther) textarea.focus();
+                });
+            });
         },
         preConfirm: () => {
-            const select = document.getElementById('rejectTemplateSelect');
+            const checked = document.querySelector('input[name="rejectReason"]:checked');
             const textarea = document.getElementById('rejectCustomReason');
-            const isOther = select.value === String(OTHER_INDEX);
-            const reason = isOther ? textarea.value.trim() : templates[select.value];
-            if (!reason) {
+            if (!checked) {
+                Swal.showValidationMessage('Please pick a reason.');
+                return false;
+            }
+            const isOther = checked.value === String(OTHER_INDEX);
+            const text = isOther ? textarea.value.trim() : templates[Number(checked.value)];
+            if (!text) {
                 Swal.showValidationMessage('Please write a reason.');
                 return false;
             }
-            return reason;
+            return text;
         }
     });
 
@@ -325,7 +371,7 @@ async function rejectLandlord(id) {
         const res = await fetch(`${API_BASE}/landlord-requests/${id}/reject`, {
             method: 'POST',
             headers: adminHeaders(),
-            body: JSON.stringify({ reason: formValues })
+            body: JSON.stringify({ reason })
         });
         if (handleAuthError(res)) return;
         if (res.ok) {
