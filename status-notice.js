@@ -183,3 +183,77 @@ async function checkLandlordStatusUpdate() {
         console.log("Landlord status check failed silently:", err);
     }
 }
+
+// ===================== BLOCK RE-SUBMIT WHILE PENDING =====================
+// Habang pending ang landlord request, hindi na pwedeng pumili ng Landlord
+// o mag-upload ulit ng documents. Maghihintay na lang ng approve/reject.
+
+function isLandlordRequestPending() {
+    return !!currentUser
+        && currentUser.landlord_status === 'pending'
+        && currentUser.role !== 'landlord';
+}
+
+const _setupSettingsLogicOriginal = setupSettingsLogic;
+setupSettingsLogic = function () {
+    _setupSettingsLogicOriginal();
+
+    const settingsBtn = document.getElementById('settingsBtn');
+    const saveBtn = document.getElementById('saveSettingsBtn');
+    const roleSelect = document.getElementById('editRole');
+    const docsSection = document.getElementById('settingsLandlordDocsSection');
+    if (!settingsBtn || !saveBtn || !roleSelect || !docsSection) return;
+
+    const landlordOption = roleSelect.querySelector('option[value="landlord"]');
+
+    // Banner na lalabas sa Settings habang pending
+    let banner = document.getElementById('pendingRequestBanner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'pendingRequestBanner';
+        banner.style.cssText = 'display:none; background:#fff8e1; border:1.5px solid #ffe0a3; border-left:5px solid #f59e0b; border-radius:12px; padding:12px 14px; margin-bottom:20px; font-size:12.5px; line-height:1.5; color:#8a5a00; font-weight:600;';
+        banner.innerHTML = '<i class="fas fa-hourglass-half"></i> <strong>Landlord request pending.</strong> Naipasa mo na ang documents mo. Hintayin muna ang approval o rejection ng admin bago mag-submit ulit.';
+        docsSection.insertAdjacentElement('beforebegin', banner);
+    }
+
+    function applyPendingState() {
+        if (isLandlordRequestPending()) {
+            if (landlordOption) {
+                landlordOption.disabled = true;
+                landlordOption.textContent = 'Landlord (request pending)';
+            }
+            roleSelect.value = 'tenant';
+            docsSection.style.display = 'none';
+            banner.style.display = 'block';
+        } else {
+            if (landlordOption) {
+                landlordOption.disabled = false;
+                landlordOption.textContent = 'Landlord';
+            }
+            banner.style.display = 'none';
+        }
+    }
+
+    // Tuwing bubuksan ang Settings
+    const openOriginal = settingsBtn.onclick;
+    settingsBtn.onclick = function (e) {
+        if (openOriginal) openOriginal.call(this, e);
+        applyPendingState();
+    };
+
+    // Extra guard sa Save, kahit paano pa nila ma-bypass ang dropdown
+    const saveOriginal = saveBtn.onclick;
+    saveBtn.onclick = async function (e) {
+        if (isLandlordRequestPending() && roleSelect.value === 'landlord') {
+            return Swal.fire({
+                title: 'Request already pending',
+                text: 'Naipasa mo na ang landlord request mo. Hintayin muna ang desisyon ng admin.',
+                icon: 'info',
+                target: '#settingsModal'
+            });
+        }
+        return saveOriginal.call(this, e);
+    };
+
+    applyPendingState();
+};
