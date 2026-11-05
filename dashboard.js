@@ -239,7 +239,17 @@ const logoutBtn = document.getElementById('logoutBtn');
 if (logoutBtn) {
     logoutBtn.onclick = (e) => {
         e.preventDefault();
-        localStorage.clear(); // Use clear to ensure all old session data is gone
+       // replace:  localStorage.clear();
+// with:
+(function () {
+    const keep = {};
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('landlordSeen_')) keep[k] = localStorage.getItem(k);
+    }
+    localStorage.clear();
+    Object.keys(keep).forEach(k => localStorage.setItem(k, keep[k]));
+})();// Use clear to ensure all old session data is gone
         window.location.href = "index.html";
     };
 }
