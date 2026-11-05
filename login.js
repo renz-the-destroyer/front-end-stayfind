@@ -3,6 +3,17 @@ emailjs.init("Y7oJ_Er1PJ59eTUfI");
 
 const API_BASE = "https://stayfind-app-system.onrender.com/api";
 
+// Clears the session but keeps the landlord notification memory
+function clearSessionKeepNotices() {
+    const keep = {};
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('landlordSeen_')) keep[k] = localStorage.getItem(k);
+    }
+    localStorage.clear();
+    Object.keys(keep).forEach(k => localStorage.setItem(k, keep[k]));
+}
+
 let generatedOtp = null;
 let signUpData = {}; 
 
