@@ -103,6 +103,84 @@
 }
 .lightbox-close:hover { background: rgba(255,255,255,.3); }
 
+/* ===================== REJECT REQUEST DIALOG (SweetAlert) =====================
+   Used by rejectLandlord() in admin.js. SweetAlert's default select/textarea
+   have big side margins, which is what made the old dialog look misaligned.
+   This version uses its own classes, so nothing inherits those margins. */
+.swal2-popup.reject-popup {
+    width: 440px; max-width: calc(100vw - 32px);
+    padding: 30px 26px 24px; border-radius: 20px;
+    font-family: 'Manrope', sans-serif;
+    box-shadow: 0 30px 70px -20px rgba(5,10,20,.45);
+}
+.reject-popup .swal2-icon.reject-icon {
+    width: 58px; height: 58px; margin: 0 auto 14px;
+    border: none; background: #fdeaea; color: var(--danger);
+}
+.reject-popup .swal2-icon.reject-icon .swal2-icon-content { font-size: 22px; }
+.reject-popup .swal2-title.reject-title {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.35rem;
+    color: var(--ink); padding: 0; margin: 0 0 6px;
+}
+.reject-popup .swal2-html-container.reject-html {
+    margin: 0; padding: 0; text-align: left; font-size: 13px; color: var(--ink);
+}
+.reject-applicant { text-align: center; margin: 0 0 20px; font-size: 13px; color: var(--muted); }
+.reject-applicant strong { color: var(--ink); }
+.reject-label {
+    display: block; margin: 0 0 8px; font-size: 10.5px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
+}
+.reject-options { display: flex; flex-direction: column; gap: 8px; }
+.reject-option {
+    display: flex; align-items: flex-start; gap: 11px; margin: 0;
+    padding: 11px 13px; border: 1.5px solid var(--line); border-radius: 12px;
+    font-size: 13px; font-weight: 600; line-height: 1.4; color: var(--ink);
+    cursor: pointer; background: #fff;
+    transition: border-color .15s ease, background .15s ease;
+}
+.reject-option:hover { border-color: #f0b4b6; }
+.reject-option input[type="radio"] {
+    flex-shrink: 0; width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--danger);
+}
+.reject-option:has(input:checked) { border-color: var(--danger); background: #fff5f5; }
+.reject-popup .reject-textarea {
+    display: none; width: 100%; min-height: 86px; margin: 10px 0 0; padding: 11px 13px;
+    border: 1.5px solid var(--line); border-radius: 12px; background: var(--canvas);
+    font-family: 'Manrope', sans-serif; font-size: 13.5px; color: var(--ink);
+    resize: vertical; outline: none; box-sizing: border-box;
+    transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.reject-popup .reject-textarea.show { display: block; }
+.reject-popup .reject-textarea:focus {
+    border-color: var(--accent); background: #fff; box-shadow: 0 0 0 4px rgba(66,165,245,.15);
+}
+.reject-note {
+    display: flex; align-items: center; gap: 8px; margin: 14px 0 0;
+    font-size: 11.5px; color: var(--muted); font-weight: 600;
+}
+.reject-note i { color: var(--accent); }
+.reject-popup .swal2-actions.reject-actions {
+    width: 100%; margin: 22px 0 0; gap: 10px; flex-wrap: nowrap;
+}
+.reject-popup .reject-confirm,
+.reject-popup .reject-cancel {
+    flex: 1; margin: 0; padding: 12px 14px; border: none; border-radius: 10px;
+    font-family: 'Manrope', sans-serif; font-size: 12.5px; font-weight: 800;
+    cursor: pointer; transition: transform .12s ease, box-shadow .15s ease, background .15s ease;
+}
+.reject-popup .reject-confirm {
+    background: linear-gradient(135deg, var(--danger), var(--danger-deep)); color: #fff;
+    box-shadow: 0 14px 24px -12px rgba(229,72,77,.65);
+}
+.reject-popup .reject-cancel { background: #eef1f6; color: var(--muted); }
+.reject-popup .reject-confirm:hover,
+.reject-popup .reject-cancel:hover { transform: translateY(-1px); }
+.reject-popup .reject-cancel:hover { background: #e3e8f0; }
+.reject-popup .swal2-validation-message {
+    margin: 14px 0 0; border-radius: 10px; font-size: 12.5px; font-weight: 700;
+}
+
 /* ===================== MOBILE ===================== */
 @media (max-width: 700px) {
     .review-head { grid-template-columns: 1fr; }
@@ -114,4 +192,6 @@
     #activityTableBody td:nth-child(1)::before { content: "When"; }
     #activityTableBody td:nth-child(2)::before { content: "Admin"; }
     #activityTableBody td:nth-child(3)::before { content: "Action"; }
+
+    .swal2-popup.reject-popup { padding: 24px 18px 20px; }
 }
