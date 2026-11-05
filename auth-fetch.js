@@ -20,7 +20,16 @@
 
         const response = await originalFetch(input, options);
         if (response.status === 401) {
-            localStorage.clear();
+          // replace:  localStorage.clear();
+(function () {
+    const keep = {};
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('landlordSeen_')) keep[k] = localStorage.getItem(k);
+    }
+    localStorage.clear();
+    Object.keys(keep).forEach(k => localStorage.setItem(k, keep[k]));
+})();
             window.location.href = 'index.html';
         }
         return response;
