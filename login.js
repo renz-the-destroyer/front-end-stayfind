@@ -94,7 +94,7 @@ document.getElementById('verifyOtpBtn').addEventListener('click', async () => {
             const result = await response.json().catch(() => ({}));
 
             if (response.ok) {
-                localStorage.clear();
+               clearSessionKeepNotices();
 
                 // The server returns the new user's id. (The old fallback that
                 // downloaded the whole users table to find it is gone - that
@@ -161,7 +161,7 @@ document.getElementById('signInForm').addEventListener('submit', async (e) => {
         }
 
         const user = result.user; // already has no password / documents
-        localStorage.clear(); 
+        clearSessionKeepNotices();
         localStorage.setItem('user', JSON.stringify(user));
         if (result.token) localStorage.setItem('token', result.token);
         
