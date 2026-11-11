@@ -218,6 +218,16 @@ function describeAction(method, rawPath) {
         const img = e.target.closest('img[data-lightbox]');
         if (img) openLightbox(img.src);
     });
+
+    // --- NEW (Module 4): the top bar's Logout button reuses the sidebar's
+    //     existing logout handler from admin.js, so there is only one logout path. ---
+    const topbarLogout = $('topbarLogoutBtn');
+    if (topbarLogout) {
+        topbarLogout.addEventListener('click', () => {
+            const sidebarLogout = $('adminLogoutBtn');
+            if (sidebarLogout) sidebarLogout.click();
+        });
+    }
 })();
 
 // Stat cards / banner buttons that jump to another panel
@@ -636,6 +646,17 @@ async function loadAdmins() {
         if (!rows) return;
         ex.adminsById = new Map(rows.map(a => [Number(a.id), a]));
 
+        // NEW (Module 4): if this admin just renamed themselves (or changed their
+        // email) in Settings, update the top bar right away - no extra request.
+        if (currentAdmin) {
+            const mine = ex.adminsById.get(Number(currentAdmin.id));
+            if (mine && (mine.full_name !== currentAdmin.full_name || mine.email !== currentAdmin.email)) {
+                currentAdmin = { id: mine.id, full_name: mine.full_name, email: mine.email };
+                localStorage.setItem('adminInfo', JSON.stringify(currentAdmin));
+                renderAdminIdentity();
+            }
+        }
+
         if (rows.length === 0) {
             tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">No admin accounts found.</div></td></tr>`;
             return;
@@ -692,9 +713,45 @@ function startAutoRefresh() {
     }, 60000);
 }
 
+// ===================== 9. NEW (Module 4): WHO IS SIGNED IN =====================
+// Paints the top bar (and the small line in the sidebar) from currentAdmin.
+function renderAdminIdentity() {
+    const name = currentAdmin ? String(currentAdmin.full_name || currentAdmin.email || 'Admin') : 'Admin';
+    const email = currentAdmin ? String(currentAdmin.email || '') : '';
+
+    const avatar = $('topbarAvatar');
+    const nameEl = $('topbarName');
+    const emailEl = $('topbarEmail');
+    if (avatar) avatar.innerText = initials(name);
+    if (nameEl) nameEl.innerText = name;
+    if (emailEl) emailEl.innerText = email;
+
+    const sidebarLine = $('adminIdentity');
+    if (sidebarLine && currentAdmin) sidebarLine.innerText = `Signed in as ${name}`;
+}
+
+// Asks the server who this token belongs to (GET /api/admin/me). This keeps the
+// top bar correct after a refresh, and if the admin account was deleted while
+// the person was still signed in, the server answers 401 and adminGet's
+// handleAuthError signs them out.
+async function refreshAdminIdentity() {
+    try {
+        const data = await adminGet('/me');
+        if (!data || !data.admin) return; // null = 401 was already handled
+        currentAdmin = { id: data.admin.id, full_name: data.admin.full_name, email: data.admin.email };
+        localStorage.setItem('adminInfo', JSON.stringify(currentAdmin));
+        renderAdminIdentity();
+    } catch (err) {
+        // Network hiccup: keep showing the cached name from login.
+        console.log('Could not refresh admin identity:', err);
+    }
+}
+
 const _showDashboardOriginal = showDashboard;
 showDashboard = function () {
     _showDashboardOriginal();
+    renderAdminIdentity();      // instant, from the cached login info
+    refreshAdminIdentity();     // then confirm with the server
     loadActivity();
     startAutoRefresh();
 };
