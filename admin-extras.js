@@ -5,7 +5,8 @@
 // Uses admin.js globals: API_BASE, adminKey, currentAdmin, adminHeaders,
 // handleAuthError, nameMatchStatus, closeModal, openEditUser, deleteUser,
 // openEditListing, deleteListing, deleteReview, openEditAdmin,
-// deleteAdminAccount, approveLandlord, rejectLandlord, showDashboard.
+// deleteAdminAccount, approveLandlord, rejectLandlord, showDashboard,
+// adminSignOut, adminTokenExpiresAt.
 
 // ===================== HELPERS =====================
 
@@ -219,7 +220,7 @@ function describeAction(method, rawPath) {
         if (img) openLightbox(img.src);
     });
 
-    // --- NEW (Module 4): the top bar's Logout button reuses the sidebar's
+    // --- (Module 4) the top bar's Logout button reuses the sidebar's
     //     existing logout handler from admin.js, so there is only one logout path. ---
     const topbarLogout = $('topbarLogoutBtn');
     if (topbarLogout) {
@@ -646,13 +647,13 @@ async function loadAdmins() {
         if (!rows) return;
         ex.adminsById = new Map(rows.map(a => [Number(a.id), a]));
 
-        // NEW (Module 4): if this admin just renamed themselves (or changed their
+        // (Module 4) if this admin just renamed themselves (or changed their
         // email) in Settings, update the top bar right away - no extra request.
         if (currentAdmin) {
             const mine = ex.adminsById.get(Number(currentAdmin.id));
             if (mine && (mine.full_name !== currentAdmin.full_name || mine.email !== currentAdmin.email)) {
                 currentAdmin = { id: mine.id, full_name: mine.full_name, email: mine.email };
-                localStorage.setItem('adminInfo', JSON.stringify(currentAdmin));
+                sessionStorage.setItem('adminInfo', JSON.stringify(currentAdmin)); // UPDATED (Module 5)
                 renderAdminIdentity();
             }
         }
@@ -713,7 +714,7 @@ function startAutoRefresh() {
     }, 60000);
 }
 
-// ===================== 9. NEW (Module 4): WHO IS SIGNED IN =====================
+// ===================== 9. WHO IS SIGNED IN (Module 4) =====================
 // Paints the top bar (and the small line in the sidebar) from currentAdmin.
 function renderAdminIdentity() {
     const name = currentAdmin ? String(currentAdmin.full_name || currentAdmin.email || 'Admin') : 'Admin';
@@ -739,13 +740,132 @@ async function refreshAdminIdentity() {
         const data = await adminGet('/me');
         if (!data || !data.admin) return; // null = 401 was already handled
         currentAdmin = { id: data.admin.id, full_name: data.admin.full_name, email: data.admin.email };
-        localStorage.setItem('adminInfo', JSON.stringify(currentAdmin));
+        sessionStorage.setItem('adminInfo', JSON.stringify(currentAdmin)); // UPDATED (Module 5)
         renderAdminIdentity();
     } catch (err) {
         // Network hiccup: keep showing the cached name from login.
         console.log('Could not refresh admin identity:', err);
     }
 }
+
+// ===================== 10. NEW (Module 5): SESSION WATCH =====================
+// Signs the admin out when they walk away (idle) or when the 2-hour token runs
+// out, and double-checks the session the moment the tab comes back into view.
+//
+// To test quickly, temporarily set IDLE_LIMIT_MS to 2 * 60 * 1000 (2 minutes).
+const IDLE_LIMIT_MS = 30 * 60 * 1000;  // sign out after 30 minutes without activity
+const IDLE_WARN_MS = 60 * 1000;        // warn during the last 60 seconds
+
+let lastActivityAt = Date.now();
+let sessionTick = null;
+let idleWarningOpen = false;
+let expiryWarned = false;
+
+// Any of these counts as "the admin is here". While the warning popup is open
+// they are ignored on purpose: only the "Stay signed in" button extends the session.
+function noteActivity() {
+    if (!idleWarningOpen) lastActivityAt = Date.now();
+}
+['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'].forEach(ev =>
+    document.addEventListener(ev, noteActivity, { passive: true, capture: true }));
+
+function startSessionWatch() {
+    lastActivityAt = Date.now();
+    idleWarningOpen = false;
+    expiryWarned = false;
+    clearInterval(sessionTick);
+    sessionTick = setInterval(checkSession, 1000);
+}
+
+// Called by adminSignOut() in admin.js, whatever the reason for signing out.
+function stopSessionWatch() {
+    clearInterval(sessionTick);
+    sessionTick = null;
+    idleWarningOpen = false;
+    expiryWarned = false;
+    if (Swal.isVisible()) Swal.close();
+
+    // Forget the data held in memory, too.
+    ex.users = []; ex.usersById = new Map();
+    ex.listings = []; ex.listingsById = new Map();
+    ex.requests = new Map(); ex.adminsById = new Map();
+}
+
+function endSession(message) {
+    adminSignOut(); // admin.js: clears the token, wipes the page, shows the login screen
+    if (message) Swal.fire({ title: 'Signed out', text: message, icon: 'info' });
+}
+
+function checkSession() {
+    if (!adminKey) return;
+
+    const now = Date.now();
+    const exp = adminTokenExpiresAt(adminKey); // null if the token couldn't be read
+
+    if (exp && now >= exp) {
+        endSession('Your session expired. Please sign in again.');
+        return;
+    }
+
+    const idleFor = now - lastActivityAt;
+    if (idleFor >= IDLE_LIMIT_MS) {
+        endSession('You were signed out after 30 minutes of inactivity.');
+        return;
+    }
+
+    // Heads-up shortly before the hard 2-hour limit (this one can't be extended).
+    if (exp && exp - now <= 60000 && !expiryWarned) {
+        expiryWarned = true;
+        AdminToast.fire({ icon: 'warning', title: 'Your session ends in about a minute. Please finish up.', timer: 8000 });
+    }
+
+    if (idleFor >= IDLE_LIMIT_MS - IDLE_WARN_MS && !idleWarningOpen) showIdleWarning();
+}
+
+function showIdleWarning() {
+    idleWarningOpen = true;
+    let countdownTimer = null;
+
+    Swal.fire({
+        title: 'Still there?',
+        html: 'You will be signed out in <b id="idleCountdown">60</b> seconds because of inactivity.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Stay signed in',
+        cancelButtonText: 'Log out now',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+            countdownTimer = setInterval(() => {
+                const left = Math.max(0, Math.ceil((IDLE_LIMIT_MS - (Date.now() - lastActivityAt)) / 1000));
+                const el = document.getElementById('idleCountdown');
+                if (el) el.textContent = left;
+            }, 500);
+        },
+        willClose: () => clearInterval(countdownTimer)
+    }).then((result) => {
+        idleWarningOpen = false;
+        if (result.isConfirmed) {
+            lastActivityAt = Date.now(); // the admin is still here
+        } else if (result.dismiss === Swal.DismissReason.cancel) {
+            adminSignOut(); // chose "Log out now"
+        }
+        // Any other close means the session already ended on its own.
+    });
+}
+
+// Timers are slowed down in background tabs, so check straight away when the tab
+// comes back, and ask the server whether the session is still valid.
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && adminKey) {
+        checkSession();
+        if (adminKey) refreshAdminIdentity(); // a 401 here signs the admin out
+    }
+});
+// Same check when the browser restores the page from its back/forward cache.
+window.addEventListener('pageshow', (e) => {
+    if (e.persisted && adminKey) checkSession();
+});
 
 const _showDashboardOriginal = showDashboard;
 showDashboard = function () {
@@ -754,4 +874,5 @@ showDashboard = function () {
     refreshAdminIdentity();     // then confirm with the server
     loadActivity();
     startAutoRefresh();
+    startSessionWatch();        // NEW (Module 5)
 };
