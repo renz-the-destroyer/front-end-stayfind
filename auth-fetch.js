@@ -6,7 +6,19 @@
 // expired (401), the person is sent back to the login page.
 (function () {
     const API_PREFIX = "https://stayfind-app-system.onrender.com/api";
+    const LOGIN_URL = "index.html?auth=signin";
     const originalFetch = window.fetch.bind(window);
+
+    // Clears the session but keeps the landlord notification memory
+    function clearSessionKeepNotices() {
+        const keep = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('landlordSeen_')) keep[k] = localStorage.getItem(k);
+        }
+        localStorage.clear();
+        Object.keys(keep).forEach(k => localStorage.setItem(k, keep[k]));
+    }
 
     window.fetch = async function (input, init) {
         const url = typeof input === 'string' ? input : ((input && input.url) || '');
@@ -20,17 +32,8 @@
 
         const response = await originalFetch(input, options);
         if (response.status === 401) {
-          // replace:  localStorage.clear();
-(function () {
-    const keep = {};
-    for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith('landlordSeen_')) keep[k] = localStorage.getItem(k);
-    }
-    localStorage.clear();
-    Object.keys(keep).forEach(k => localStorage.setItem(k, keep[k]));
-})();
-            window.location.href = 'index.html';
+            clearSessionKeepNotices();
+            window.location.href = LOGIN_URL;
         }
         return response;
     };
