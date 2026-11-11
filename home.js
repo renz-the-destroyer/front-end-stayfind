@@ -11,8 +11,36 @@ const API_BASE = "https://stayfind-app-system.onrender.com/api";
 const CLOUDINARY_CLOUD_NAME = "nep3vrt2";
 const CLOUDINARY_UPLOAD_PRESET = "stayfind_unsigned";
 
-const currentUser = JSON.parse(localStorage.getItem('user'));
+// NEW (guest mode): home.html is the public landing page. A visitor with no
+// saved login (or with a saved user but no token, which can't work anyway)
+// is a GUEST: currentUser is null and isGuest is true. Every place below that
+// reads currentUser either checks isGuest first or guards against null.
+let storedUser = null;
+try { storedUser = JSON.parse(localStorage.getItem('user')); } catch (e) { storedUser = null; }
+if (storedUser && !localStorage.getItem('token')) localStorage.removeItem('user'); // stale half-session
+const currentUser = (storedUser && storedUser.id && localStorage.getItem('token')) ? storedUser : null;
+const isGuest = !currentUser;
 const listingsGrid = document.getElementById('listingsGrid');
+
+// NEW (guest mode): one shared "please log in" popup for every locked
+// feature (save, message, rate/comment, Smart Search). Sends the person to the
+// login page on the right tab.
+function promptLogin(message) {
+    return Swal.fire({
+        title: 'Log in to continue',
+        text: message || 'Create a free account or log in to use this feature.',
+        icon: 'info',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: 'Log in',
+        denyButtonText: 'Sign up',
+        cancelButtonText: 'Not now',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) window.location.href = "index.html?auth=signin";
+        else if (result.isDenied) window.location.href = "index.html?auth=signup";
+    });
+}
 
 // Global variable to track selected stars
 let selectedRating = 0;
@@ -317,7 +345,15 @@ function setupHeroGreeting() {
     const heroGreeting = document.getElementById('heroGreeting');
     const heroSubtitle = document.getElementById('heroSubtitle');
     const heroEyebrow = document.getElementById('heroEyebrow');
-    if (!heroGreeting || !currentUser) return;
+    if (!heroGreeting) return;
+
+    // NEW (guest mode): a friendly generic hero for visitors who aren't logged in.
+    if (isGuest) {
+        heroGreeting.innerText = "Welcome to StayFind 👋";
+        if (heroEyebrow) heroEyebrow.innerText = "Find Your Next Stay";
+        if (heroSubtitle) heroSubtitle.innerText = "Browse verified stays across Candelaria. Log in to save listings and message landlords.";
+        return;
+    }
 
     const name = (currentUser.full_name || currentUser.name || "there").trim().split(' ')[0];
     const hour = new Date().getHours();
@@ -336,45 +372,50 @@ function setupHeroGreeting() {
 
 // --- 1. SECURITY & ROLE CHECK ---
 window.onload = () => {
-    if (!currentUser) {
-        window.location.href = "index.html";
+    // UPDATED (guest mode): no login is no longer a reason to leave this page.
+    // The only redirect left is for someone who signed up but hasn't finished
+    // setting up their profile yet.
+    if (currentUser && currentUser.role && currentUser.role.toLowerCase() === 'pending') {
+        window.location.href = "dashboard.html";
         return;
     }
 
     const postBtn = document.getElementById('postBtn');
-    if (postBtn && currentUser.role === 'landlord') {
+    if (postBtn && currentUser && currentUser.role === 'landlord') {
         postBtn.style.display = 'flex';
     }
     const postFab = document.getElementById('postFab');
-    if (postFab && currentUser.role === 'landlord') {
+    if (postFab && currentUser && currentUser.role === 'landlord') {
         postFab.style.display = 'flex';
     }
 
     // NEW: Inject Smart Search Button if it doesn't exist in HTML
-    if (!document.getElementById('smartSearchBtn') && currentUser.role === 'tenant') {
+    // (guests get the button too; clicking it asks them to log in)
+    if (!document.getElementById('smartSearchBtn') && (isGuest || currentUser.role === 'tenant')) {
         injectSmartSearchUI();
     }
 
-    console.log("Welcome back, " + (currentUser.full_name || currentUser.name || "User"));
+    console.log("Welcome " + (isGuest ? "guest" : (currentUser.full_name || currentUser.name || "User")));
 
     setupHeroGreeting(); // NEW: personalized hero header
     setupLoadMoreButton(); // NEW: pagination control under the grid
     loadListings();
-    setupSettingsLogic(); 
+    if (!isGuest) setupSettingsLogic(); 
     setupPostListingLogic(); 
     setupBookmarkToggles(); 
     setupStarRatingLogic(); // Initialize star click listeners
     setupSideDrawer(); // NEW: hamburger-triggered side navigation
+    setupGuestChrome(); // NEW (guest mode): hides logged-in-only menu items for guests
     setupFiltersToggle(); // NEW: collapsible filter panel on mobile
     setupAvailabilityFilterButtons(); // NEW: Available Property / Occupied Property buttons
     setupCategoryPills(); // NEW: one-tap Apartment/House/Condo/Bedspace quick filters
     setupSearchBarEnhancements(); // NEW: autocomplete, recent searches, clear button, live count
     setupStickySearchBar(); // NEW: compact search bar that slides in once you scroll past the real one
     setupFooter(); // NEW: footer year + Settings link
-    setupMessaging(); // NEW: Messages inbox, thread view, and unread badge
+    if (!isGuest) setupMessaging(); // NEW: Messages inbox, thread view, and unread badge
 
     // NEW: check for a landlord approval/rejection outcome to notify the user about
-    checkLandlordStatusUpdate();
+    if (!isGuest) checkLandlordStatusUpdate();
 };
 
 // --- NEW: SIDE DRAWER NAVIGATION ---
@@ -421,7 +462,30 @@ function setupSideDrawer() {
                 <div class="drawer-user-role">${currentUser.role === 'landlord' ? 'Landlord' : 'Tenant'}</div>
             </div>
         `;
+    } else if (drawerUserInfo && isGuest) {
+        // NEW (guest mode): Log in / Sign up buttons at the top of the drawer.
+        // (Module 3 adds the same buttons to the top-right of the page.)
+        drawerUserInfo.innerHTML = `
+            <div style="width:100%;">
+                <div style="font-weight:700; font-size:14px; color:var(--ink); margin-bottom:10px;">Welcome, guest 👋</div>
+                <div style="display:flex; gap:8px;">
+                    <a href="index.html?auth=signin" style="flex:1; text-align:center; padding:10px 8px; border-radius:10px; border:1.5px solid var(--primary); color:var(--primary); font-weight:700; font-size:13px; text-decoration:none;">Log in</a>
+                    <a href="index.html?auth=signup" style="flex:1; text-align:center; padding:10px 8px; border-radius:10px; background:var(--primary); color:#fff; font-weight:700; font-size:13px; text-decoration:none;">Sign up</a>
+                </div>
+            </div>
+        `;
     }
+}
+
+// NEW (guest mode): hides the menu items that only make sense when logged in.
+function setupGuestChrome() {
+    if (!isGuest) return;
+    ['viewSavedBtn', 'messagesBtn', 'settingsBtn'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    const drawerFooter = document.querySelector('#sideDrawer .drawer-footer');
+    if (drawerFooter) drawerFooter.style.display = 'none'; // no Logout for guests
 }
 
 // --- NEW: COLLAPSIBLE FILTER PANEL (mobile only) ---
@@ -700,6 +764,11 @@ function injectSmartSearchUI() {
 // separate from the main search bar as requested, rather than the main bar
 // silently triggering it on its own.
 function openSmartSearchPanel(prefillQuery) {
+    // NEW (guest mode): Smart Search needs an account.
+    if (isGuest) {
+        promptLogin('Log in to use Smart Search.');
+        return;
+    }
     const panel = document.getElementById('smartSearchPanel');
     const input = document.getElementById('smartInput');
     if (!panel || !input) return;
@@ -752,9 +821,10 @@ function focusMainSearchBar() {
 }
 
 // --- UPDATED: SMART SEARCH LOGIC (API Connected) ---
-// Only tenants get Smart Search (same as before - landlords never had the widget).
+// Tenants get Smart Search. UPDATED (guest mode): guests also see the button,
+// but using it asks them to log in (see openSmartSearchPanel / runSmartSearch).
 function isSmartSearchAvailable() {
-    return !!currentUser && currentUser.role === 'tenant';
+    return isGuest || currentUser.role === 'tenant';
 }
 
 // When set, the main search bar's text is a Smart Search sentence rather than
@@ -783,6 +853,12 @@ function handleMainSearchSubmit() {
 async function runSmartSearch(rawQuery, { showLoadingOverlay = true } = {}) {
     rawQuery = (rawQuery || '').trim();
     if (!rawQuery) return false;
+
+    // NEW (guest mode)
+    if (isGuest) {
+        promptLogin('Log in to use Smart Search.');
+        return false;
+    }
 
     closeSearchSuggestions();
     if (showLoadingOverlay) {
@@ -1222,7 +1298,8 @@ async function renderListings(items) {
     updateResultsHeaderCount(hasMorePages ? totalListingsCount : items.length);
     showResultsHeader();
 
-    let savedListings = JSON.parse(localStorage.getItem('bookmarks')) || [];
+    // UPDATED (guest mode): guests have no saved listings.
+    let savedListings = isGuest ? [] : (JSON.parse(localStorage.getItem('bookmarks')) || []);
     
     if (currentUser && currentUser.id) {
         try {
@@ -1266,14 +1343,15 @@ async function renderListings(items) {
         
         card.onclick = () => showFullDetails(item);
 
-        // UI SECURITY: Hide save button for landlords
-        const saveButtonHTML = currentUser.role === 'tenant' ? `
+        // UI SECURITY: Hide save button for landlords.
+        // UPDATED (guest mode): guests see the heart too; clicking it asks them to log in.
+        const saveButtonHTML = (isGuest || currentUser.role === 'tenant') ? `
             <div class="save-btn ${isSaved ? 'active' : ''}" onclick="toggleBookmark(event, ${item.id})">
                 <i class="fas fa-heart"></i>
             </div>
         ` : "";
 
-        const isOwnerCard = currentUser.role === 'landlord' && item.user_id && String(currentUser.id) === String(item.user_id);
+        const isOwnerCard = !isGuest && currentUser.role === 'landlord' && item.user_id && String(currentUser.id) === String(item.user_id);
         const quickEditHTML = isOwnerCard ? `
             <div class="quick-edit-btn" title="Quick edit">
                 <i class="fas fa-pen"></i>
@@ -1356,7 +1434,7 @@ function openReviewsFor(item) {
         const anchor = document.getElementById('reviewsSectionAnchor');
         if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
         const commentBox = document.getElementById('commentText');
-        if (commentBox) commentBox.focus();
+        if (commentBox && !isGuest) commentBox.focus();
     }, 120);
 }
 
@@ -1387,7 +1465,10 @@ function showFullDetails(item) {
     // Info box - same approved-status check as the card badge above.
     const detLandlordVerifiedEl = document.getElementById('detLandlordVerified');
     if (detLandlordVerifiedEl) detLandlordVerifiedEl.innerHTML = buildVerifiedBadgeHTML(item.landlord_status);
-    document.getElementById('detContact').innerText = item.landlord_contact || "No contact provided";
+    // UPDATED (guest mode): the server doesn't send contact details to guests.
+    document.getElementById('detContact').innerText = isGuest
+        ? "Log in to view contact details"
+        : (item.landlord_contact || "No contact provided");
     document.getElementById('detType').innerText = item.category || "Apartment";
 
     const carouselWrapperEl = document.getElementById('carouselWrapper');
@@ -1400,7 +1481,31 @@ function showFullDetails(item) {
 
     const ratingArea = document.getElementById('ratingInputArea');
     if (ratingArea) {
-        ratingArea.style.display = isOwner ? 'none' : 'block';
+        ratingArea.style.display = (isOwner || isGuest) ? 'none' : 'block';
+    }
+
+    // NEW (guest mode): guests can READ reviews but not write them. The
+    // comment form is swapped for a "Log in" prompt.
+    const reviewForm = document.querySelector('#reviewsSectionAnchor .comment-form');
+    let guestReviewPrompt = document.getElementById('guestReviewPrompt');
+    if (isGuest && reviewForm) {
+        reviewForm.style.display = 'none';
+        if (!guestReviewPrompt) {
+            guestReviewPrompt = document.createElement('div');
+            guestReviewPrompt.id = 'guestReviewPrompt';
+            guestReviewPrompt.style.cssText = 'background:#f4f8fd; border:1px solid #e3f2fd; border-radius:12px; padding:14px; text-align:center; font-size:13px; color:#475569;';
+            guestReviewPrompt.innerHTML = `
+                <i class="fas fa-lock" style="color:#0d47a1;"></i>
+                Log in to rate this stay or leave a comment.
+                <button type="button" id="guestReviewLoginBtn" style="display:block; width:100%; margin-top:10px; padding:11px; border:none; border-radius:10px; background:#0d47a1; color:#fff; font-weight:700; cursor:pointer;">Log in</button>
+            `;
+            reviewForm.insertAdjacentElement('beforebegin', guestReviewPrompt);
+            document.getElementById('guestReviewLoginBtn').onclick = () => promptLogin('Log in to rate this stay or leave a comment.');
+        }
+        guestReviewPrompt.style.display = 'block';
+    } else {
+        if (reviewForm) reviewForm.style.display = '';
+        if (guestReviewPrompt) guestReviewPrompt.style.display = 'none';
     }
 
     selectedRating = 0;
@@ -1423,16 +1528,22 @@ function showFullDetails(item) {
     // landlord). Built as a real <button> wired with .onclick rather than
     // an inline onclick with the listing's data serialized into the
     // attribute, so nothing here has to round-trip through HTML.
+    // UPDATED (guest mode): guests see the button too, but it asks them to log in.
     const messageLandlordContainer = document.getElementById('messageLandlordContainer');
     if (messageLandlordContainer) {
         if (!isOwner && item.user_id) {
             messageLandlordContainer.innerHTML = `
                 <button type="button" id="messageLandlordBtn" class="message-landlord-btn">
-                    <i class="fas fa-comment-dots"></i> Message Landlord
+                    <i class="fas fa-comment-dots"></i> ${isGuest ? 'Log in to message landlord' : 'Message Landlord'}
                 </button>
             `;
-            document.getElementById('messageLandlordBtn').onclick = () =>
+            document.getElementById('messageLandlordBtn').onclick = () => {
+                if (isGuest) {
+                    promptLogin('Log in to message this landlord and see their contact details.');
+                    return;
+                }
                 startConversationWithLandlord(item.id, item.user_id, item.title, item.landlord_name || 'Landlord');
+            };
         } else {
             messageLandlordContainer.innerHTML = "";
         }
@@ -1760,6 +1871,12 @@ function cancelReply() {
 }
 
 async function submitComment(listingId, isOwner) {
+    // NEW (guest mode)
+    if (isGuest) {
+        promptLogin('Log in to rate this stay or leave a comment.');
+        return;
+    }
+
     const commentText = document.getElementById('commentText').value.trim();
     const isReplying = isOwner && replyContext !== null;
 
@@ -1867,6 +1984,8 @@ function moveCarousel(event, id, direction) {
 }
 
 // --- 9. LOGOUT LOGIC ---
+// UPDATED (guest mode): after logging out the person lands on the public home
+// page as a guest, instead of being sent to the login page.
 const logoutLink = document.getElementById('logoutLink');
 if (logoutLink) {
     logoutLink.onclick = (e) => {
@@ -1874,7 +1993,7 @@ if (logoutLink) {
         localStorage.removeItem('user');
         localStorage.removeItem('token');
         localStorage.removeItem('bookmarks');
-        window.location.href = "index.html";
+        window.location.href = "home.html";
     };
 }
 
@@ -2297,11 +2416,16 @@ function setupFooter() {
 
     const footerSettingsLink = document.getElementById('footerSettingsLink');
     if (footerSettingsLink) {
-        footerSettingsLink.onclick = (e) => {
-            e.preventDefault();
-            const settingsBtn = document.getElementById('settingsBtn');
-            if (settingsBtn) settingsBtn.click();
-        };
+        // NEW (guest mode): guests have no Settings.
+        if (isGuest) {
+            footerSettingsLink.style.display = 'none';
+        } else {
+            footerSettingsLink.onclick = (e) => {
+                e.preventDefault();
+                const settingsBtn = document.getElementById('settingsBtn');
+                if (settingsBtn) settingsBtn.click();
+            };
+        }
     }
 }
 
@@ -2622,6 +2746,13 @@ function setupPostListingLogic() {
 // --- 13. UPDATED: PERSISTENT BOOKMARK SYSTEM ---
 async function toggleBookmark(event, listingId) {
     event.stopPropagation();
+
+    // NEW (guest mode): saving needs an account.
+    if (isGuest) {
+        promptLogin('Log in to save listings and find them later.');
+        return;
+    }
+
     let saved = JSON.parse(localStorage.getItem('bookmarks')) || [];
     const iconWrapper = event.currentTarget;
     const isAdding = !saved.includes(listingId);
@@ -2672,6 +2803,12 @@ function setupBookmarkToggles() {
     // filters that by the bookmarked ids, so Saved is always correct
     // regardless of how many pages the Browse view has loaded.
     viewSavedBtn.onclick = async () => {
+        // NEW (guest mode): the Saved menu item is hidden for guests, but guard anyway.
+        if (isGuest) {
+            promptLogin('Log in to see your saved listings.');
+            return;
+        }
+
         clearAvailabilityFilterState();
         clearCategoryFilterState();
         viewSavedBtn.classList.add('nav-active');
@@ -3048,7 +3185,11 @@ async function sendThreadMessage() {
 // NEW: called by the "Message Landlord" button in the details modal. Starts
 // (or resumes) the conversation on the server, then opens straight into it.
 async function startConversationWithLandlord(listingId, landlordId, listingTitle, landlordName) {
-    if (!currentUser) return;
+    // UPDATED (guest mode): a guest is asked to log in instead of silently doing nothing.
+    if (!currentUser) {
+        promptLogin('Log in to message this landlord.');
+        return;
+    }
 
     try {
         const res = await fetch(`${API_BASE}/conversations/start`, {
