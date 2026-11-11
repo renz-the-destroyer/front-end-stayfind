@@ -14,6 +14,21 @@ function clearSessionKeepNotices() {
     Object.keys(keep).forEach(k => localStorage.setItem(k, keep[k]));
 }
 
+// NEW: if the person is already logged in, they don't need this page.
+// A stale/expired token is handled later: auth-fetch.js clears the session on
+// a 401 and sends them back here, and by then there is no user/token left,
+// so this check cannot loop.
+(function skipLoginIfLoggedIn() {
+    try {
+        const user = JSON.parse(localStorage.getItem('user'));
+        const token = localStorage.getItem('token');
+        if (user && user.email && token) {
+            const isPending = user.role && user.role.toLowerCase() === 'pending';
+            window.location.replace(isPending ? "dashboard.html" : "home.html");
+        }
+    } catch (e) { /* corrupted storage: just show the login page */ }
+})();
+
 let generatedOtp = null;
 let signUpData = {}; 
 
@@ -23,6 +38,14 @@ document.getElementById('signUp').addEventListener('click', () => container.clas
 document.getElementById('signIn').addEventListener('click', () => container.classList.remove("right-panel-active"));
 document.getElementById('mobileSignUp').addEventListener('click', (e) => { e.preventDefault(); container.classList.add("right-panel-active"); });
 document.getElementById('mobileSignIn').addEventListener('click', (e) => { e.preventDefault(); container.classList.remove("right-panel-active"); });
+
+// NEW: open the right tab from the link that brought the person here
+// (index.html?auth=signup opens Create Account, anything else opens Sign In).
+(function openTabFromUrl() {
+    const mode = new URLSearchParams(window.location.search).get('auth');
+    if (mode === 'signup') container.classList.add("right-panel-active");
+    else container.classList.remove("right-panel-active");
+})();
 
 // --- Password Visibility Toggle ---
 document.querySelectorAll('.toggle-password').forEach(icon => {
