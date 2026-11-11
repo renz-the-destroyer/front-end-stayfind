@@ -210,6 +210,22 @@
         .switch-line a { color: var(--primary); font-weight: 700; text-decoration: none; }
         .switch-line a:hover { text-decoration: underline; }
 
+        /* NEW (Module 3): small admin entry at the very bottom of the form column,
+           visible on both the Sign In and Create Account tabs. */
+        .staff-link {
+            margin: 34px 0 0;
+            padding-top: 18px;
+            border-top: 1px dashed var(--line);
+            text-align: center;
+            font-size: 12px;
+        }
+        .staff-link a {
+            display: inline-flex; align-items: center; gap: 7px;
+            color: var(--muted); font-weight: 700; text-decoration: none;
+            transition: color 0.15s ease;
+        }
+        .staff-link a:hover { color: var(--primary); }
+
         .spinner {
             display: inline-block; width: 13px; height: 13px;
             border: 2px solid rgba(255,255,255,.35); border-radius: 50%;
@@ -454,6 +470,9 @@
                         <p class="switch-line">Already have an account? <a href="#" id="mobileSignIn">Sign in</a></p>
                     </form>
                 </div>
+
+                <!-- NEW (Module 3): admin entry, moved here from the home page drawer and footer -->
+                <p class="staff-link"><a href="admin.html"><i class="fas fa-user-shield"></i> Staff? Admin sign-in</a></p>
             </div>
         </div>
 
