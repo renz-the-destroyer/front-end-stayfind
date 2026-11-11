@@ -114,6 +114,39 @@
     .main h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.8rem; margin: 0 0 6px; color: var(--ink); letter-spacing: -0.01em; }
     .main .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
 
+    /* ===================== NEW (Module 4): TOP BAR =====================
+       Sticks to the top of the page and always shows who is signed in.
+       The negative margins pull it flush to the edges of .main's padding. */
+    .topbar {
+        position: sticky; top: 0; z-index: 90;
+        display: flex; align-items: center; justify-content: space-between; gap: 16px;
+        margin: -40px -44px 30px; padding: 12px 44px;
+        background: rgba(255,255,255,.94); backdrop-filter: blur(8px);
+        border-bottom: 1px solid var(--line);
+    }
+    .topbar-title { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 800; color: var(--muted); letter-spacing: .02em; }
+    .topbar-title i { color: var(--primary); }
+    .topbar-user { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .topbar-avatar {
+        width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+        background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+        color: #fff; font-weight: 800; font-size: 15px;
+        display: inline-flex; align-items: center; justify-content: center;
+        box-shadow: 0 8px 16px -8px rgba(13,71,161,.6);
+    }
+    .topbar-user-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+    .topbar-user-text .signed-in-label { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+    .topbar-user-text strong { font-size: 13.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
+    .topbar-user-text small { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
+    .topbar-logout {
+        display: inline-flex; align-items: center; gap: 8px; margin-left: 6px;
+        padding: 9px 14px; border-radius: var(--radius-sm); cursor: pointer;
+        border: 1.5px solid #f6c9cb; background: #fdf1f1; color: var(--danger-deep);
+        font-size: 12px; font-weight: 800;
+        transition: background .15s ease, color .15s ease, border-color .15s ease;
+    }
+    .topbar-logout:hover { background: var(--danger); border-color: var(--danger); color: #fff; }
+
     /* ===================== STAT CARDS ===================== */
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 18px; margin-bottom: 8px; }
     .stat-card { background: #fff; border-radius: var(--radius-md); padding: 20px; box-shadow: 0 10px 26px -14px rgba(13,71,161,.18); border: 1px solid var(--line); }
@@ -236,6 +269,14 @@
         .toolbar { flex-direction: column; align-items: stretch; }
         .btn-primary-small { justify-content: center; }
         .modal-box { padding: 24px 20px; }
+
+        /* NEW (Module 4): top bar on tablets / phones */
+        .topbar { margin: -26px -16px 22px; padding: 10px 16px; }
+        .topbar-title { display: none; }
+        .topbar-user { flex: 1; }
+        .topbar-user-text { flex: 1; }
+        .topbar-user-text strong, .topbar-user-text small { max-width: none; }
+        .topbar-logout { margin-left: auto; }
     }
 
     /* ===================== MOBILE: TABLES BECOME CARDS =====================
@@ -312,6 +353,12 @@
         .modal-box { padding: 20px 16px; }
         .modal-box h3 { font-size: 1.1rem; }
         .login-card { padding: 34px 26px 30px; }
+
+        /* NEW (Module 4): on very small phones the logout button is icon-only */
+        .topbar { margin: -20px -12px 18px; padding: 9px 12px; }
+        .topbar-user-text small { display: none; }
+        .topbar-logout span { display: none; }
+        .topbar-logout { padding: 9px 12px; }
     }
 
     @media (hover: none) and (pointer: coarse) {
@@ -370,6 +417,21 @@
         </div>
 
         <div class="main">
+            <!-- NEW (Module 4): top bar showing who is signed in.
+                 Filled in by admin-extras.js (renderAdminIdentity). -->
+            <header class="topbar" id="adminTopbar">
+                <div class="topbar-title"><i class="fas fa-shield-halved"></i> StayFind Admin Panel</div>
+                <div class="topbar-user">
+                    <span class="topbar-avatar" id="topbarAvatar">?</span>
+                    <div class="topbar-user-text">
+                        <span class="signed-in-label">Signed in as</span>
+                        <strong id="topbarName">Loading…</strong>
+                        <small id="topbarEmail"></small>
+                    </div>
+                    <button type="button" class="topbar-logout" id="topbarLogoutBtn" aria-label="Log out"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></button>
+                </div>
+            </header>
+
             <!-- OVERVIEW -->
             <div class="panel active" id="panel-overview">
                 <h1>Overview</h1>
