@@ -1,8 +1,22 @@
 // REPLACE THIS with your Render URL
 const API_BASE = "https://stayfind-app-system.onrender.com/api";
 
+// NEW: where "go to the login page" points (see login.js: ?auth=signin)
+const LOGIN_URL = "index.html?auth=signin";
+
 let userRole = null;
 let currentUser = JSON.parse(localStorage.getItem('user'));
+
+// Clears the session but keeps the landlord notification memory
+function clearSessionKeepNotices() {
+    const keep = {};
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('landlordSeen_')) keep[k] = localStorage.getItem(k);
+    }
+    localStorage.clear();
+    Object.keys(keep).forEach(k => localStorage.setItem(k, keep[k]));
+}
 
 // --- 0. IMMEDIATE HIDE FUNCTION ---
 function hideLoader() {
@@ -47,7 +61,7 @@ window.onload = () => {
     // FIXED: Ensure we have a user object before trying to read properties
     if (!currentUser || !currentUser.email) {
         console.error("No valid user session found. Redirecting...");
-        window.location.href = "index.html";
+        window.location.href = LOGIN_URL;
         return;
     }
 
@@ -239,17 +253,8 @@ const logoutBtn = document.getElementById('logoutBtn');
 if (logoutBtn) {
     logoutBtn.onclick = (e) => {
         e.preventDefault();
-       // replace:  localStorage.clear();
-// with:
-(function () {
-    const keep = {};
-    for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith('landlordSeen_')) keep[k] = localStorage.getItem(k);
-    }
-    localStorage.clear();
-    Object.keys(keep).forEach(k => localStorage.setItem(k, keep[k]));
-})();// Use clear to ensure all old session data is gone
-        window.location.href = "index.html";
+        // Clear the whole session but keep the landlord notification memory
+        clearSessionKeepNotices();
+        window.location.href = LOGIN_URL;
     };
 }
