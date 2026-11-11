@@ -95,22 +95,96 @@
         .menu-toggle:hover { background: #eef4fd; transform: scale(1.06); }
         .menu-toggle:active { transform: scale(0.94); }
 
+        /* UPDATED (Module 3): the logo moved from the top-right to the top-left,
+           next to the menu button, so the top-right is free for Log in / Sign up. */
         .floating-logo {
             position: fixed;
             top: 20px;
-            right: 20px;
+            left: 80px;
             z-index: 1100;
+            display: flex;
+            align-items: center;
+            height: 48px;
             font-weight: 800;
             font-size: 1.1rem;
             letter-spacing: -0.5px;
             color: var(--primary);
             text-decoration: none;
             background: #ffffff;
-            padding: 11px 18px;
+            padding: 0 18px;
             border-radius: 24px;
             box-shadow: 0 8px 22px rgba(0,0,0,0.15);
         }
         .floating-logo span { color: var(--accent); }
+
+        /* ============ NEW (Module 3): TOP-RIGHT ACCOUNT AREA ============
+           Logged out: [Log in] [Sign up]. Logged in: avatar chip + dropdown.
+           The markup is filled in by the small script at the bottom of this page. */
+        .top-actions {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1200;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            height: 48px;
+            padding: 5px;
+            background: #ffffff;
+            border-radius: 999px;
+            box-shadow: 0 8px 22px rgba(0,0,0,0.18);
+        }
+        .top-link, .top-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            height: 38px; padding: 0 18px; border-radius: 999px;
+            font-size: 13.5px; font-weight: 700; text-decoration: none; white-space: nowrap;
+            transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+        }
+        .top-link { color: var(--primary); }
+        .top-link:hover { background: #eef4fd; }
+        .top-btn {
+            color: #fff;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            box-shadow: 0 6px 16px rgba(13,71,161,0.35);
+        }
+        .top-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(13,71,161,0.45); }
+
+        .user-chip {
+            display: flex; align-items: center; gap: 8px; height: 38px;
+            border: none; background: transparent; cursor: pointer;
+            padding: 0 12px 0 0; border-radius: 999px;
+            color: var(--ink); font-size: 13px; font-weight: 700;
+            transition: background 0.15s;
+        }
+        .user-chip:hover { background: #eef4fd; }
+        .user-chip-avatar {
+            width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: #fff; font-weight: 800; font-size: 15px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .user-chip-name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .user-chip i { font-size: 10px; color: var(--muted); }
+
+        .user-menu {
+            display: none; position: absolute; top: calc(100% + 10px); right: 0;
+            width: 230px; background: #fff; border-radius: 16px; overflow: hidden;
+            border: 1px solid var(--border); box-shadow: var(--shadow-lg);
+            animation: floatIn 0.15s ease;
+        }
+        .user-menu.open { display: block; }
+        .user-menu-head { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+        .user-menu-name { font-weight: 800; font-size: 14px; color: var(--ink); overflow-wrap: anywhere; }
+        .user-menu-role { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+        .user-menu-item {
+            display: flex; align-items: center; gap: 12px; width: 100%;
+            padding: 12px 16px; border: none; background: #fff; cursor: pointer;
+            font-size: 13.5px; font-weight: 600; color: #37474f; text-align: left;
+            transition: background 0.15s;
+        }
+        .user-menu-item i { width: 16px; text-align: center; color: var(--muted); }
+        .user-menu-item:hover { background: #f1f6fc; }
+        .user-menu-item.danger, .user-menu-item.danger i { color: var(--danger); }
 
         /* ============ SIDE DRAWER ============ */
         .drawer-overlay {
@@ -536,11 +610,13 @@
         .sort-control select:focus { border-color: var(--accent); }
 
         /* NEW: compact sticky search bar - hidden until the person scrolls
-           past the real search bar (see setupStickySearchBar() in home.js) */
+           past the real search bar (see setupStickySearchBar() in home.js).
+           UPDATED (Module 3): side padding clears the logo on the left and
+           the Log in / Sign up (or avatar) area on the right. */
         .sticky-search-bar {
             position: fixed; top: 0; left: 0; right: 0; z-index: 1050;
             background: #fff; box-shadow: 0 4px 18px rgba(0,0,0,0.1);
-            padding: 14px 78px;
+            padding: 14px 250px 14px 210px;
             transform: translateY(-100%);
             transition: transform 0.25s ease;
         }
@@ -892,6 +968,16 @@
             .hero { padding: 92px 6% 58px; }
             .menu-toggle { top: 16px; left: 16px; width: 44px; height: 44px; font-size: 16px; }
             .floating-logo { display: none; }
+
+            /* NEW (Module 3): compact top-right account area on phones */
+            .top-actions { top: 16px; right: 16px; height: 44px; padding: 4px; }
+            .top-link, .top-btn { height: 36px; padding: 0 12px; font-size: 13px; }
+            .user-chip { height: 36px; padding: 0; }
+            .user-chip-avatar { width: 36px; height: 36px; }
+            .user-chip-name, .user-chip .fa-chevron-down { display: none; }
+            body.is-guest .sticky-search-bar { padding: 12px 160px 12px 64px; }
+            body:not(.is-guest) .sticky-search-bar { padding: 12px 70px 12px 64px; }
+
             .filter-container { margin: -30px auto 24px; padding: 20px 18px 18px; width: 90%; }
             .filters-toggle-btn { display: flex; }
             #advancedFiltersBody { display: none; margin-top: 0; }
@@ -904,7 +990,6 @@
             .search-box-wrapper { flex-direction: row; }
             .search-btn { padding: 10px 16px; font-size: 14px; }
             .category-pill { padding: 7px 14px; font-size: 12px; }
-            .sticky-search-bar { padding: 12px 60px; }
             .results-header { padding: 0 5% 14px; font-size: 13px; }
             .site-footer { padding: 36px 6% 110px; }
             .availability-pill { padding: 7px 14px; font-size: 12px; }
@@ -924,6 +1009,10 @@
         <i class="fas fa-bars"></i>
     </button>
     <a href="home.html" class="floating-logo">Stay<span>Find</span></a>
+
+    <!-- NEW (Module 3): Log in / Sign up (guests) or the avatar chip (logged in).
+         Filled in by the small script at the bottom of this page. -->
+    <div class="top-actions" id="topActions"></div>
 
     <div class="drawer-overlay" id="sideDrawerOverlay"></div>
     <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
@@ -945,9 +1034,10 @@
             <a id="messagesBtn" class="drawer-link"><i class="fas fa-envelope"></i> Messages <span id="messagesUnreadBadge" class="drawer-msg-badge" style="display:none;">0</span></a>
             <a href="#" class="drawer-link post-drawer-link" id="postBtn" style="display:none;"><i class="fas fa-plus"></i> Post a Listing</a>
 
-            <div class="drawer-section-label">Account</div>
+            <div class="drawer-section-label" id="drawerAccountLabel">Account</div>
             <a id="settingsBtn" class="drawer-link"><i class="fas fa-cog"></i> Settings</a>
-            <a href="admin.html" class="drawer-link"><i class="fas fa-user-shield"></i> Admin Panel</a>
+            <!-- REMOVED (Module 3): the "Admin Panel" link. It now lives at the
+                 bottom of the login page (index.html). -->
         </nav>
 
         <div class="drawer-footer">
@@ -1251,7 +1341,7 @@
             <div class="footer-links">
                 <a id="footerBrowseLink" href="home.html">Browse</a>
                 <a id="footerSettingsLink" href="#">Settings</a>
-                <a href="admin.html">Admin Panel</a>
+                <!-- REMOVED (Module 3): the "Admin Panel" link (now on the login page). -->
             </div>
             <p class="footer-copy">© <span id="footerYear"></span> StayFind. Made with hart in the Candelaria.</p>
         </div>
@@ -1268,5 +1358,81 @@
     <script src="home.js"></script>
     <script src="messages-ui.js"></script>
     <script src="status-notice.js"></script>
+
+    <!-- NEW (Module 3): top-right account area.
+         Must stay AFTER home.js: it reads isGuest, currentUser and escapeHtml from it. -->
+    <script>
+    (function setupTopActions() {
+        const box = document.getElementById('topActions');
+        if (!box || typeof isGuest === 'undefined') return;
+
+        if (isGuest) {
+            document.body.classList.add('is-guest');
+
+            box.innerHTML =
+                '<a class="top-link" href="index.html?auth=signin">Log in</a>' +
+                '<a class="top-btn" href="index.html?auth=signup">Sign up</a>';
+
+            // Guests have the buttons above, so the drawer's own guest block
+            // and the "Account" heading are not needed.
+            const drawerUser = document.getElementById('drawerUserInfo');
+            if (drawerUser) drawerUser.style.display = 'none';
+            const accountLabel = document.getElementById('drawerAccountLabel');
+            if (accountLabel) accountLabel.style.display = 'none';
+            return;
+        }
+
+        const fullName = (currentUser.full_name || currentUser.name || 'User').trim();
+        const firstName = fullName.split(' ')[0];
+        const initial = fullName.charAt(0).toUpperCase() || 'U';
+        const roleLabel = currentUser.role === 'landlord' ? 'Landlord' : 'Tenant';
+
+        box.innerHTML =
+            '<button type="button" class="user-chip" id="userChipBtn" aria-haspopup="true" aria-expanded="false">' +
+                '<span class="user-chip-avatar">' + escapeHtml(initial) + '</span>' +
+                '<span class="user-chip-name">' + escapeHtml(firstName) + '</span>' +
+                '<i class="fas fa-chevron-down"></i>' +
+            '</button>' +
+            '<div class="user-menu" id="userMenu">' +
+                '<div class="user-menu-head">' +
+                    '<div class="user-menu-name">' + escapeHtml(fullName) + '</div>' +
+                    '<div class="user-menu-role">' + roleLabel + '</div>' +
+                '</div>' +
+                '<button type="button" class="user-menu-item" id="userMenuSettings"><i class="fas fa-cog"></i> Settings</button>' +
+                '<button type="button" class="user-menu-item danger" id="userMenuLogout"><i class="fas fa-sign-out-alt"></i> Log out</button>' +
+            '</div>';
+
+        const chip = document.getElementById('userChipBtn');
+        const menu = document.getElementById('userMenu');
+
+        function setMenu(open) {
+            menu.classList.toggle('open', open);
+            chip.setAttribute('aria-expanded', String(open));
+        }
+
+        chip.addEventListener('click', (e) => {
+            e.stopPropagation();
+            setMenu(!menu.classList.contains('open'));
+        });
+        document.addEventListener('click', (e) => {
+            if (!box.contains(e.target)) setMenu(false);
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') setMenu(false);
+        });
+
+        // Reuse the existing Settings and Logout handlers that home.js already wires up.
+        document.getElementById('userMenuSettings').addEventListener('click', () => {
+            setMenu(false);
+            const settingsBtn = document.getElementById('settingsBtn');
+            if (settingsBtn) settingsBtn.click();
+        });
+        document.getElementById('userMenuLogout').addEventListener('click', () => {
+            setMenu(false);
+            const logoutLink = document.getElementById('logoutLink');
+            if (logoutLink) logoutLink.click();
+        });
+    })();
+    </script>
 </body>
 </html>
