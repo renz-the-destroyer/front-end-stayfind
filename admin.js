@@ -1,15 +1,50 @@
 // REPLACE THIS with your Render URL (same as home.js / login.js)
 const API_BASE = "https://stayfind-app-system.onrender.com/api/admin";
 
-let adminKey = localStorage.getItem('adminKey');
-// NEW: identity of the currently logged-in admin (id/full_name/email),
-// stored after login so we can show "Signed in as..." and prevent an admin
-// from deleting their own account in the Settings panel.
-let currentAdmin = JSON.parse(localStorage.getItem('adminInfo') || 'null');
+// UPDATED (Module 5): the admin session lives in sessionStorage, so closing the
+// tab or browser signs the admin out. (It used to be localStorage, which kept
+// the token on the computer until it expired.)
+let adminKey = sessionStorage.getItem('adminKey');
+let currentAdmin = null;
+try { currentAdmin = JSON.parse(sessionStorage.getItem('adminInfo') || 'null'); } catch (e) { currentAdmin = null; }
 let editingUserId = null;
 let editingListingId = null;
 // NEW: tracks which admin account is being edited in the Add/Edit Admin modal
 let editingAdminId = null;
+
+// NEW (Module 5): true once a sign-out has started, so several requests that fail
+// at the same moment only produce ONE "session expired" popup. Reset on login.
+let sessionEnding = false;
+
+// NEW (Module 5): older versions kept the token in localStorage. Delete any
+// leftover copy so it can't stay on the computer.
+function purgeLegacyAdminStorage() {
+    localStorage.removeItem('adminKey');
+    localStorage.removeItem('adminInfo');
+}
+purgeLegacyAdminStorage();
+
+// --- NEW (Module 5): read the expiry time out of the token ---
+// This is only used to show a friendly message at the right moment. The SERVER
+// is what actually enforces the expiry; this never grants access to anything.
+function decodeJwtPayload(token) {
+    try {
+        const part = String(token).split('.')[1] || '';
+        const b64 = part.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), '=');
+        return JSON.parse(atob(padded));
+    } catch (e) {
+        return null;
+    }
+}
+function adminTokenExpiresAt(token) {
+    const payload = decodeJwtPayload(token);
+    return payload && payload.exp ? payload.exp * 1000 : null; // milliseconds
+}
+function isAdminTokenExpired(token) {
+    const exp = adminTokenExpiresAt(token);
+    return exp !== null && Date.now() >= exp;
+}
 
 // --- HELPER: build headers with the admin key attached ---
 function adminHeaders() {
@@ -40,10 +75,16 @@ function nameMatchStatus(registeredName, docName) {
 
 // --- INIT ---
 window.onload = () => {
-    if (adminKey) {
+    // UPDATED (Module 5): a token that already expired is never used.
+    if (adminKey && !isAdminTokenExpired(adminKey)) {
         showDashboard();
     } else {
+        const hadSession = !!adminKey;
+        if (hadSession) adminSignOut();
         showLogin();
+        if (hadSession) {
+            Swal.fire({ title: 'Session expired', text: 'Your session expired. Please sign in again.', icon: 'info' });
+        }
     }
     setupNav();
     setupModalSaveHandlers();
@@ -53,6 +94,8 @@ window.onload = () => {
 function showLogin() {
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('dashboardScreen').style.display = 'none';
+    const pw = document.getElementById('adminPassword');
+    if (pw) pw.value = '';
 }
 
 function showDashboard() {
@@ -71,6 +114,41 @@ function showDashboard() {
     loadListings();
     loadReviews();
     loadAdmins(); // NEW
+}
+
+// --- NEW (Module 5): THE ONE WAY TO SIGN OUT ---
+// Used by the Logout buttons, by expired sessions (401) and by the idle timeout.
+// It forgets the token AND wipes everything sensitive from the page, so nothing
+// (landlord documents, user lists) is left sitting in hidden HTML for the next
+// person who uses this computer.
+function adminSignOut() {
+    sessionEnding = true;
+
+    sessionStorage.removeItem('adminKey');
+    sessionStorage.removeItem('adminInfo');
+    purgeLegacyAdminStorage();
+    adminKey = null;
+    currentAdmin = null;
+
+    // Stop the idle / expiry watcher (defined in admin-extras.js)
+    if (typeof stopSessionWatch === 'function') stopSessionWatch();
+
+    // Close every modal and the image zoom
+    document.querySelectorAll('.modal').forEach(m => { m.style.display = 'none'; });
+    const lightbox = document.getElementById('adminLightbox');
+    if (lightbox) lightbox.style.display = 'none';
+
+    // Empty everything that held data
+    ['statsGrid', 'overviewExtras', 'requestsTableBody', 'usersTableBody', 'listingsTableBody',
+     'reviewsTableBody', 'adminsTableBody', 'activityTableBody', 'docsModalBody'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+    });
+    document.querySelectorAll('.pager').forEach(p => { p.style.display = 'none'; });
+    const identityEl = document.getElementById('adminIdentity');
+    if (identityEl) identityEl.innerText = '';
+
+    showLogin();
 }
 
 // --- LOGIN ---
@@ -96,12 +174,14 @@ document.getElementById('adminLoginBtn').onclick = async () => {
 
         if (response.ok && result.success) {
             adminKey = result.adminKey;
-            localStorage.setItem('adminKey', adminKey);
+            sessionStorage.setItem('adminKey', adminKey);
 
             // NEW: remember which admin just logged in
             currentAdmin = result.admin || null;
-            if (currentAdmin) localStorage.setItem('adminInfo', JSON.stringify(currentAdmin));
+            if (currentAdmin) sessionStorage.setItem('adminInfo', JSON.stringify(currentAdmin));
 
+            sessionEnding = false; // NEW (Module 5): a fresh session has started
+            document.getElementById('adminPassword').value = '';
             showDashboard();
         } else {
             Swal.fire('Login Failed', result.message || 'Invalid credentials', 'error');
@@ -116,11 +196,7 @@ document.getElementById('adminLoginBtn').onclick = async () => {
 
 // --- LOGOUT ---
 document.getElementById('adminLogoutBtn').onclick = () => {
-    localStorage.removeItem('adminKey');
-    localStorage.removeItem('adminInfo'); // NEW
-    adminKey = null;
-    currentAdmin = null;
-    showLogin();
+    adminSignOut();
 };
 
 // --- NAV / TAB SWITCHING ---
@@ -136,15 +212,14 @@ function setupNav() {
 }
 
 // --- HANDLE AUTH ERRORS GLOBALLY ---
+// UPDATED (Module 5): signs out immediately and shows the notice only once, even
+// when the dashboard's several startup requests all come back 401 together.
 function handleAuthError(response) {
     if (response.status === 401) {
-        Swal.fire('Session Expired', 'Please log in again.', 'warning').then(() => {
-            localStorage.removeItem('adminKey');
-            localStorage.removeItem('adminInfo');
-            adminKey = null;
-            currentAdmin = null;
-            showLogin();
-        });
+        if (!sessionEnding) {
+            adminSignOut();
+            Swal.fire({ title: 'Session expired', text: 'Please sign in again.', icon: 'warning' });
+        }
         return true;
     }
     return false;
