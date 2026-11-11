@@ -4,10 +4,17 @@
 // login token. That way home.js, messages-ui.js and dashboard.js keep working
 // without editing each fetch call. If the server says the session is invalid or
 // expired (401), the person is sent back to the login page.
+//
+// NEW (guest mode): home.html is public now. A guest has no token, so a 401
+// there must NOT redirect them. Only someone who actually HAD a token (an
+// expired session), or someone on a login-only page like dashboard.html,
+// is sent to the login page.
 (function () {
     const API_PREFIX = "https://stayfind-app-system.onrender.com/api";
     const LOGIN_URL = "index.html?auth=signin";
     const originalFetch = window.fetch.bind(window);
+
+    const onPublicPage = /(^|\/)home\.html$/.test(window.location.pathname);
 
     // Clears the session but keeps the landlord notification memory
     function clearSessionKeepNotices() {
@@ -31,7 +38,7 @@
         options.headers = headers;
 
         const response = await originalFetch(input, options);
-        if (response.status === 401) {
+        if (response.status === 401 && (token || !onPublicPage)) {
             clearSessionKeepNotices();
             window.location.href = LOGIN_URL;
         }
