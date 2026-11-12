@@ -124,9 +124,14 @@ function describeAction(method, rawPath) {
     return `${method} ${p}`;
 }
 
+// NEW (Module 6): the audit-log endpoint now answers { rows, hasMore }.
+// This also accepts the old plain-array answer, so nothing breaks if the
+// frontend is ever deployed before the backend.
+const auditRows = (data) => Array.isArray(data) ? data : ((data && data.rows) || []);
+
 // ===================== INJECTED CHROME (runs once, on load) =====================
 (function injectChrome() {
-    // --- Activity Log: sidebar link + panel ---
+    // --- Activity Log: sidebar link + panel (UPDATED Module 6: filters + Load more) ---
     const settingsLink = document.querySelector('.sidebar nav a[data-panel="settings"]');
     const settingsPanel = $('panel-settings');
     if (settingsLink && settingsPanel && !$('panel-activity')) {
@@ -136,6 +141,41 @@ function describeAction(method, rawPath) {
             <div class="panel" id="panel-activity">
                 <h1>Activity Log</h1>
                 <div class="subtitle">Every change made in this panel — who did it and when</div>
+
+                <div class="activity-filters">
+                    <div class="filter-field">
+                        <label for="actAdmin">Admin</label>
+                        <select id="actAdmin"><option value="">All admins</option></select>
+                    </div>
+                    <div class="filter-field">
+                        <label for="actAction">Action</label>
+                        <select id="actAction">
+                            <option value="">All actions</option>
+                            <option value="approve">Approved landlord</option>
+                            <option value="reject">Rejected landlord</option>
+                            <option value="user_edit">Edited user</option>
+                            <option value="user_delete">Deleted user</option>
+                            <option value="listing_edit">Edited listing</option>
+                            <option value="listing_delete">Deleted listing</option>
+                            <option value="review_delete">Deleted review</option>
+                            <option value="admin_create">Created admin</option>
+                            <option value="admin_edit">Edited admin</option>
+                            <option value="admin_delete">Deleted admin</option>
+                        </select>
+                    </div>
+                    <div class="filter-field">
+                        <label for="actFrom">From</label>
+                        <input type="date" id="actFrom">
+                    </div>
+                    <div class="filter-field">
+                        <label for="actTo">To</label>
+                        <input type="date" id="actTo">
+                    </div>
+                    <button type="button" class="btn-export" id="actClear"><i class="fas fa-rotate-left"></i> Clear filters</button>
+                </div>
+
+                <div class="activity-count" id="activityCount"></div>
+
                 <div class="table-wrap">
                     <div class="table-scroll">
                         <table>
@@ -144,8 +184,20 @@ function describeAction(method, rawPath) {
                         </table>
                     </div>
                 </div>
+
+                <div class="load-more-row" id="activityMoreRow">
+                    <button type="button" class="btn-export" id="activityMoreBtn"><i class="fas fa-angles-down"></i> Load more</button>
+                </div>
             </div>`);
         document.querySelector('.sidebar nav a[data-panel="activity"]').addEventListener('click', () => loadActivity());
+
+        // Filters reload the log from the first page.
+        $('actAdmin').onchange = (e) => { act.admin = e.target.value; loadActivity(); };
+        $('actAction').onchange = (e) => { act.action = e.target.value; loadActivity(); };
+        $('actFrom').onchange = (e) => { act.from = e.target.value; if (datesAreValid()) loadActivity(); };
+        $('actTo').onchange = (e) => { act.to = e.target.value; if (datesAreValid()) loadActivity(); };
+        $('actClear').onclick = () => { clearActivityFilters(); loadActivity(); };
+        $('activityMoreBtn').onclick = () => fetchActivity(true);
     }
 
     // --- Overview: container for charts under the stat cards ---
@@ -341,11 +393,11 @@ async function loadStats() {
                 <div class="label">${esc(c.label)}</div>
             </div>`).join('');
 
-        const [ov, log] = await Promise.all([
+        const [ov, logData] = await Promise.all([
             adminGet('/overview').catch(() => null),
             adminGet('/audit-log?limit=6').catch(() => null)
         ]);
-        renderOverviewExtras(data, ov, log);
+        renderOverviewExtras(data, ov, logData ? auditRows(logData) : null); // UPDATED (Module 6)
     } catch (err) {
         console.error('Stats error:', err);
     }
@@ -653,10 +705,12 @@ async function loadAdmins() {
             const mine = ex.adminsById.get(Number(currentAdmin.id));
             if (mine && (mine.full_name !== currentAdmin.full_name || mine.email !== currentAdmin.email)) {
                 currentAdmin = { id: mine.id, full_name: mine.full_name, email: mine.email };
-                sessionStorage.setItem('adminInfo', JSON.stringify(currentAdmin)); // UPDATED (Module 5)
+                sessionStorage.setItem('adminInfo', JSON.stringify(currentAdmin));
                 renderAdminIdentity();
             }
         }
+
+        populateActivityAdminFilter(); // NEW (Module 6): keep the Activity Log's admin dropdown current
 
         if (rows.length === 0) {
             tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">No admin accounts found.</div></td></tr>`;
@@ -682,27 +736,141 @@ async function loadAdmins() {
     }
 }
 
-// ===================== 7. ACTIVITY LOG =====================
-async function loadActivity() {
+// ===================== 7. ACTIVITY LOG (Module 6: filters + Load more) =====================
+const ACTIVITY_PAGE = 25;
+
+// Everything the Activity Log panel remembers. `seq` numbers each request so a
+// slow answer for old filters can never overwrite the result of newer ones.
+const act = { admin: '', action: '', from: '', to: '', rows: [], hasMore: false, loading: false, seq: 0 };
+
+function activityFiltersActive() {
+    return !!(act.admin || act.action || act.from || act.to);
+}
+
+// Fills the "Admin" dropdown from the admin accounts list and keeps the selection.
+function populateActivityAdminFilter() {
+    const sel = $('actAdmin');
+    if (!sel) return;
+    const keep = act.admin;
+    const admins = [...ex.adminsById.values()].sort((a, b) => String(a.full_name).localeCompare(String(b.full_name)));
+    sel.innerHTML = '<option value="">All admins</option>' + admins.map(a =>
+        `<option value="${Number(a.id)}">${esc(a.full_name || a.email)}${currentAdmin && String(currentAdmin.id) === String(a.id) ? ' (you)' : ''}</option>`
+    ).join('');
+    sel.value = keep;
+    if (sel.value !== keep) { act.admin = ''; sel.value = ''; } // that admin no longer exists
+}
+
+function clearActivityFilters() {
+    act.admin = ''; act.action = ''; act.from = ''; act.to = '';
+    if ($('actAdmin')) $('actAdmin').value = '';
+    if ($('actAction')) $('actAction').value = '';
+    if ($('actFrom')) $('actFrom').value = '';
+    if ($('actTo')) $('actTo').value = '';
+}
+
+// "From" must not be after "To".
+function datesAreValid() {
+    if (act.from && act.to && act.from > act.to) {
+        AdminToast.fire({ icon: 'warning', title: '"From" must be on or before "To".' });
+        return false;
+    }
+    return true;
+}
+
+function setActivityBusy(busy) {
+    const btn = $('activityMoreBtn');
+    if (!btn) return;
+    btn.disabled = busy;
+    btn.innerHTML = busy
+        ? '<i class="fas fa-spinner fa-spin"></i> Loading…'
+        : '<i class="fas fa-angles-down"></i> Load more';
+}
+
+function renderActivity() {
+    const tbody = $('activityTableBody');
+    const countEl = $('activityCount');
+    const moreRow = $('activityMoreRow');
+    if (!tbody) return;
+
+    if (act.rows.length === 0) {
+        const msg = activityFiltersActive() ? 'No activity matches these filters.' : 'No activity recorded yet.';
+        tbody.innerHTML = `<tr><td colspan="3"><div class="empty-state"><i class="fas fa-clipboard-list" style="font-size:24px;"></i><p>${msg}</p></div></td></tr>`;
+        if (countEl) countEl.innerHTML = '';
+        if (moreRow) moreRow.style.display = 'none';
+        return;
+    }
+
+    tbody.innerHTML = act.rows.map(r => `
+        <tr>
+            <td>${esc(fmtDate(r.created_at))}</td>
+            <td>${esc(r.admin_name || 'Unknown admin')}</td>
+            <td>${esc(describeAction(r.method, r.path))}</td>
+        </tr>`).join('');
+
+    if (countEl) {
+        countEl.innerHTML = `Showing <strong>${act.rows.length}</strong> ${act.rows.length === 1 ? 'entry' : 'entries'}${act.hasMore ? ' — more available' : ''}`;
+    }
+    if (moreRow) moreRow.style.display = act.hasMore ? 'flex' : 'none';
+}
+
+// append = false: start over from the newest entry. append = true: the next older page.
+async function fetchActivity(append) {
     const tbody = $('activityTableBody');
     if (!tbody) return;
-    try {
-        const rows = await adminGet('/audit-log?limit=100');
-        if (!rows) return;
+    if (append && act.loading) return;
 
-        if (rows.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="3"><div class="empty-state"><i class="fas fa-clipboard-list" style="font-size:24px;"></i><p>No activity recorded yet.</p></div></td></tr>`;
-            return;
-        }
-        tbody.innerHTML = rows.map(r => `
-            <tr>
-                <td>${esc(fmtDate(r.created_at))}</td>
-                <td>${esc(r.admin_name || 'Unknown admin')}</td>
-                <td>${esc(describeAction(r.method, r.path))}</td>
-            </tr>`).join('');
-    } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="3"><div class="empty-state">The activity log isn't available yet. Make sure the backend update is deployed.</div></td></tr>`;
+    const mySeq = ++act.seq;
+    act.loading = true;
+    setActivityBusy(true);
+
+    if (!append) {
+        tbody.innerHTML = '<tr><td colspan="3"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading…</p></div></td></tr>';
+        const moreRow = $('activityMoreRow');
+        if (moreRow) moreRow.style.display = 'none';
     }
+
+    const p = new URLSearchParams({ limit: String(ACTIVITY_PAGE) });
+    if (act.admin) p.set('admin_id', act.admin);
+    if (act.action) p.set('action', act.action);
+    if (act.from) p.set('from', act.from);
+    if (act.to) p.set('to', act.to);
+    if (act.from || act.to) p.set('tz', String(new Date().getTimezoneOffset())); // so "Nov 12" means Nov 12 where the admin is
+    if (append && act.rows.length) p.set('before', String(act.rows[act.rows.length - 1].id));
+
+    try {
+        const data = await adminGet('/audit-log?' + p.toString());
+        if (!data || mySeq !== act.seq) return; // signed out, or newer filters already took over
+
+        const rows = auditRows(data);
+        act.rows = append ? act.rows.concat(rows) : rows;
+        act.hasMore = !Array.isArray(data) && !!data.hasMore;
+        renderActivity();
+    } catch (err) {
+        if (mySeq === act.seq && !append) {
+            tbody.innerHTML = `<tr><td colspan="3"><div class="empty-state">The activity log isn't available right now. Make sure the backend update is deployed.</div></td></tr>`;
+        } else if (mySeq === act.seq) {
+            AdminToast.fire({ icon: 'error', title: 'Could not load more entries.' });
+        }
+    } finally {
+        if (mySeq === act.seq) {
+            act.loading = false;
+            setActivityBusy(false);
+        }
+    }
+}
+
+// Opens the log from the first page with the current filters.
+async function loadActivity() {
+    if (!$('activityTableBody')) return;
+    if (ex.adminsById.size === 0) {
+        // The admin list normally loads at startup; fetch it if it hasn't yet.
+        try {
+            const admins = await adminGet('/admins');
+            if (admins) ex.adminsById = new Map(admins.map(a => [Number(a.id), a]));
+        } catch (e) { /* the dropdown just stays at "All admins" */ }
+    }
+    populateActivityAdminFilter();
+    fetchActivity(false);
 }
 
 // ===================== 8. STARTUP + AUTO-REFRESH =====================
@@ -740,7 +908,7 @@ async function refreshAdminIdentity() {
         const data = await adminGet('/me');
         if (!data || !data.admin) return; // null = 401 was already handled
         currentAdmin = { id: data.admin.id, full_name: data.admin.full_name, email: data.admin.email };
-        sessionStorage.setItem('adminInfo', JSON.stringify(currentAdmin)); // UPDATED (Module 5)
+        sessionStorage.setItem('adminInfo', JSON.stringify(currentAdmin));
         renderAdminIdentity();
     } catch (err) {
         // Network hiccup: keep showing the cached name from login.
@@ -748,7 +916,7 @@ async function refreshAdminIdentity() {
     }
 }
 
-// ===================== 10. NEW (Module 5): SESSION WATCH =====================
+// ===================== 10. SESSION WATCH (Module 5) =====================
 // Signs the admin out when they walk away (idle) or when the 2-hour token runs
 // out, and double-checks the session the moment the tab comes back into view.
 //
@@ -789,6 +957,16 @@ function stopSessionWatch() {
     ex.users = []; ex.usersById = new Map();
     ex.listings = []; ex.listingsById = new Map();
     ex.requests = new Map(); ex.adminsById = new Map();
+
+    // NEW (Module 6): and reset the Activity Log (rows + filters + any request still in flight).
+    act.rows = []; act.hasMore = false; act.loading = false; act.seq++;
+    clearActivityFilters();
+    const countEl = $('activityCount');
+    if (countEl) countEl.innerHTML = '';
+    const moreRow = $('activityMoreRow');
+    if (moreRow) moreRow.style.display = 'none';
+    const adminSel = $('actAdmin');
+    if (adminSel) adminSel.innerHTML = '<option value="">All admins</option>';
 }
 
 function endSession(message) {
@@ -874,5 +1052,5 @@ showDashboard = function () {
     refreshAdminIdentity();     // then confirm with the server
     loadActivity();
     startAutoRefresh();
-    startSessionWatch();        // NEW (Module 5)
+    startSessionWatch();
 };
