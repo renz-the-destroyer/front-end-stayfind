@@ -3,10 +3,9 @@
 // Later function declarations replace earlier ones of the same name, so
 // admin.js stays untouched (same trick as messages-ui.js / home.js).
 // Uses admin.js globals: API_BASE, adminKey, currentAdmin, adminHeaders,
-// handleAuthError, nameMatchStatus, closeModal, openEditUser, deleteUser,
-// openEditListing, deleteListing, deleteReview, openEditAdmin,
-// deleteAdminAccount, approveLandlord, rejectLandlord, showDashboard,
-// adminSignOut, adminTokenExpiresAt.
+// handleAuthError, nameMatchStatus, closeModal, openEditUser,
+// openEditAdmin, deleteAdminAccount, deleteReview, approveLandlord,
+// rejectLandlord, showDashboard, adminSignOut, adminTokenExpiresAt.
 
 // ===================== HELPERS =====================
 
@@ -40,6 +39,19 @@ async function adminGet(path) {
     if (handleAuthError(res)) return null;
     if (!res.ok) throw new Error('Request failed (' + res.status + ')');
     return res.json();
+}
+
+// NEW (Module 7): POST helper for hide / unhide / suspend / unsuspend.
+// Returns null if the session ended, otherwise { ok, data }.
+async function adminPost(path, body) {
+    const res = await fetch(`${API_BASE}${path}`, {
+        method: 'POST',
+        headers: adminHeaders(),
+        body: JSON.stringify(body || {})
+    });
+    if (handleAuthError(res)) return null;
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, data };
 }
 
 function fmtDate(v) {
@@ -108,9 +120,15 @@ function renderPager(tbodyId, total, page, onGo) {
 }
 
 // Turns a logged request (method + path) into a readable sentence.
+// (The hide/unhide/suspend/unsuspend lines must come BEFORE the generic
+// /users/:id and /listings/:id matches below them.)
 function describeAction(method, rawPath) {
     const p = String(rawPath || '').replace(/^\/api\/admin/, '');
     let m;
+    if ((m = p.match(/^\/listings\/(\d+)\/unhide/))) return `Unhid listing #${m[1]}`;
+    if ((m = p.match(/^\/listings\/(\d+)\/hide/))) return `Hid listing #${m[1]}`;
+    if ((m = p.match(/^\/users\/(\d+)\/unsuspend/))) return `Unsuspended user #${m[1]}`;
+    if ((m = p.match(/^\/users\/(\d+)\/suspend/))) return `Suspended user #${m[1]}`;
     if ((m = p.match(/^\/landlord-requests\/(\d+)\/approve/))) return `Approved landlord request (user #${m[1]})`;
     if ((m = p.match(/^\/landlord-requests\/(\d+)\/reject/))) return `Rejected landlord request (user #${m[1]})`;
     if ((m = p.match(/^\/users\/(\d+)/))) return method === 'DELETE' ? `Deleted user #${m[1]}` : `Edited user #${m[1]}`;
@@ -124,14 +142,75 @@ function describeAction(method, rawPath) {
     return `${method} ${p}`;
 }
 
-// NEW (Module 6): the audit-log endpoint now answers { rows, hasMore }.
-// This also accepts the old plain-array answer, so nothing breaks if the
-// frontend is ever deployed before the backend.
+// The audit-log endpoint answers { rows, hasMore }. This also accepts the old
+// plain-array answer, so nothing breaks if the frontend is deployed first.
 const auditRows = (data) => Array.isArray(data) ? data : ((data && data.rows) || []);
+
+// ===================== MODERATION DIALOG (Module 7) =====================
+// Asks for a reason (pick a template, or write your own). Returns the reason text,
+// or null if the admin cancelled. Reuses the look of the "Reject request" dialog.
+async function askModerationReason({ title, subjectLine, icon, templates, confirmText, note }) {
+    const options = [...templates, 'Other (write your own reason)'];
+    const OTHER_INDEX = options.length - 1;
+
+    const { value, isConfirmed } = await Swal.fire({
+        title,
+        iconHtml: `<i class="fas ${icon}"></i>`,
+        html: `
+            ${subjectLine ? `<p class="reject-applicant">${subjectLine}</p>` : ''}
+            <span class="reject-label">Reason</span>
+            <div class="reject-options">
+                ${options.map((t, i) => `
+                    <label class="reject-option">
+                        <input type="radio" name="modReason" value="${i}" ${i === 0 ? 'checked' : ''}>
+                        <span>${esc(t)}</span>
+                    </label>`).join('')}
+            </div>
+            <textarea id="modCustomReason" class="reject-textarea" placeholder="Write a custom reason..." maxlength="300"></textarea>
+            <p class="reject-note"><i class="fas fa-circle-info"></i> ${esc(note)}</p>
+        `,
+        showCancelButton: true,
+        confirmButtonText: confirmText,
+        cancelButtonText: 'Cancel',
+        reverseButtons: true,
+        focusConfirm: false,
+        buttonsStyling: false,
+        customClass: {
+            popup: 'reject-popup',
+            icon: 'reject-icon',
+            title: 'reject-title',
+            htmlContainer: 'reject-html',
+            actions: 'reject-actions',
+            confirmButton: 'reject-confirm',
+            cancelButton: 'reject-cancel'
+        },
+        didOpen: (popup) => {
+            const textarea = popup.querySelector('#modCustomReason');
+            popup.querySelectorAll('input[name="modReason"]').forEach(radio => {
+                radio.addEventListener('change', () => {
+                    const isOther = radio.checked && radio.value === String(OTHER_INDEX);
+                    textarea.classList.toggle('show', isOther);
+                    if (isOther) textarea.focus();
+                });
+            });
+        },
+        preConfirm: () => {
+            const checked = document.querySelector('input[name="modReason"]:checked');
+            const textarea = document.getElementById('modCustomReason');
+            if (!checked) { Swal.showValidationMessage('Please pick a reason.'); return false; }
+            const isOther = checked.value === String(OTHER_INDEX);
+            const text = isOther ? textarea.value.trim() : options[Number(checked.value)];
+            if (!text || text.length < 3) { Swal.showValidationMessage('Please write a reason.'); return false; }
+            return text;
+        }
+    });
+
+    return isConfirmed ? value : null;
+}
 
 // ===================== INJECTED CHROME (runs once, on load) =====================
 (function injectChrome() {
-    // --- Activity Log: sidebar link + panel (UPDATED Module 6: filters + Load more) ---
+    // --- Activity Log: sidebar link + panel (filters + Load more) ---
     const settingsLink = document.querySelector('.sidebar nav a[data-panel="settings"]');
     const settingsPanel = $('panel-settings');
     if (settingsLink && settingsPanel && !$('panel-activity')) {
@@ -154,13 +233,17 @@ const auditRows = (data) => Array.isArray(data) ? data : ((data && data.rows) ||
                             <option value="approve">Approved landlord</option>
                             <option value="reject">Rejected landlord</option>
                             <option value="user_edit">Edited user</option>
-                            <option value="user_delete">Deleted user</option>
-                            <option value="listing_edit">Edited listing</option>
-                            <option value="listing_delete">Deleted listing</option>
+                            <option value="user_suspend">Suspended user</option>
+                            <option value="user_unsuspend">Unsuspended user</option>
+                            <option value="listing_hide">Hid listing</option>
+                            <option value="listing_unhide">Unhid listing</option>
                             <option value="review_delete">Deleted review</option>
                             <option value="admin_create">Created admin</option>
                             <option value="admin_edit">Edited admin</option>
                             <option value="admin_delete">Deleted admin</option>
+                            <option value="user_delete">Deleted user (old)</option>
+                            <option value="listing_edit">Edited listing (old)</option>
+                            <option value="listing_delete">Deleted listing (old)</option>
                         </select>
                     </div>
                     <div class="filter-field">
@@ -238,19 +321,22 @@ const auditRows = (data) => Array.isArray(data) ? data : ((data && data.rows) ||
     }
 
     // --- Row buttons use data-* + one click listener per table (no inline JSON) ---
+    // UPDATED (Module 7): users can be edited / suspended / unsuspended (no delete).
     $('usersTableBody').addEventListener('click', (e) => {
         const btn = e.target.closest('[data-act]');
         if (!btn) return;
         const id = Number(btn.dataset.id);
         if (btn.dataset.act === 'edit-user') { const u = ex.usersById.get(id); if (u) openEditUser(u); }
-        if (btn.dataset.act === 'delete-user') deleteUser(id);
+        if (btn.dataset.act === 'suspend-user') suspendUser(id);
+        if (btn.dataset.act === 'unsuspend-user') unsuspendUser(id);
     });
+    // UPDATED (Module 7): listings can be hidden / unhidden (no edit, no delete).
     $('listingsTableBody').addEventListener('click', (e) => {
         const btn = e.target.closest('[data-act]');
         if (!btn) return;
         const id = Number(btn.dataset.id);
-        if (btn.dataset.act === 'edit-listing') { const l = ex.listingsById.get(id); if (l) openEditListing(l); }
-        if (btn.dataset.act === 'delete-listing') deleteListing(id);
+        if (btn.dataset.act === 'hide-listing') hideListing(id);
+        if (btn.dataset.act === 'unhide-listing') unhideListing(id);
     });
     $('requestsTableBody').addEventListener('click', (e) => {
         const btn = e.target.closest('[data-act]');
@@ -397,7 +483,7 @@ async function loadStats() {
             adminGet('/overview').catch(() => null),
             adminGet('/audit-log?limit=6').catch(() => null)
         ]);
-        renderOverviewExtras(data, ov, logData ? auditRows(logData) : null); // UPDATED (Module 6)
+        renderOverviewExtras(data, ov, logData ? auditRows(logData) : null);
     } catch (err) {
         console.error('Stats error:', err);
     }
@@ -569,16 +655,21 @@ function renderUsers() {
     const slice = rows.slice((ex.userPage - 1) * PER_PAGE, ex.userPage * PER_PAGE);
     tbody.innerHTML = slice.map(u => {
         const status = u.landlord_status || 'none';
+        const suspended = Number(u.is_suspended) === 1;
+        const id = Number(u.id);
         return `
         <tr>
-            <td><div class="cell-user"><span class="avatar">${esc(initials(u.full_name || u.email))}</span><span>${esc(u.full_name || '—')}</span></div></td>
+            <td><div class="cell-user"><span class="avatar">${esc(initials(u.full_name || u.email))}</span><span>${esc(u.full_name || '—')}</span>
+                ${suspended ? `<span class="pill rejected" title="${esc(u.suspended_reason || '')}">Suspended</span>` : ''}</div></td>
             <td>${esc(u.email)}</td>
             <td><span class="pill ${esc(u.role)}">${esc(u.role)}</span></td>
             <td><span class="pill ${esc(status)}">${esc(status)}</span></td>
             <td>${esc(u.contact || '—')}</td>
             <td>
-                <button class="btn btn-edit" data-act="edit-user" data-id="${Number(u.id)}" title="Edit"><i class="fas fa-edit"></i></button>
-                <button class="btn btn-delete" data-act="delete-user" data-id="${Number(u.id)}" title="Delete"><i class="fas fa-trash"></i></button>
+                <button class="btn btn-edit" data-act="edit-user" data-id="${id}" title="Edit"><i class="fas fa-edit"></i></button>
+                ${suspended
+                    ? `<button class="btn btn-approve" data-act="unsuspend-user" data-id="${id}" title="Unsuspend"><i class="fas fa-user-check"></i></button>`
+                    : `<button class="btn btn-delete" data-act="suspend-user" data-id="${id}" title="Suspend"><i class="fas fa-user-slash"></i></button>`}
             </td>
         </tr>`;
     }).join('');
@@ -590,8 +681,66 @@ function exportUsersCsv() {
     const rows = filteredUsers();
     if (!rows.length) return Swal.fire('Nothing to export', 'There are no users in the current view.', 'info');
     downloadCsv('stayfind-users.csv',
-        ['Name', 'Email', 'Role', 'Landlord status', 'Contact', 'Address'],
-        rows.map(u => [u.full_name, u.email, u.role, u.landlord_status || 'none', u.contact, u.address]));
+        ['Name', 'Email', 'Role', 'Landlord status', 'Suspended', 'Contact', 'Address'],
+        rows.map(u => [u.full_name, u.email, u.role, u.landlord_status || 'none', Number(u.is_suspended) === 1 ? 'Yes' : 'No', u.contact, u.address]));
+}
+
+// NEW (Module 7): suspend / unsuspend a user (replaces deleting them).
+async function suspendUser(id) {
+    const u = ex.usersById.get(Number(id));
+    const reason = await askModerationReason({
+        title: 'Suspend this user?',
+        subjectLine: u ? `User: <strong>${esc(u.full_name || u.email)}</strong>` : '',
+        icon: 'fa-user-slash',
+        templates: [
+            "Repeated violations of StayFind's rules.",
+            'Suspected fake or fraudulent account.',
+            'Abusive or harassing behavior toward other users.'
+        ],
+        confirmText: 'Suspend',
+        note: "They are signed out right away and can't log in. If they are a landlord, their listings leave the public feed. Nothing is deleted. They will see this reason when they try to log in."
+    });
+    if (!reason) return;
+
+    try {
+        const r = await adminPost(`/users/${Number(id)}/suspend`, { reason });
+        if (!r) return;
+        if (r.ok) {
+            Swal.fire('Suspended', 'The user is suspended. You can unsuspend them at any time.', 'success');
+            fetchUsers();
+            fetchListings();
+        } else {
+            Swal.fire('Error', r.data.message || 'Failed to suspend user.', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Error', 'Server connection failed.', 'error');
+    }
+}
+
+async function unsuspendUser(id) {
+    const u = ex.usersById.get(Number(id));
+    const c = await Swal.fire({
+        title: 'Unsuspend this user?',
+        text: `${u ? (u.full_name || u.email) : 'This user'} will be able to log in again, and any listings that were not hidden separately become visible.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, unsuspend'
+    });
+    if (!c.isConfirmed) return;
+
+    try {
+        const r = await adminPost(`/users/${Number(id)}/unsuspend`, {});
+        if (!r) return;
+        if (r.ok) {
+            Swal.fire('Unsuspended', 'The user can log in again.', 'success');
+            fetchUsers();
+            fetchListings();
+        } else {
+            Swal.fire('Error', r.data.message || 'Failed to unsuspend user.', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Error', 'Server connection failed.', 'error');
+    }
 }
 
 // ===================== 4. LISTINGS =====================
@@ -634,19 +783,25 @@ function renderListingsTable() {
     const slice = rows.slice((ex.listingPage - 1) * PER_PAGE, ex.listingPage * PER_PAGE);
     tbody.innerHTML = slice.map(l => {
         const occupied = (l.status || 'available') === 'occupied';
+        const hidden = Number(l.is_hidden) === 1;
+        const id = Number(l.id);
         const thumb = safeImg(l.thumbnail)
             ? `<img class="thumb" src="${esc(l.thumbnail)}" alt="" loading="lazy">`
             : `<span class="thumb thumb-empty"><i class="fas fa-image"></i></span>`;
         return `
         <tr>
             <td><div class="cell-listing">${thumb}<div><strong>${esc(l.title)}</strong>
-                <span class="pill ${occupied ? 'pending' : 'approved'}">${occupied ? 'Occupied' : 'Available'}</span></div></div></td>
+                <span class="pill ${occupied ? 'pending' : 'approved'}">${occupied ? 'Occupied' : 'Available'}</span>
+                ${hidden ? '<span class="pill rejected">Hidden</span>' : ''}
+                ${hidden && l.hidden_reason ? `<div style="font-size:11.5px; color:#c0392f; margin-top:4px; font-weight:600;">Reason: ${esc(l.hidden_reason)}</div>` : ''}
+                </div></div></td>
             <td>${esc(l.landlord_name || '—')}</td>
             <td>₱${Number(l.price || 0).toLocaleString()}</td>
             <td>${esc(l.location || '—')}</td>
             <td>
-                <button class="btn btn-edit" data-act="edit-listing" data-id="${Number(l.id)}" title="Edit"><i class="fas fa-edit"></i></button>
-                <button class="btn btn-delete" data-act="delete-listing" data-id="${Number(l.id)}" title="Delete"><i class="fas fa-trash"></i></button>
+                ${hidden
+                    ? `<button class="btn btn-approve" data-act="unhide-listing" data-id="${id}" title="Make visible again"><i class="fas fa-eye"></i> Unhide</button>`
+                    : `<button class="btn btn-reject" data-act="hide-listing" data-id="${id}" title="Hide from the public"><i class="fas fa-eye-slash"></i> Hide</button>`}
             </td>
         </tr>`;
     }).join('');
@@ -658,8 +813,66 @@ function exportListingsCsv() {
     const rows = filteredListings();
     if (!rows.length) return Swal.fire('Nothing to export', 'There are no listings in the current view.', 'info');
     downloadCsv('stayfind-listings.csv',
-        ['Title', 'Category', 'Status', 'Price', 'Location', 'Rooms', 'Size (sqm)', 'Landlord', 'Landlord email', 'Posted'],
-        rows.map(l => [l.title, l.category, l.status || 'available', l.price, l.location, l.rooms, l.size, l.landlord_name, l.landlord_email, l.created_at]));
+        ['Title', 'Category', 'Status', 'Visibility', 'Hidden reason', 'Price', 'Location', 'Rooms', 'Size (sqm)', 'Landlord', 'Landlord email', 'Posted'],
+        rows.map(l => [l.title, l.category, l.status || 'available', Number(l.is_hidden) === 1 ? 'Hidden' : 'Visible', l.hidden_reason || '', l.price, l.location, l.rooms, l.size, l.landlord_name, l.landlord_email, l.created_at]));
+}
+
+// NEW (Module 7): hide / unhide a listing (replaces deleting and editing it).
+async function hideListing(id) {
+    const l = ex.listingsById.get(Number(id));
+    const reason = await askModerationReason({
+        title: 'Hide this listing?',
+        subjectLine: l ? `Listing: <strong>${esc(l.title)}</strong>` : '',
+        icon: 'fa-eye-slash',
+        templates: [
+            'The photos or description are misleading or inaccurate.',
+            'The price or details do not match the actual property.',
+            'This looks like a duplicate of another listing.',
+            'The listing contains inappropriate or prohibited content.',
+            'Reported by users and under review.'
+        ],
+        confirmText: 'Hide listing',
+        note: 'It disappears from the public feed and search right away. The landlord can still see it, together with this reason, and you can unhide it any time.'
+    });
+    if (!reason) return;
+
+    try {
+        const r = await adminPost(`/listings/${Number(id)}/hide`, { reason });
+        if (!r) return;
+        if (r.ok) {
+            Swal.fire('Hidden', 'The listing is hidden from the public. The landlord can see your reason.', 'success');
+            fetchListings();
+        } else {
+            Swal.fire('Error', r.data.message || 'Failed to hide listing.', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Error', 'Server connection failed.', 'error');
+    }
+}
+
+async function unhideListing(id) {
+    const l = ex.listingsById.get(Number(id));
+    const c = await Swal.fire({
+        title: 'Show this listing again?',
+        text: `${l ? l.title : 'This listing'} will appear in the public feed again.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, unhide'
+    });
+    if (!c.isConfirmed) return;
+
+    try {
+        const r = await adminPost(`/listings/${Number(id)}/unhide`, {});
+        if (!r) return;
+        if (r.ok) {
+            Swal.fire('Visible', 'The listing is public again.', 'success');
+            fetchListings();
+        } else {
+            Swal.fire('Error', r.data.message || 'Failed to unhide listing.', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Error', 'Server connection failed.', 'error');
+    }
 }
 
 // ===================== 5. REVIEWS =====================
@@ -710,7 +923,7 @@ async function loadAdmins() {
             }
         }
 
-        populateActivityAdminFilter(); // NEW (Module 6): keep the Activity Log's admin dropdown current
+        populateActivityAdminFilter(); // keep the Activity Log's admin dropdown current
 
         if (rows.length === 0) {
             tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">No admin accounts found.</div></td></tr>`;
@@ -736,7 +949,7 @@ async function loadAdmins() {
     }
 }
 
-// ===================== 7. ACTIVITY LOG (Module 6: filters + Load more) =====================
+// ===================== 7. ACTIVITY LOG (filters + Load more) =====================
 const ACTIVITY_PAGE = 25;
 
 // Everything the Activity Log panel remembers. `seq` numbers each request so a
@@ -958,7 +1171,7 @@ function stopSessionWatch() {
     ex.listings = []; ex.listingsById = new Map();
     ex.requests = new Map(); ex.adminsById = new Map();
 
-    // NEW (Module 6): and reset the Activity Log (rows + filters + any request still in flight).
+    // And reset the Activity Log (rows + filters + any request still in flight).
     act.rows = []; act.hasMore = false; act.loading = false; act.seq++;
     clearActivityFilters();
     const countEl = $('activityCount');
