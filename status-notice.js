@@ -257,3 +257,116 @@ setupSettingsLogic = function () {
 
     applyPendingState();
 };
+
+// ===================== NEW (Module 7): LISTINGS HIDDEN BY AN ADMIN =====================
+// The server only sends a hidden listing to the landlord who OWNS it (with
+// is_hidden = 1 and hidden_reason). Nobody else ever receives it. This section:
+//   1. puts a red "Hidden" chip on those cards,
+//   2. shows the admin's reason at the top of the details modal,
+//   3. shows a one-time popup when a listing is newly hidden.
+// It wraps renderListings() and showFullDetails() from home.js instead of editing it.
+
+(function injectHiddenListingStyles() {
+    if (document.getElementById('hiddenListingStyles')) return;
+    const style = document.createElement('style');
+    style.id = 'hiddenListingStyles';
+    style.textContent = `
+        .listing-card.is-hidden-listing .carousel-container { opacity: 0.55; filter: grayscale(0.5); }
+        .hidden-chip {
+            display: inline-flex; align-items: center; gap: 6px;
+            color: #fff; font-size: 10.5px; font-weight: 700;
+            padding: 5px 11px 5px 9px; border-radius: 20px; letter-spacing: 0.2px;
+            background: rgba(198, 40, 40, 0.92);
+        }
+        .hidden-notice {
+            background: #fff5f5; border: 1.5px solid #f6c9cb; border-left: 5px solid #e5484d;
+            border-radius: 14px; padding: 14px 16px; margin: 0 0 16px;
+        }
+        .hidden-notice-title { font-size: 13.5px; font-weight: 800; color: #c62828; margin: 0 0 8px; }
+        .hidden-notice-reason { margin: 0 0 8px; font-size: 14px; font-weight: 600; line-height: 1.5; color: #1a2332; overflow-wrap: anywhere; }
+        .hidden-notice-help { margin: 0; font-size: 12px; line-height: 1.5; color: #5c6b7a; }
+        .hidden-popup-list { list-style: none; margin: 14px 0 0; padding: 0; text-align: left; }
+        .hidden-popup-list li { background: #fff5f5; border: 1px solid #f6c9cb; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; font-size: 13px; }
+        .hidden-popup-list li strong { display: block; color: #1a2332; margin-bottom: 3px; }
+        .hidden-popup-list li span { color: #5c6b7a; overflow-wrap: anywhere; }
+    `;
+    document.head.appendChild(style);
+})();
+
+function isHiddenOwnListing(item) {
+    return !!currentUser && !!item
+        && Number(item.is_hidden) === 1
+        && String(item.user_id) === String(currentUser.id);
+}
+
+// 1. Cards: dim the photo and add the "Hidden" chip next to the category/status chips.
+function decorateHiddenListings(items) {
+    if (!Array.isArray(items)) return;
+    items.forEach(item => {
+        if (!isHiddenOwnListing(item)) return;
+        const card = document.querySelector(`.listing-card[data-id="${item.id}"]`);
+        if (!card) return;
+        card.classList.add('is-hidden-listing');
+        const badges = card.querySelector('.card-badges');
+        if (badges && !badges.querySelector('.hidden-chip')) {
+            badges.insertAdjacentHTML('beforeend', '<span class="hidden-chip"><i class="fas fa-eye-slash"></i> Hidden</span>');
+        }
+    });
+}
+
+// 3. One-time popup. The remembered value uses the "landlordSeen_" prefix so it
+// survives logout (the app keeps every key starting with that prefix).
+let hiddenAnnouncementChecked = false;
+function announceHiddenListings(items) {
+    if (hiddenAnnouncementChecked || !currentUser || currentUser.role !== 'landlord' || !Array.isArray(items)) return;
+    hiddenAnnouncementChecked = true;
+
+    const hidden = items.filter(isHiddenOwnListing);
+    const signature = hidden.map(i => `${i.id}:${i.hidden_at || ''}`).sort().join('|');
+    const key = `landlordSeen_hidden_${currentUser.id}`;
+    if (signature === (localStorage.getItem(key) || '')) return;
+    localStorage.setItem(key, signature);
+    if (hidden.length === 0) return;
+
+    const shown = hidden.slice(0, 5);
+    const more = hidden.length - shown.length;
+    Swal.fire({
+        title: hidden.length === 1 ? 'One of your listings was hidden' : `${hidden.length} of your listings were hidden`,
+        html: `
+            <p style="font-size:13.5px; color:#5c6b7a; margin:0; line-height:1.55;">An admin hid ${hidden.length === 1 ? 'it' : 'them'} from the public. Only you can still see ${hidden.length === 1 ? 'it' : 'them'}.</p>
+            <ul class="hidden-popup-list">
+                ${shown.map(i => `<li><strong>${escapeHtml(i.title || 'Listing')}</strong><span>${escapeHtml(i.hidden_reason || 'No reason given.')}</span></li>`).join('')}
+            </ul>
+            ${more > 0 ? `<p style="font-size:12px; color:#94a3b8; margin:6px 0 0;">…and ${more} more.</p>` : ''}
+        `,
+        icon: 'warning',
+        confirmButtonText: 'Got it'
+    });
+}
+
+const _renderListingsHiddenOriginal = renderListings;
+renderListings = async function (items) {
+    await _renderListingsHiddenOriginal(items);
+    decorateHiddenListings(items);
+    announceHiddenListings(items);
+};
+
+// 2. Details modal: show the admin's reason above the photos.
+const _showFullDetailsHiddenOriginal = showFullDetails;
+showFullDetails = function (item) {
+    _showFullDetailsHiddenOriginal(item);
+
+    const old = document.getElementById('hiddenListingNotice');
+    if (old) old.remove();
+
+    const wrapper = document.getElementById('carouselWrapper');
+    if (wrapper && isHiddenOwnListing(item)) {
+        wrapper.insertAdjacentHTML('beforebegin', `
+            <div class="hidden-notice" id="hiddenListingNotice">
+                <div class="hidden-notice-title"><i class="fas fa-eye-slash"></i> Hidden by a StayFind admin</div>
+                <p class="hidden-notice-reason">${escapeHtml(item.hidden_reason || 'No reason given.')}</p>
+                <p class="hidden-notice-help">Tenants can't see this listing right now. You can still edit it. Fix the issue, then ask an admin to unhide it.</p>
+            </div>
+        `);
+    }
+};
