@@ -41,7 +41,7 @@ async function adminGet(path) {
     return res.json();
 }
 
-// NEW (Module 7): POST helper for hide / unhide / suspend / unsuspend.
+// POST helper for hide / unhide / suspend / unsuspend / dismiss appeal.
 // Returns null if the session ended, otherwise { ok, data }.
 async function adminPost(path, body) {
     const res = await fetch(`${API_BASE}${path}`, {
@@ -120,24 +120,27 @@ function renderPager(tbodyId, total, page, onGo) {
 }
 
 // Turns a logged request (method + path) into a readable sentence.
-// (The hide/unhide/suspend/unsuspend lines must come BEFORE the generic
-// /users/:id and /listings/:id matches below them.)
-function describeAction(method, rawPath) {
+// UPDATED: `label` is the real listing title / user name saved with the log
+// entry; the "#id" is only a fallback. The hide/unhide/suspend/... lines must
+// come BEFORE the generic /users/:id and /listings/:id matches below them.
+function describeAction(method, rawPath, label) {
     const p = String(rawPath || '').replace(/^\/api\/admin/, '');
     let m;
-    if ((m = p.match(/^\/listings\/(\d+)\/unhide/))) return `Unhid listing #${m[1]}`;
-    if ((m = p.match(/^\/listings\/(\d+)\/hide/))) return `Hid listing #${m[1]}`;
-    if ((m = p.match(/^\/users\/(\d+)\/unsuspend/))) return `Unsuspended user #${m[1]}`;
-    if ((m = p.match(/^\/users\/(\d+)\/suspend/))) return `Suspended user #${m[1]}`;
-    if ((m = p.match(/^\/landlord-requests\/(\d+)\/approve/))) return `Approved landlord request (user #${m[1]})`;
-    if ((m = p.match(/^\/landlord-requests\/(\d+)\/reject/))) return `Rejected landlord request (user #${m[1]})`;
-    if ((m = p.match(/^\/users\/(\d+)/))) return method === 'DELETE' ? `Deleted user #${m[1]}` : `Edited user #${m[1]}`;
-    if ((m = p.match(/^\/listings\/(\d+)/))) return method === 'DELETE' ? `Deleted listing #${m[1]}` : `Edited listing #${m[1]}`;
-    if ((m = p.match(/^\/reviews\/(\d+)/))) return `Deleted review #${m[1]}`;
+    const who = (id, word) => label || `${word} #${id}`;
+    if ((m = p.match(/^\/listings\/(\d+)\/dismiss-appeal/))) return `Declined the appeal for listing ${who(m[1], 'listing')}`;
+    if ((m = p.match(/^\/listings\/(\d+)\/unhide/))) return `Unhid listing ${who(m[1], 'listing')}`;
+    if ((m = p.match(/^\/listings\/(\d+)\/hide/))) return `Hid listing ${who(m[1], 'listing')}`;
+    if ((m = p.match(/^\/users\/(\d+)\/unsuspend/))) return `Unsuspended user ${who(m[1], 'user')}`;
+    if ((m = p.match(/^\/users\/(\d+)\/suspend/))) return `Suspended user ${who(m[1], 'user')}`;
+    if ((m = p.match(/^\/landlord-requests\/(\d+)\/approve/))) return `Approved landlord request of ${who(m[1], 'user')}`;
+    if ((m = p.match(/^\/landlord-requests\/(\d+)\/reject/))) return `Rejected landlord request of ${who(m[1], 'user')}`;
+    if ((m = p.match(/^\/users\/(\d+)/))) return method === 'DELETE' ? `Deleted user ${who(m[1], 'user')}` : `Edited user ${who(m[1], 'user')}`;
+    if ((m = p.match(/^\/listings\/(\d+)/))) return method === 'DELETE' ? `Deleted listing ${who(m[1], 'listing')}` : `Edited listing ${who(m[1], 'listing')}`;
+    if ((m = p.match(/^\/reviews\/(\d+)/))) return `Deleted ${label || 'review #' + m[1]}`;
     if (/^\/admins/.test(p)) {
         m = p.match(/^\/admins\/(\d+)/);
-        if (method === 'POST') return 'Created an admin account';
-        return method === 'DELETE' ? `Deleted admin #${m ? m[1] : '?'}` : `Edited admin #${m ? m[1] : '?'}`;
+        if (method === 'POST') return label ? `Created admin account for ${label}` : 'Created an admin account';
+        return method === 'DELETE' ? `Deleted admin ${who(m ? m[1] : '?', 'admin')}` : `Edited admin ${who(m ? m[1] : '?', 'admin')}`;
     }
     return `${method} ${p}`;
 }
@@ -146,7 +149,7 @@ function describeAction(method, rawPath) {
 // plain-array answer, so nothing breaks if the frontend is deployed first.
 const auditRows = (data) => Array.isArray(data) ? data : ((data && data.rows) || []);
 
-// ===================== MODERATION DIALOG (Module 7) =====================
+// ===================== MODERATION DIALOG =====================
 // Asks for a reason (pick a template, or write your own). Returns the reason text,
 // or null if the admin cancelled. Reuses the look of the "Reject request" dialog.
 async function askModerationReason({ title, subjectLine, icon, templates, confirmText, note }) {
@@ -237,6 +240,7 @@ async function askModerationReason({ title, subjectLine, icon, templates, confir
                             <option value="user_unsuspend">Unsuspended user</option>
                             <option value="listing_hide">Hid listing</option>
                             <option value="listing_unhide">Unhid listing</option>
+                            <option value="appeal_dismiss">Declined appeal</option>
                             <option value="review_delete">Deleted review</option>
                             <option value="admin_create">Created admin</option>
                             <option value="admin_edit">Edited admin</option>
@@ -321,7 +325,7 @@ async function askModerationReason({ title, subjectLine, icon, templates, confir
     }
 
     // --- Row buttons use data-* + one click listener per table (no inline JSON) ---
-    // UPDATED (Module 7): users can be edited / suspended / unsuspended (no delete).
+    // Users can be edited / suspended / unsuspended (no delete).
     $('usersTableBody').addEventListener('click', (e) => {
         const btn = e.target.closest('[data-act]');
         if (!btn) return;
@@ -330,13 +334,14 @@ async function askModerationReason({ title, subjectLine, icon, templates, confir
         if (btn.dataset.act === 'suspend-user') suspendUser(id);
         if (btn.dataset.act === 'unsuspend-user') unsuspendUser(id);
     });
-    // UPDATED (Module 7): listings can be hidden / unhidden (no edit, no delete).
+    // Listings can be hidden / unhidden, and appeals declined (no edit, no delete).
     $('listingsTableBody').addEventListener('click', (e) => {
         const btn = e.target.closest('[data-act]');
         if (!btn) return;
         const id = Number(btn.dataset.id);
         if (btn.dataset.act === 'hide-listing') hideListing(id);
         if (btn.dataset.act === 'unhide-listing') unhideListing(id);
+        if (btn.dataset.act === 'dismiss-appeal') dismissAppeal(id);
     });
     $('requestsTableBody').addEventListener('click', (e) => {
         const btn = e.target.closest('[data-act]');
@@ -358,8 +363,8 @@ async function askModerationReason({ title, subjectLine, icon, templates, confir
         if (img) openLightbox(img.src);
     });
 
-    // --- (Module 4) the top bar's Logout button reuses the sidebar's
-    //     existing logout handler from admin.js, so there is only one logout path. ---
+    // The top bar's Logout button reuses the sidebar's existing logout handler
+    // from admin.js, so there is only one logout path.
     const topbarLogout = $('topbarLogoutBtn');
     if (topbarLogout) {
         topbarLogout.addEventListener('click', () => {
@@ -432,7 +437,7 @@ function activityList(log) {
     if (!log || !log.length) return '<p class="muted-note">No admin activity recorded yet.</p>';
     return `<ul class="activity-list">${log.map(r => `
         <li>
-            <span class="act-text">${esc(describeAction(r.method, r.path))}</span>
+            <span class="act-text">${esc(describeAction(r.method, r.path, r.target_label))}</span>
             <span class="act-meta">${esc(r.admin_name || 'Unknown admin')} · ${esc(fmtDate(r.created_at))}</span>
         </li>`).join('')}</ul>`;
 }
@@ -442,10 +447,14 @@ function renderOverviewExtras(stats, ov, log) {
     if (!box) return;
 
     const pending = Number(stats.pendingRequests) || 0;
-    const banner = pending > 0
+    const appeals = Number(stats.pendingAppeals) || 0;
+    const banner = (pending > 0
         ? `<div class="alert-banner"><i class="fas fa-bell"></i> ${pending} landlord request${pending === 1 ? '' : 's'} waiting for review
                <button type="button" class="btn-primary-small" data-goto="requests">Review now</button></div>`
-        : '';
+        : '') + (appeals > 0
+        ? `<div class="alert-banner"><i class="fas fa-flag"></i> ${appeals} hidden listing${appeals === 1 ? ' has' : 's have'} a landlord appeal waiting
+               <button type="button" class="btn-primary-small" data-goto="listings">Review now</button></div>`
+        : '');
 
     let cards = '';
     if (ov) {
@@ -685,7 +694,7 @@ function exportUsersCsv() {
         rows.map(u => [u.full_name, u.email, u.role, u.landlord_status || 'none', Number(u.is_suspended) === 1 ? 'Yes' : 'No', u.contact, u.address]));
 }
 
-// NEW (Module 7): suspend / unsuspend a user (replaces deleting them).
+// Suspend / unsuspend a user (replaces deleting them).
 async function suspendUser(id) {
     const u = ex.usersById.get(Number(id));
     const reason = await askModerationReason({
@@ -784,6 +793,7 @@ function renderListingsTable() {
     tbody.innerHTML = slice.map(l => {
         const occupied = (l.status || 'available') === 'occupied';
         const hidden = Number(l.is_hidden) === 1;
+        const hasAppeal = hidden && !!l.appeal_at;
         const id = Number(l.id);
         const thumb = safeImg(l.thumbnail)
             ? `<img class="thumb" src="${esc(l.thumbnail)}" alt="" loading="lazy">`
@@ -793,7 +803,9 @@ function renderListingsTable() {
             <td><div class="cell-listing">${thumb}<div><strong>${esc(l.title)}</strong>
                 <span class="pill ${occupied ? 'pending' : 'approved'}">${occupied ? 'Occupied' : 'Available'}</span>
                 ${hidden ? '<span class="pill rejected">Hidden</span>' : ''}
+                ${hasAppeal ? '<span class="pill pending">Appeal</span>' : ''}
                 ${hidden && l.hidden_reason ? `<div style="font-size:11.5px; color:#c0392f; margin-top:4px; font-weight:600;">Reason: ${esc(l.hidden_reason)}</div>` : ''}
+                ${hasAppeal ? `<div style="font-size:11.5px; color:#1565c0; margin-top:4px; font-weight:600;"><i class="fas fa-flag"></i> Landlord appeal (${esc(fmtDate(l.appeal_at))}): ${esc(l.appeal_message || '')}</div>` : ''}
                 </div></div></td>
             <td>${esc(l.landlord_name || '—')}</td>
             <td>₱${Number(l.price || 0).toLocaleString()}</td>
@@ -802,6 +814,7 @@ function renderListingsTable() {
                 ${hidden
                     ? `<button class="btn btn-approve" data-act="unhide-listing" data-id="${id}" title="Make visible again"><i class="fas fa-eye"></i> Unhide</button>`
                     : `<button class="btn btn-reject" data-act="hide-listing" data-id="${id}" title="Hide from the public"><i class="fas fa-eye-slash"></i> Hide</button>`}
+                ${hasAppeal ? `<button class="btn btn-reject" data-act="dismiss-appeal" data-id="${id}" title="Keep it hidden and tell the landlord why"><i class="fas fa-ban"></i> Decline appeal</button>` : ''}
             </td>
         </tr>`;
     }).join('');
@@ -817,7 +830,7 @@ function exportListingsCsv() {
         rows.map(l => [l.title, l.category, l.status || 'available', Number(l.is_hidden) === 1 ? 'Hidden' : 'Visible', l.hidden_reason || '', l.price, l.location, l.rooms, l.size, l.landlord_name, l.landlord_email, l.created_at]));
 }
 
-// NEW (Module 7): hide / unhide a listing (replaces deleting and editing it).
+// Hide / unhide a listing (replaces deleting and editing it).
 async function hideListing(id) {
     const l = ex.listingsById.get(Number(id));
     const reason = await askModerationReason({
@@ -832,7 +845,7 @@ async function hideListing(id) {
             'Reported by users and under review.'
         ],
         confirmText: 'Hide listing',
-        note: 'It disappears from the public feed and search right away. The landlord can still see it, together with this reason, and you can unhide it any time.'
+        note: 'It disappears from the public feed and search right away. The landlord can still see it, together with this reason, and can appeal. You can unhide it any time.'
     });
     if (!reason) return;
 
@@ -869,6 +882,39 @@ async function unhideListing(id) {
             fetchListings();
         } else {
             Swal.fire('Error', r.data.message || 'Failed to unhide listing.', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Error', 'Server connection failed.', 'error');
+    }
+}
+
+// NEW: decline a landlord's appeal. The listing stays hidden, and the landlord
+// sees "Appeal declined: <reason>" and can appeal again after fixing it.
+async function dismissAppeal(id) {
+    const l = ex.listingsById.get(Number(id));
+    const reason = await askModerationReason({
+        title: 'Decline this appeal?',
+        subjectLine: l ? `Listing: <strong>${esc(l.title)}</strong>` : '',
+        icon: 'fa-flag',
+        templates: [
+            'The issue has not been fixed yet.',
+            'The listing still does not meet our guidelines.',
+            'We could not verify the corrections you described.'
+        ],
+        confirmText: 'Decline appeal',
+        note: 'The listing stays hidden. The landlord will see "Appeal declined" with this reason and can send a new appeal after fixing the problem. To approve the appeal, use Unhide instead.'
+    });
+    if (!reason) return;
+
+    try {
+        const r = await adminPost(`/listings/${Number(id)}/dismiss-appeal`, { reason });
+        if (!r) return;
+        if (r.ok) {
+            Swal.fire('Declined', 'The appeal was declined and the landlord can see your reason.', 'success');
+            fetchListings();
+            loadStats();
+        } else {
+            Swal.fire('Error', r.data.message || 'Failed to decline the appeal.', 'error');
         }
     } catch (err) {
         Swal.fire('Error', 'Server connection failed.', 'error');
@@ -912,8 +958,8 @@ async function loadAdmins() {
         if (!rows) return;
         ex.adminsById = new Map(rows.map(a => [Number(a.id), a]));
 
-        // (Module 4) if this admin just renamed themselves (or changed their
-        // email) in Settings, update the top bar right away - no extra request.
+        // If this admin just renamed themselves (or changed their email) in
+        // Settings, update the top bar right away - no extra request.
         if (currentAdmin) {
             const mine = ex.adminsById.get(Number(currentAdmin.id));
             if (mine && (mine.full_name !== currentAdmin.full_name || mine.email !== currentAdmin.email)) {
@@ -1017,7 +1063,7 @@ function renderActivity() {
         <tr>
             <td>${esc(fmtDate(r.created_at))}</td>
             <td>${esc(r.admin_name || 'Unknown admin')}</td>
-            <td>${esc(describeAction(r.method, r.path))}</td>
+            <td>${esc(describeAction(r.method, r.path, r.target_label))}</td>
         </tr>`).join('');
 
     if (countEl) {
@@ -1095,7 +1141,7 @@ function startAutoRefresh() {
     }, 60000);
 }
 
-// ===================== 9. WHO IS SIGNED IN (Module 4) =====================
+// ===================== 9. WHO IS SIGNED IN =====================
 // Paints the top bar (and the small line in the sidebar) from currentAdmin.
 function renderAdminIdentity() {
     const name = currentAdmin ? String(currentAdmin.full_name || currentAdmin.email || 'Admin') : 'Admin';
@@ -1129,7 +1175,7 @@ async function refreshAdminIdentity() {
     }
 }
 
-// ===================== 10. SESSION WATCH (Module 5) =====================
+// ===================== 10. SESSION WATCH =====================
 // Signs the admin out when they walk away (idle) or when the 2-hour token runs
 // out, and double-checks the session the moment the tab comes back into view.
 //
