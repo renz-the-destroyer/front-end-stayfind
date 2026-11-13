@@ -1,8 +1,7 @@
 // status-notice.js — load AFTER home.js.
 // Replaces checkLandlordStatusUpdate() from home.js (later function
-// declarations win), so home.js stays untouched. Same logic as before;
-// only the popups look different. Uses home.js globals: currentUser,
-// API_BASE, escapeHtml.
+// declarations win), so home.js stays untouched. Uses home.js globals:
+// currentUser, API_BASE, escapeHtml.
 
 (function injectStatusNoticeStyles() {
     if (document.getElementById('statusNoticeStyles')) return;
@@ -185,8 +184,8 @@ async function checkLandlordStatusUpdate() {
 }
 
 // ===================== BLOCK RE-SUBMIT WHILE PENDING =====================
-// Habang pending ang landlord request, hindi na pwedeng pumili ng Landlord
-// o mag-upload ulit ng documents. Maghihintay na lang ng approve/reject.
+// While a landlord request is pending, the Landlord option is disabled and
+// documents can't be uploaded again. They wait for approve/reject.
 
 function isLandlordRequestPending() {
     return !!currentUser
@@ -206,13 +205,13 @@ setupSettingsLogic = function () {
 
     const landlordOption = roleSelect.querySelector('option[value="landlord"]');
 
-    // Banner na lalabas sa Settings habang pending
+    // Banner shown in Settings while pending
     let banner = document.getElementById('pendingRequestBanner');
     if (!banner) {
         banner = document.createElement('div');
         banner.id = 'pendingRequestBanner';
         banner.style.cssText = 'display:none; background:#fff8e1; border:1.5px solid #ffe0a3; border-left:5px solid #f59e0b; border-radius:12px; padding:12px 14px; margin-bottom:20px; font-size:12.5px; line-height:1.5; color:#8a5a00; font-weight:600;';
-        banner.innerHTML = '<i class="fas fa-hourglass-half"></i> <strong>Landlord request pending.</strong> Naipasa mo na ang documents mo. Hintayin muna ang approval o rejection ng admin bago mag-submit ulit.';
+        banner.innerHTML = '<i class="fas fa-hourglass-half"></i> <strong>Landlord request pending.</strong> Your documents were already submitted. Please wait for the admin to approve or reject them before submitting again.';
         docsSection.insertAdjacentElement('beforebegin', banner);
     }
 
@@ -234,20 +233,20 @@ setupSettingsLogic = function () {
         }
     }
 
-    // Tuwing bubuksan ang Settings
+    // Every time Settings opens
     const openOriginal = settingsBtn.onclick;
     settingsBtn.onclick = function (e) {
         if (openOriginal) openOriginal.call(this, e);
         applyPendingState();
     };
 
-    // Extra guard sa Save, kahit paano pa nila ma-bypass ang dropdown
+    // Extra guard on Save, even if the dropdown is bypassed
     const saveOriginal = saveBtn.onclick;
     saveBtn.onclick = async function (e) {
         if (isLandlordRequestPending() && roleSelect.value === 'landlord') {
             return Swal.fire({
                 title: 'Request already pending',
-                text: 'Naipasa mo na ang landlord request mo. Hintayin muna ang desisyon ng admin.',
+                text: 'You already submitted a landlord request. Please wait for the admin decision.',
                 icon: 'info',
                 target: '#settingsModal'
             });
@@ -258,11 +257,12 @@ setupSettingsLogic = function () {
     applyPendingState();
 };
 
-// ===================== NEW (Module 7): LISTINGS HIDDEN BY AN ADMIN =====================
+// ===================== LISTINGS HIDDEN BY AN ADMIN (+ APPEALS) =====================
 // The server only sends a hidden listing to the landlord who OWNS it (with
-// is_hidden = 1 and hidden_reason). Nobody else ever receives it. This section:
+// is_hidden = 1, hidden_reason and the appeal fields). Nobody else ever receives
+// it. This section:
 //   1. puts a red "Hidden" chip on those cards,
-//   2. shows the admin's reason at the top of the details modal,
+//   2. shows the admin's reason (and the appeal box) at the top of the details modal,
 //   3. shows a one-time popup when a listing is newly hidden.
 // It wraps renderListings() and showFullDetails() from home.js instead of editing it.
 
@@ -285,6 +285,18 @@ setupSettingsLogic = function () {
         .hidden-notice-title { font-size: 13.5px; font-weight: 800; color: #c62828; margin: 0 0 8px; }
         .hidden-notice-reason { margin: 0 0 8px; font-size: 14px; font-weight: 600; line-height: 1.5; color: #1a2332; overflow-wrap: anywhere; }
         .hidden-notice-help { margin: 0; font-size: 12px; line-height: 1.5; color: #5c6b7a; }
+        .hidden-notice-appeal {
+            margin: 12px 0 0; padding: 10px 12px; border-radius: 10px;
+            background: #eef6fe; border: 1px solid #c3e0fb;
+            font-size: 12.5px; line-height: 1.5; color: #1a2332; overflow-wrap: anywhere;
+        }
+        .hidden-appeal-btn {
+            margin-top: 12px; padding: 10px 16px; border: none; border-radius: 10px; cursor: pointer;
+            background: linear-gradient(135deg, #0d47a1, #1565c0); color: #fff;
+            font-size: 12.5px; font-weight: 800;
+            display: inline-flex; align-items: center; gap: 8px;
+        }
+        .hidden-appeal-btn:hover { filter: brightness(1.08); }
         .hidden-popup-list { list-style: none; margin: 14px 0 0; padding: 0; text-align: left; }
         .hidden-popup-list li { background: #fff5f5; border: 1px solid #f6c9cb; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; font-size: 13px; }
         .hidden-popup-list li strong { display: block; color: #1a2332; margin-bottom: 3px; }
@@ -351,22 +363,170 @@ renderListings = async function (items) {
     announceHiddenListings(items);
 };
 
-// 2. Details modal: show the admin's reason above the photos.
-const _showFullDetailsHiddenOriginal = showFullDetails;
-showFullDetails = function (item) {
-    _showFullDetailsHiddenOriginal(item);
-
+// 2. Details modal: the admin's reason + the appeal box, above the photos.
+function renderHiddenNotice(item) {
     const old = document.getElementById('hiddenListingNotice');
     if (old) old.remove();
 
     const wrapper = document.getElementById('carouselWrapper');
-    if (wrapper && isHiddenOwnListing(item)) {
-        wrapper.insertAdjacentHTML('beforebegin', `
-            <div class="hidden-notice" id="hiddenListingNotice">
-                <div class="hidden-notice-title"><i class="fas fa-eye-slash"></i> Hidden by a StayFind admin</div>
-                <p class="hidden-notice-reason">${escapeHtml(item.hidden_reason || 'No reason given.')}</p>
-                <p class="hidden-notice-help">Tenants can't see this listing right now. You can still edit it. Fix the issue, then ask an admin to unhide it.</p>
-            </div>
-        `);
+    if (!wrapper || !isHiddenOwnListing(item)) return;
+
+    const appealHtml = item.appeal_at
+        ? `<p class="hidden-notice-appeal"><i class="fas fa-paper-plane"></i> <strong>Appeal sent</strong> on ${escapeHtml(new Date(item.appeal_at).toLocaleDateString())}. An admin will review it.<br><em>${escapeHtml(item.appeal_message || '')}</em></p>`
+        : `<button type="button" class="hidden-appeal-btn" id="hiddenAppealBtn"><i class="fas fa-flag"></i> Request review</button>`;
+
+    wrapper.insertAdjacentHTML('beforebegin', `
+        <div class="hidden-notice" id="hiddenListingNotice">
+            <div class="hidden-notice-title"><i class="fas fa-eye-slash"></i> Hidden by a StayFind admin</div>
+            <p class="hidden-notice-reason">${escapeHtml(item.hidden_reason || 'No reason given.')}</p>
+            <p class="hidden-notice-help">Tenants can't see this listing right now. You can still edit it. Fix the issue, then send an appeal so an admin can review it.</p>
+            ${appealHtml}
+        </div>
+    `);
+
+    const btn = document.getElementById('hiddenAppealBtn');
+    if (btn) btn.onclick = () => requestListingReview(item);
+}
+
+// NEW: the landlord asks an admin to review a hidden listing.
+async function requestListingReview(item) {
+    const { value, isConfirmed } = await Swal.fire({
+        title: 'Request a review',
+        input: 'textarea',
+        inputLabel: 'What did you fix, or why should this listing be shown again?',
+        inputPlaceholder: 'e.g. I replaced the photos and corrected the price.',
+        inputAttributes: { maxlength: 500 },
+        showCancelButton: true,
+        confirmButtonText: 'Send appeal',
+        inputValidator: (v) => (!v || v.trim().length < 10) ? 'Please write at least 10 characters.' : undefined
+    });
+    if (!isConfirmed) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/listings/${item.id}/appeal`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: value.trim() })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success) {
+            item.appeal_message = value.trim();
+            item.appeal_at = data.appeal_at || new Date().toISOString();
+            renderHiddenNotice(item);
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Appeal sent', showConfirmButton: false, timer: 2500 });
+        } else {
+            Swal.fire('Could not send', data.message || 'Please try again.', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Error', 'Could not connect to the server.', 'error');
     }
+}
+
+const _showFullDetailsHiddenOriginal = showFullDetails;
+showFullDetails = function (item) {
+    _showFullDetailsHiddenOriginal(item);
+    renderHiddenNotice(item);
 };
+
+// ===================== LANDLORD: DELETE COMMENTS ON THEIR LISTING =====================
+// home.js builds the comment list. After it finishes, this adds a "Delete"
+// button to every comment when the viewer owns the listing. A tenant's review
+// that has a star rating only loses its text: the rating still counts.
+const LANDLORD_REMOVED_TEXT = '[Comment removed by the landlord]';
+
+(function injectCommentDeleteStyles() {
+    if (document.getElementById('commentDeleteStyles')) return;
+    const style = document.createElement('style');
+    style.id = 'commentDeleteStyles';
+    style.textContent = `
+        .comment-delete-link {
+            display: inline-block; margin: 7px 0 0 12px; background: none; border: none;
+            padding: 0; color: #e5484d; font-size: 12px; font-weight: 700; cursor: pointer;
+        }
+        .comment-delete-link:hover { text-decoration: underline; }
+    `;
+    document.head.appendChild(style);
+})();
+
+const _loadCommentsOriginal = loadComments;
+loadComments = async function (listingId, isOwner) {
+    await _loadCommentsOriginal(listingId, isOwner);
+    if (isOwner) addLandlordDeleteButtons(listingId);
+};
+
+async function addLandlordDeleteButtons(listingId) {
+    const list = document.getElementById('commentsDisplayList');
+    if (!list) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/get-reviews/${listingId}`);
+        const reviews = await res.json();
+        if (!Array.isArray(reviews) || reviews.length === 0) return;
+
+        // Same order home.js renders them in: each top-level comment, then its replies.
+        const byId = new Map(reviews.map(r => [r.id, r]));
+        const topLevel = reviews.filter(r => !r.parent_review_id || !byId.has(r.parent_review_id));
+        const repliesByParent = new Map();
+        reviews.forEach(r => {
+            if (r.parent_review_id && byId.has(r.parent_review_id)) {
+                if (!repliesByParent.has(r.parent_review_id)) repliesByParent.set(r.parent_review_id, []);
+                repliesByParent.get(r.parent_review_id).push(r);
+            }
+        });
+        const ordered = [];
+        topLevel.forEach(r => {
+            ordered.push(r);
+            (repliesByParent.get(r.id) || []).forEach(x => ordered.push(x));
+        });
+
+        const items = list.querySelectorAll('.comment-item');
+        if (items.length !== ordered.length) return; // the list changed meanwhile: skip
+
+        items.forEach((el, i) => {
+            const rev = ordered[i];
+            const isReply = Number(rev.is_reply) === 1;
+            if (!isReply && rev.comment === LANDLORD_REMOVED_TEXT) return; // already removed
+            const body = el.querySelector('.comment-body');
+            if (!body || body.querySelector('.comment-delete-link')) return;
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'comment-delete-link';
+            btn.textContent = 'Delete';
+            btn.onclick = () => deleteCommentAsLandlord(rev, listingId);
+            body.appendChild(btn);
+        });
+    } catch (err) {
+        console.log('Could not add delete buttons:', err);
+    }
+}
+
+async function deleteCommentAsLandlord(rev, listingId) {
+    const isReply = Number(rev.is_reply) === 1;
+    const keepsRating = !isReply && Number(rev.rating) > 0;
+
+    const c = await Swal.fire({
+        title: 'Delete this comment?',
+        text: keepsRating
+            ? "The text will be removed, but the tenant's star rating still counts toward your average."
+            : 'This cannot be undone.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ff5252',
+        confirmButtonText: 'Yes, delete'
+    });
+    if (!c.isConfirmed) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/delete-review/${rev.id}`, { method: 'DELETE' });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success) {
+            loadComments(listingId, true);
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: data.message || 'Comment deleted', showConfirmButton: false, timer: 2200 });
+        } else {
+            Swal.fire('Error', data.message || 'Could not delete the comment.', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Error', 'Could not connect to the server.', 'error');
+    }
+}
