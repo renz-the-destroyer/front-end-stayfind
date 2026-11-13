@@ -1,4 +1,4 @@
-/* admin-extras.css — load AFTER admin.html's own <style>. Adds styles only; nothing is removed. */
+/* admin-extras.css — load AFTER admin.html's own <style>. Adds styles only; nothing is removed */
 
 /* SweetAlert dialogs must sit ABOVE the admin modals (they were appearing behind them) */
 .swal2-container { z-index: 5000 !important; }
