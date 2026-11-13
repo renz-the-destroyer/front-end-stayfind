@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StayFind — Sign In or Sign Up</title>
 
-    <!-- NEW (guest mode): home.html is the public landing page now. Anyone who
-         opens this page WITHOUT ?auth=signin or ?auth=signup is sent there.
-         The login/sign-up form only shows when a Log in / Sign up button
-         (or a "Log in to continue" prompt) sends the person here with ?auth=. -->
+    <!-- home.html is the public landing page. Anyone who opens this page WITHOUT
+         ?auth=signin or ?auth=signup is sent there. The login/sign-up form only
+         shows when a Log in / Sign up button (or a "Log in to continue" prompt)
+         sends the person here with ?auth=. -->
     <script>
         (function () {
             if (!new URLSearchParams(window.location.search).get('auth')) {
@@ -76,6 +76,16 @@
             background: var(--paper);
         }
         .form-column-inner { width: 100%; max-width: 400px; }
+
+        /* NEW: explicit way back to the public home page */
+        .back-home {
+            display: flex; align-items: center; gap: 8px; width: fit-content;
+            margin: 0 0 26px; padding: 9px 16px;
+            border: 1.5px solid var(--line); border-radius: 999px; background: #fff;
+            color: var(--muted); font-size: 12.5px; font-weight: 700; text-decoration: none;
+            transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+        }
+        .back-home:hover { color: var(--primary); border-color: var(--accent); background: var(--canvas); }
 
         .brand-mark {
             font-family: 'Fraunces', serif;
@@ -210,7 +220,7 @@
         .switch-line a { color: var(--primary); font-weight: 700; text-decoration: none; }
         .switch-line a:hover { text-decoration: underline; }
 
-        /* NEW (Module 3): small admin entry at the very bottom of the form column,
+        /* Small admin entry at the very bottom of the form column,
            visible on both the Sign In and Create Account tabs. */
         .staff-link {
             margin: 34px 0 0;
@@ -423,6 +433,9 @@
         <!-- ===================== LEFT: FORM COLUMN ===================== -->
         <div class="form-column">
             <div class="form-column-inner">
+                <!-- NEW: back to the public home page -->
+                <a href="home.html" class="back-home"><i class="fas fa-arrow-left"></i> Back to home</a>
+
                 <a href="home.html" class="brand-mark">Stay<span>Find</span></a>
 
                 <div class="tab-switch" role="tablist">
@@ -471,7 +484,7 @@
                     </form>
                 </div>
 
-                <!-- NEW (Module 3): admin entry, moved here from the home page drawer and footer -->
+                <!-- Admin entry, moved here from the home page drawer and footer -->
                 <p class="staff-link"><a href="admin.html"><i class="fas fa-user-shield"></i> Staff? Admin sign-in</a></p>
             </div>
         </div>
