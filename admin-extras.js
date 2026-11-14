@@ -120,9 +120,9 @@ function renderPager(tbodyId, total, page, onGo) {
 }
 
 // Turns a logged request (method + path) into a readable sentence.
-// UPDATED: `label` is the real listing title / user name saved with the log
-// entry; the "#id" is only a fallback. The hide/unhide/suspend/... lines must
-// come BEFORE the generic /users/:id and /listings/:id matches below them.
+// `label` is the real listing title / user name saved with the log entry; the
+// "#id" is only a fallback. The hide/unhide/suspend/... lines must come BEFORE
+// the generic /users/:id and /listings/:id matches below them.
 function describeAction(method, rawPath, label) {
     const p = String(rawPath || '').replace(/^\/api\/admin/, '');
     let m;
@@ -888,7 +888,7 @@ async function unhideListing(id) {
     }
 }
 
-// NEW: decline a landlord's appeal. The listing stays hidden, and the landlord
+// Decline a landlord's appeal. The listing stays hidden, and the landlord
 // sees "Appeal declined: <reason>" and can appeal again after fixing it.
 async function dismissAppeal(id) {
     const l = ex.listingsById.get(Number(id));
@@ -1132,13 +1132,62 @@ async function loadActivity() {
     fetchActivity(false);
 }
 
-// ===================== 8. STARTUP + AUTO-REFRESH =====================
+// ===================== 8. LIVE UPDATES (replaces the old 60-second refresh) =====================
+// Every 20 seconds, while the tab is visible, the panel asks the server for the
+// dashboard numbers. If anything changed (a new landlord request, a landlord
+// appeal, a new user or listing), it shows a toast and refreshes the tables, so
+// nobody has to reload the page. Every third check (about once a minute) it
+// also refreshes the Users and Listings tables, to catch changes by other admins.
+// These background checks are not user activity, so the idle timeout still works.
+const LIVE_ADMIN_MS = 20000;
 let _refreshTimer;
+let livePrev = null;   // the numbers from the previous check (null = take a baseline)
+let liveTickCount = 0;
+
+async function adminLiveTick() {
+    if (!adminKey || document.visibilityState !== 'visible' || Swal.isVisible()) return;
+
+    try {
+        const s = await adminGet('/stats');
+        if (!s || !adminKey) return; // signed out meanwhile
+
+        const cur = {
+            req: Number(s.pendingRequests) || 0,
+            app: Number(s.pendingAppeals) || 0,
+            users: Number(s.totalUsers) || 0,
+            listings: Number(s.totalListings) || 0
+        };
+        const prev = livePrev;
+        livePrev = cur;
+        liveTickCount++;
+
+        if (!prev) return; // first check = baseline only
+
+        const changed = JSON.stringify(prev) !== JSON.stringify(cur);
+        if (changed) {
+            if (cur.app > prev.app) {
+                AdminToast.fire({ icon: 'info', title: 'A landlord sent an appeal for a hidden listing.', timer: 6000 });
+            } else if (cur.req > prev.req) {
+                AdminToast.fire({ icon: 'info', title: 'A new landlord request is waiting.', timer: 6000 });
+            }
+        }
+
+        if (changed || liveTickCount % 3 === 0) {
+            loadStats();
+            loadLandlordRequests();
+            fetchListings();
+            fetchUsers();
+        }
+    } catch (err) {
+        console.log('Live update check failed silently:', err);
+    }
+}
+
 function startAutoRefresh() {
     clearInterval(_refreshTimer);
-    _refreshTimer = setInterval(() => {
-        if (adminKey && document.visibilityState === 'visible') loadLandlordRequests();
-    }, 60000);
+    livePrev = null;
+    liveTickCount = 0;
+    _refreshTimer = setInterval(adminLiveTick, LIVE_ADMIN_MS);
 }
 
 // ===================== 9. WHO IS SIGNED IN =====================
@@ -1208,6 +1257,8 @@ function startSessionWatch() {
 function stopSessionWatch() {
     clearInterval(sessionTick);
     sessionTick = null;
+    clearInterval(_refreshTimer); // NEW: stop the live updates too
+    livePrev = null;
     idleWarningOpen = false;
     expiryWarned = false;
     if (Swal.isVisible()) Swal.close();
@@ -1292,11 +1343,13 @@ function showIdleWarning() {
 }
 
 // Timers are slowed down in background tabs, so check straight away when the tab
-// comes back, and ask the server whether the session is still valid.
+// comes back, ask the server whether the session is still valid, and look for
+// changes that happened while the tab was hidden.
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && adminKey) {
         checkSession();
         if (adminKey) refreshAdminIdentity(); // a 401 here signs the admin out
+        if (adminKey) adminLiveTick();
     }
 });
 // Same check when the browser restores the page from its back/forward cache.
