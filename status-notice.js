@@ -1,7 +1,7 @@
 // status-notice.js — load AFTER home.js.
 // Replaces checkLandlordStatusUpdate() from home.js (later function
 // declarations win), so home.js stays untouched. Uses home.js globals:
-// currentUser, API_BASE, escapeHtml.
+// currentUser, API_BASE, escapeHtml, buildListingsQuery, loadListings.
 
 (function injectStatusNoticeStyles() {
     if (document.getElementById('statusNoticeStyles')) return;
@@ -121,6 +121,8 @@ function showRejectedNotice(reason) {
     });
 }
 
+// UPDATED: after the landlord clicks OK the page reloads, so the Post button and
+// the landlord view are fully ready.
 function showApprovedNotice() {
     return Swal.fire({
         html: `
@@ -139,7 +141,7 @@ function showApprovedNotice() {
             popup: 'sn-popup',
             confirmButton: 'sn-btn-main sn-green'
         }
-    });
+    }).then(() => window.location.reload());
 }
 
 // Same logic as home.js's version — only the popups changed.
@@ -388,7 +390,7 @@ function renderHiddenNotice(item) {
     if (btn) btn.onclick = () => requestListingReview(item);
 }
 
-// NEW: the landlord asks an admin to review a hidden listing.
+// The landlord asks an admin to review a hidden listing.
 async function requestListingReview(item) {
     const { value, isConfirmed } = await Swal.fire({
         title: 'Request a review',
@@ -412,6 +414,7 @@ async function requestListingReview(item) {
         if (res.ok && data.success) {
             item.appeal_message = value.trim();
             item.appeal_at = data.appeal_at || new Date().toISOString();
+            liveListingSig = null; // our own change: don't announce it as an admin update
             renderHiddenNotice(item);
             Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Appeal sent', showConfirmButton: false, timer: 2500 });
         } else {
@@ -529,4 +532,62 @@ async function deleteCommentAsLandlord(rev, listingId) {
     } catch (err) {
         Swal.fire('Error', 'Could not connect to the server.', 'error');
     }
+}
+
+// ===================== NEW: LIVE UPDATES (no reload needed) =====================
+// Every ~15 seconds, while the tab is visible and the person is logged in:
+//   1. checkLandlordStatusUpdate() asks the server for the fresh profile. This
+//      also catches a SUSPENSION (the server answers 401 and auth-fetch.js shows
+//      the "Account suspended" popup), and landlord approval / rejection.
+//   2. A landlord's own listings are re-checked; if an admin hid, unhid or
+//      answered an appeal, the grid refreshes by itself.
+// Nothing refreshes while a popup or modal is open, so no one is interrupted.
+const LIVE_INTERVAL_MS = 15000;
+let liveListingSig = null; // null = "take a fresh baseline on the next check"
+
+function anyModalOpen() {
+    const ids = ['detailsModal', 'postModal', 'messagesModal', 'settingsModal'];
+    const open = ids.some(id => {
+        const el = document.getElementById(id);
+        return el && el.style.display === 'block';
+    });
+    return open || (typeof Swal !== 'undefined' && Swal.isVisible());
+}
+
+async function pollOwnListings() {
+    if (!currentUser || currentUser.role !== 'landlord') return;
+
+    try {
+        const res = await fetch(buildListingsQuery('all=true'));
+        if (!res.ok) return;
+        const data = await res.json();
+        const rows = Array.isArray(data.listings) ? data.listings : [];
+
+        const sig = rows
+            .map(l => `${l.id}:${l.is_hidden}:${l.appeal_at || ''}:${l.hidden_reason || ''}`)
+            .sort().join('|');
+
+        if (liveListingSig === null) { liveListingSig = sig; return; } // first check = baseline
+        if (sig === liveListingSig) return;
+        if (anyModalOpen()) return; // something changed, but wait until the person is free
+
+        liveListingSig = sig;
+        hiddenAnnouncementChecked = false; // let the "was hidden" popup run again for new hides
+        loadListings();
+        Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Your listings were updated', showConfirmButton: false, timer: 3500 });
+    } catch (err) {
+        console.log('Live listing check failed silently:', err);
+    }
+}
+
+function liveTick() {
+    if (!currentUser || document.hidden) return;
+    checkLandlordStatusUpdate();
+    pollOwnListings();
+}
+
+if (currentUser) {
+    setInterval(liveTick, LIVE_INTERVAL_MS);
+    // Coming back to the tab: check right away instead of waiting for the timer.
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) liveTick(); });
 }
